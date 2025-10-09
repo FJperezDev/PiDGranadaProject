@@ -1,6 +1,7 @@
 from django.apps import AppConfig
 
 
-class TopicConceptsConfig(AppConfig):
+class CustomAuthConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'topic_concepts'
+    name = 'custom_auth'
+    label = 'custom_auth'
