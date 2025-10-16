@@ -1,0 +1,23 @@
+databases:
+  - name: backenddb
+    plan: free
+    databaseName: backend
+    user: backend
+
+services:
+  - type: web
+    plan: free
+    name: backend
+    runtime: python
+    buildCommand: './build.sh'
+    startCommand: 'python -m gunicorn backend.asgi:application -k uvicorn.workers.UvicornWorker'
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: backenddb
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
+      # - key: EXPO_EXTERNAL_HOSTNAME use it on render.com
