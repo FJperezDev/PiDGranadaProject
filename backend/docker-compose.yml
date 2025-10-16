@@ -1,0 +1,20 @@
+---
+services:
+  web:
+    build: .
+    container_name: django_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - proxy
+    volumes:
+      - .:/app
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.django.rule=Host(`api.franjpg.com`)"
+      - "traefik.http.routers.django.entrypoints=websecure"
+
+networks:
+  proxy:
+    external: true
