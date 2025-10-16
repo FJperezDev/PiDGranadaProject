@@ -9,7 +9,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Instala dependencias del sistema
-RUN apt-get update && apt-get install -y build-essential libpq-dev
+RUN apt-get update && apt-get install -y build-essential libpq-dev netcat-openbsd
 
 # Copia los requirements
 COPY requirements.txt .
@@ -20,6 +20,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia todo el proyecto
 COPY . .
 
+# Copia el entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 # Crea el usuario no root
 RUN adduser --disabled-password django
 USER django
@@ -27,5 +31,5 @@ USER django
 # Expone el puerto (gunicorn servirá en el 8000)
 EXPOSE 8000
 
-# Ejecuta el servidor WSGI
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+# Usa el script como punto de entrada
+ENTRYPOINT ["/entrypoint.sh"]

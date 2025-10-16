@@ -1,15 +1,28 @@
 ---
 services:
+  db:
+    image: postgres:16
+    container_name: django_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: django_db
+      POSTGRES_USER: django
+      POSTGRES_PASSWORD: django123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - proxy
+
   web:
     build: .
     container_name: django_backend
     restart: unless-stopped
-    env_file:
-      - .env
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://django:django123@db:5432/django_db
     networks:
       - proxy
-    volumes:
-      - .:/app
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.django.rule=Host(`api.franjpg.com`)"
@@ -18,3 +31,6 @@ services:
 networks:
   proxy:
     external: true
+
+volumes:
+  postgres_data:
