@@ -3,15 +3,14 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.apps import apps
 
-class CustomUser(AbstractUser):
+class CustomTeacher(AbstractUser):
     ROLE_CHOICES = (
-        ('superadmin', 'Super Admin'),
-        ('admin', 'Admin'),
-        ('user', 'User'),
+        ('superteacher', 'Super Teacher'),
+        ('teacher', 'Teacher'),
     )
     username = models.CharField(max_length=100, blank=True, unique=True)
     email = models.EmailField(unique=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='teacher')
     statistics = models.JSONField(default=dict, blank=True)
 
     USERNAME_FIELD = 'email'
@@ -28,20 +27,17 @@ class CustomUser(AbstractUser):
         # elif not self.is_superuser and not self.is_staff:
         #     self.role = 'user'
 
-        if self.role == 'superadmin':
+        if self.role == 'superteacher':
             self.is_superuser = True
             self.is_staff = True
-        elif self.role == 'admin':
+        elif self.role == 'teacher':
             self.is_staff = True
             self.is_superuser = False
-        elif self.role == 'user':
-            self.is_superuser = False
-            self.is_staff = False
 
         super().save(*args, **kwargs)
 
         # After saving we add view only permissions
-        if self.role == 'admin':
+        if self.role == 'teacher':
             self.user_permissions.clear()  # Clear permissions
 
             for model in apps.get_models():

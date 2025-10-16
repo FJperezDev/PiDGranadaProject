@@ -4,17 +4,17 @@ from django.db.utils import OperationalError, ProgrammingError
 
 class ApiConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'api'
+    name = 'apps.customauth'
     
     def ready(self):
         try:
-            CustomUser = get_user_model()
-            if not CustomUser.objects.filter(is_superuser=True).exists():
-                CustomUser.objects.create_superuser(
+            CustomTeacher = get_user_model()
+            if not CustomTeacher.objects.filter(is_superuser=True).exists():
+                CustomTeacher.objects.create_superuser(
                     username='admin',
                     email='admin@admin.com',
                     password='admin123',
-                    role='superadmin'
+                    role='superteacher'
                 )
                 print("Superuser created successfully.\n" \
                 "Please change the password after logging in for the first time.    " \

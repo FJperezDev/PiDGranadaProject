@@ -1,6 +1,5 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
-from django.conf import settings
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -8,28 +7,39 @@ from rest_framework import status, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
-from ..serializers import CustomUserSerializer
-from ..models import CustomUser
-
+from ..serializers import CustomTeacherSerializer 
+from ..models import CustomTeacher
 
 class LoggedUserView(APIView):  
     permission_classes = [permissions.IsAuthenticated]
     def get(self, request, *args, **kwargs):
-        return Response(CustomUserSerializer(request.user).data, status=status.HTTP_200_OK)
+        return Response(CustomTeacherSerializer(request.user).data, status=status.HTTP_200_OK)
 
 class LoginView(TokenObtainPairView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        # Aquí validas usuario y contraseña (o usas serializer)
-        user = authenticate(email=request.data['email'], password=request.data['password'])
+
+        username = request.data.get("username") 
+        email = request.data.get("email")
+        password = request.data.get("password")
+        
+        if not password and not (username or email):
+            return Response({'message': 'Email or username and password are required'}, status=400)
+
+        user = None            
+        if username:
+            email = CustomTeacher.objects.get(username=username).email
+            request.data["email"] = email
+            
+        user = authenticate(request, username=email, password=password)
         if user is None:
             return Response({'message': 'Invalid credentials'}, status=401)
 
         response = super().post(request)
         if response.status_code == status.HTTP_200_OK:
             response.data['message'] = 'Logged in successfully'
-            # response.data['user'] = CustomUserSerializer(user).data
+            # response.data['user'] = CustomTeacherSerializer(user).data
         else:
             response.data['error'] = str(response.status_code)
 
@@ -70,13 +80,13 @@ class RegisterView(APIView):
         if not email or not password or not username:
             return Response({'error': 'Email, username, and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        if CustomUser.objects.filter(email=email).exists():
+        if CustomTeacher.objects.filter(email=email).exists():
             return Response({'error': 'Email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        if CustomUser.objects.filter(username=username).exists():
+        if CustomTeacher.objects.filter(username=username).exists():
             return Response({'error': 'Username already exists.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        user = CustomUser(
+        user = CustomTeacher(
             email=email,
             username=username,
             password=make_password(password)  # Hash the password before saving

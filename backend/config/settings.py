@@ -55,7 +55,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',  # Can remove if not using templates
     'django.contrib.staticfiles',
     
-    'api',
+    'apps.customauth',
 
     # REST + JWT
     'rest_framework',
@@ -108,7 +108,7 @@ if not DEBUG:
     # and renames the files with unique names for each version to support long-term caching
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-ROOT_URLCONF = 'backend.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -125,12 +125,12 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'backend.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validatorsy
 
-AUTH_USER_MODEL = 'api.CustomUser'
+AUTH_USER_MODEL = 'customauth.CustomTeacher'
 
 AUTH_PASSWORD_VALIDATORS = [
     {

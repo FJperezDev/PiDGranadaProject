@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework import routers
-from .views import UserViewSet, RegisterView, LogoutView, LoggedUserView, LoginView, LogoutAllView
+from .views import TeacherViewSet, RegisterView, LogoutView, LoggedUserView, LoginView, LogoutAllView
 
 # from django.contrib.auth.views import LoginView, LogoutView
 
@@ -9,7 +9,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 router = routers.DefaultRouter()
 
 # ViewSet for User model
-router.register(r'users', UserViewSet, basename='user')
+router.register(r'users', TeacherViewSet, basename='user')
 
 urlpatterns = router.urls
 

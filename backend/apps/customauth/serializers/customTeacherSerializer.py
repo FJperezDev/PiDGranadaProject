@@ -1,9 +1,8 @@
 from rest_framework import serializers
-from ..models import CustomUser
+from ..models import CustomTeacher
 
-class CustomUserSerializer(serializers.ModelSerializer):
+class CustomTeacherSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CustomUser
+        model = CustomTeacher
         fields = ['id', 'username', 'email', 'role']
         read_only_fields = ['id']
-        

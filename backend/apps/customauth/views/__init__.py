@@ -1,4 +1,4 @@
-from .userViewSet import UserViewSet
+from .teacherViewSet import TeacherViewSet
 from .authenticationView import (
     LogoutView,
     RegisterView,

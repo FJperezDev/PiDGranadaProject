@@ -4,9 +4,9 @@ from django.urls import reverse
 from rest_framework import status
 from django.contrib.auth import get_user_model
 
-from api.models.users import CustomUser
+from apps.customauth.models.teachers import CustomTeacher
 
-CustomUser = get_user_model()
+CustomTeacher = get_user_model()
 
 class SessionAuthTestCase(TestCase):
 
@@ -19,11 +19,11 @@ class SessionAuthTestCase(TestCase):
             "password": "1234"
         }
         # Creamos el usuario directamente (más rápido que llamar a RegisterView)
-        self.user = CustomUser.objects.create_user(
+        self.user = CustomTeacher.objects.create_user(
             username=self.user_data["username"],
             email=self.user_data["email"],
             password=self.user_data["password"],
-            role='superadmin'
+            role='superteacher'
         )
         self.login_url = reverse("login")
         self.logout_url = reverse("logout")
