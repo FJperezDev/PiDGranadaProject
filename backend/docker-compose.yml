@@ -13,7 +13,7 @@ services:
     networks:
       - proxy
 
-  web:
+  backend:
     build: .
     container_name: django_backend
     restart: unless-stopped
