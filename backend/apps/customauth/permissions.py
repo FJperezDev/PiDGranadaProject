@@ -1,5 +1,4 @@
 from rest_framework import permissions
-from rest_framework_simplejwt.tokens import RefreshToken
 
 class RolePermission(permissions.BasePermission):
     def __init__(self, allowed_roles):
@@ -11,3 +10,17 @@ class RolePermission(permissions.BasePermission):
             user.role in self.allowed_roles or user.is_superuser
         )
 
+class IsTeacherOrReadOnly(permissions.BasePermission):
+    """Permite lectura a cualquiera, escritura solo a profesores."""
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True  # lectura para todos
+        return request.user and hasattr(request.user, 'is_teacher') and request.user.is_teacher
+
+class IsSuperTeacherOrReadOnly(permissions.BasePermission):
+    """Permite borrar solo a superteachers, lectura para todos."""
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS or request.method in ['POST', 'PUT', 'PATCH']:
+            return True  # lectura/edición según otra capa
+        # DELETE
+        return request.user and hasattr(request.user, 'is_super') and request.user.is_super

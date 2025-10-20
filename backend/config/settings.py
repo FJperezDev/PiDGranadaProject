@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     'apps.customauth',
+    'apps.content',
 
     # REST + JWT
     'rest_framework',

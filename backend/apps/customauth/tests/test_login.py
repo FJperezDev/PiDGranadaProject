@@ -4,7 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from django.contrib.auth import get_user_model
 
-from apps.customauth.models.teachers import CustomTeacher
+from backend.apps.customauth.teachers import CustomTeacher
 
 CustomTeacher = get_user_model()
 
