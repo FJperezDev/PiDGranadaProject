@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from ..customauth.models import CustomTeacher as Teacher
+from ...customauth.models import CustomTeacher as Teacher
 
 # Create your models here.
 

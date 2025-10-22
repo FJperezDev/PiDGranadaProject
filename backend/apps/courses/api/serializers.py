@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Subject, StudentGroup, TeacherMakeChangeStudentGroup
-from ..customauth.models import CustomTeacher as Teacher
+from customauth.models import CustomTeacher as Teacher
 
 
 class SubjectSerializer(serializers.ModelSerializer):
