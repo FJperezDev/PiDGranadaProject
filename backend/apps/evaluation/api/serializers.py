@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..domain.models import (
+from .models import (
     Question, Answer,
     TeacherMakeChangeQuestion, TeacherMakeChangeAnswer,
     QuestionBelongsToTopic, QuestionRelatedToConcept,

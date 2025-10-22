@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from ..domain.models import (
+from .models import (
     Question, Answer,
     TeacherMakeChangeQuestion, TeacherMakeChangeAnswer,
     QuestionBelongsToTopic, QuestionRelatedToConcept,
@@ -10,7 +10,7 @@ from .serializers import (
     QuestionBelongsToTopicSerializer, QuestionRelatedToConceptSerializer,
     QuestionEvaluationGroupSerializer
 )
-from courses.models import Teacher
+from backend.apps.courses.api.models import Teacher
 
 
 class QuestionViewSet(viewsets.ModelViewSet):

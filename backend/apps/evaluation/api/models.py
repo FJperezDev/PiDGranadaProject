@@ -5,7 +5,7 @@ from django.db import models
 from django.utils import timezone
 
 # Importar desde otras apps
-from courses.models import Teacher, StudentGroup
+from backend.apps.courses.api.models import Teacher, StudentGroup
 from content.models import Topic, Concept 
 
 
