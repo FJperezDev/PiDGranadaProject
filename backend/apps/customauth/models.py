@@ -4,40 +4,26 @@ from django.db import models
 from django.apps import apps
 
 class CustomTeacher(AbstractUser):
-    ROLE_CHOICES = (
-        ('superteacher', 'Super Teacher'),
-        ('teacher', 'Teacher'),
-    )
     username = models.CharField(max_length=100, blank=True, unique=True)
     email = models.EmailField(unique=True)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='teacher')
-    statistics = models.JSONField(default=dict, blank=True)
+    is_super = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']  # username sigue siendo obligatorio si usas AbstractUser
 
     def save(self, *args, **kwargs):
 
-        # Only for creating first superadmin user
-    
-        # if self.is_superuser and self.is_staff:
-        #     self.role = 'superadmin'
-        # elif not self.is_superuser and self.is_staff:
-        #     self.role = 'admin'
-        # elif not self.is_superuser and not self.is_staff:
-        #     self.role = 'user'
-
-        if self.role == 'superteacher':
+        if self.is_super:
             self.is_superuser = True
             self.is_staff = True
-        elif self.role == 'teacher':
+        else:
             self.is_staff = True
             self.is_superuser = False
 
         super().save(*args, **kwargs)
 
         # After saving we add view only permissions
-        if self.role == 'teacher':
+        if not self.is_super:
             self.user_permissions.clear()  # Clear permissions
 
             for model in apps.get_models():

@@ -23,7 +23,7 @@ class Concept(models.Model):
 class TopicIsAboutConcept(models.Model):
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE)
     concept = models.ForeignKey(Concept, on_delete=models.CASCADE)
-    order_id = models.IntegerField()
+    order_id = models.IntegerField(unique=True)
 
     class Meta:
         unique_together = ('topic', 'concept', 'order_id')

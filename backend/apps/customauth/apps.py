@@ -14,7 +14,13 @@ class ApiConfig(AppConfig):
                     username='admin',
                     email='admin@admin.com',
                     password='admin123',
-                    role='superteacher'
+                    is_super=True
+                )
+                CustomTeacher.objects.create_user(
+                    username='fran',
+                    email='fran@gmail.com',
+                    password='fran123',
+                    is_super=False
                 )
                 print("Superuser created successfully.\n" \
                 "Please change the password after logging in for the first time.    " \

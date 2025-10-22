@@ -2,7 +2,7 @@ from rest_framework import viewsets, permissions
 
 from ..models import CustomTeacher
 from ..serializers import CustomTeacherSerializer
-from ..permissions import RolePermission
+from ..permissions import IsSuperTeacher, IsTeacher
 
 # Create your views here.
 
@@ -19,34 +19,20 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
     queryset = CustomTeacher.objects.all()
     serializer_class = CustomTeacherSerializer
-
-    def get_permissions(self):
-        action_roles = {
-            'list': {'superteacher', 'teacher'},
-            'retrieve': 'any',
-            'create': {'superteacher'},
-            'update': {'superteacher'},
-            'partial_update': {'superteacher'},
-            'destroy': {'superteacher'},
-        }
-
-        roles = action_roles.get(self.action, None)
-        if isinstance(roles, set):
-            return [RolePermission(roles)]
-        else:
-            return [permissions.IsAuthenticated()]
+    permission_classes = [IsSuperTeacher]
     
     def get_queryset(self):
         queryset = CustomTeacher.objects.all()
         username = self.request.query_params.get('username', None)
         email = self.request.query_params.get('email', None)
-        role = self.request.query_params.get('role', None)
+        is_super = self.request.query_params.get('is_super', None)
 
-        # if role not in {'admin', 'superadmin'}:
-        #     return CustomTeacher.objects.none()
         if username:
             queryset = queryset.filter(username__icontains=username)
         if email:
             queryset = queryset.filter(email__icontains=email)
+        if is_super:
+            queryset = queryset.filter(is_super__icontains=is_super)
+        
             
         return queryset
