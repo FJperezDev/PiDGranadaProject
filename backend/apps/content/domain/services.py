@@ -1,5 +1,5 @@
 # apps/content/domain/services.py
-from .models import Topic, Concept, Epigraph, TopicIsAboutConcept
+from ..api.models import Topic, Concept, Epigraph, TopicIsAboutConcept
 from django.core.exceptions import ValidationError
 
 # --- Topic Services ---

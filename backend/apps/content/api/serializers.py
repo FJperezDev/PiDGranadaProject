@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..domain.models import Topic, Concept, Epigraph
+from .models import Topic, Concept, Epigraph
 
 # Utility mixin for language-aware fields
 class LanguageSerializerMixin:

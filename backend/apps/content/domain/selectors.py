@@ -1,5 +1,5 @@
 # apps/content/domain/selectors.py
-from .models import Topic, Concept, Epigraph
+from ..api.models import Topic, Concept, Epigraph
 
 def get_all_topics():
     """Devuelve todos los temas con sus epígrafes y conceptos precargados."""

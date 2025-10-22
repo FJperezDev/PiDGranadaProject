@@ -59,6 +59,13 @@ class ConceptViewSet(BaseContentViewSet):
             description_en=data.get('description_en')
         )
 
+    @action(detail=True, methods=['post'])
+    def topic(self, request, pk=None):
+        """POST /topics/<id>/epigraphs/"""
+        queryset = selectors.get_epigraphs_by_topic(pk)
+        serializer = EpigraphSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
 class EpigraphViewSet(BaseContentViewSet):
     serializer_class = EpigraphSerializer
 
