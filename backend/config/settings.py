@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     
     'apps.customauth',
     'apps.content',
+    'apps.courses',
+    'apps.evaluation',
 
     # REST + JWT
     'rest_framework',

@@ -23,4 +23,5 @@ urlpatterns = [
     path('', include('apps.customauth.urls')),
     path('', include('apps.content.urls')),
     path('', include('apps.courses.urls')),
+    path('', include('apps.evaluation.urls')),
 ]
