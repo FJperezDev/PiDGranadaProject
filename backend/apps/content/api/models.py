@@ -1,5 +1,5 @@
 from django.db import models
-from ...courses.api.models import Subject
+from ...courses.api.models import Subject, SubjectIsAboutTopic
 
 # Create your models here.
 
@@ -33,7 +33,7 @@ class TopicIsAboutConcept(models.Model):
 Topic.add_to_class('concepts', models.ManyToManyField(Concept, through=TopicIsAboutConcept, related_name='topics'))
 
 class Epigraph(models.Model):
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='epigraphs', unique=True)
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='epigraphs')
     name_es = models.TextField()
     name_en = models.TextField()
     description_es = models.TextField(null=True, blank=True)

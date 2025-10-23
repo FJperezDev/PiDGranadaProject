@@ -28,12 +28,13 @@ class SubjectViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'], )
     def topics(self, request, pk=None):
-        print("Dentro de concepts")
-        """GET /topics/<id>/concepts/"""
-        queryset = services.get_topics_by_subject(subject_id=pk)
+        """GET /subject/<id>/topics/"""
+        queryset = (
+            selectors.get_topics_by_subject(subject_id=pk)
+        )
         serializer = TopicSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
-    
+
     @topics.mapping.post
     def link_topic(self, request, pk=None):
         """POST /subjects/<id>/topics/ — asocia un concepto al topic"""
@@ -84,6 +85,26 @@ class SubjectViewSet(viewsets.ModelViewSet):
             'message': 'Topic linked to subject removed successfully',
             'topic_id': topic.id,
             'subject_id': subject.id
+        }, status=status.HTTP_200_OK)
+    
+    @topics.mapping.put
+    def change_topic_order(self, request, pk=None):
+        """PUT /subjects/<id>/topics/ — asocia un topic a la subject"""
+        subject = selectors.get_subject_by_id(subject_id=pk)
+        data = request.data
+        topicA = selectors.get_topic_by_title(title=data.get('topicA'))
+        topicB = selectors.get_topic_by_title(title=data.get('topicB'))
+        relationA = selectors.get_subject_topic_relation_by_both(subject=subject, topic=topicA)
+        relationB = selectors.get_subject_topic_relation_by_both(subject=subject, topic=topicB)
+        if not relationA or not relationB:
+            return Response({'detail': 'At least one relation is not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        services.swap_order(relationA, relationB)
+
+        return Response({
+            'message': 'Order swapped successfully',
+            'topicA': TopicSerializer(topicA, context={'request': request}).data,
+            'topicB': TopicSerializer(topicB, context={'request': request}).data
         }, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='groups')

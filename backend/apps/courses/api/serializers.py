@@ -8,7 +8,7 @@ from ...customauth.serializers import CustomTeacherSerializer as TeacherSerializ
 class SubjectSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
-    topics = TopicSerializer(many=True, read_only=True)
+    topics = serializers.SerializerMethodField()
     
     class Meta:
         model = Subject
@@ -34,7 +34,7 @@ class SubjectSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
         return getattr(obj, f'description_{lang}', None)
     
     def get_topics(self, obj):
-        subject_topics = SubjectIsAboutTopic.objects.filter(subject=obj).select_related('topic')
+        subject_topics = SubjectIsAboutTopic.objects.filter(subject=obj).select_related('topic').order_by('order_id')
         topics = [st.topic for st in subject_topics]
         return TopicSerializer(topics, many=True, context=self.context).data
 

@@ -1,7 +1,10 @@
 from ..api.models import Subject, StudentGroup, TeacherMakeChangeStudentGroup, SubjectIsAboutTopic
 from ...content.api.models import Topic
+from . import selectors
 
 from django.core.exceptions import ValidationError
+BIG_ENOUGH_INT = 1_000
+
 
 def create_subject(name_es: str, name_en: str, description_es=None, description_en=None) -> Subject:
     """Crea una nueva asignatura con validaciones básicas."""
@@ -19,11 +22,6 @@ def create_subject(name_es: str, name_en: str, description_es=None, description_
 
     return subject
 
-def get_topics_by_subject(subject_id: int):
-    """Devuelve los temas asociados a una asignatura concreta."""
-    subject = Subject.objects.get(id=subject_id)
-    return subject.topics.all()
-
 # --- Subject ↔ Topic relation ---
 def link_topic_to_subject(subject: Subject, topic: Topic, order_id: int) -> SubjectIsAboutTopic:
     """Asocia un concepto a un topic, con orden definido."""
@@ -37,3 +35,10 @@ def unlink_topic_from_subject(topic: Topic, subject: Subject) -> None:
     if not relation.exists():
         raise ValidationError("Este tema no está asociado a la asignatura.")
     relation.delete()
+
+def swap_order(relationA: SubjectIsAboutTopic, relationB: SubjectIsAboutTopic):
+    tmp = relationA.order_id
+    relationA.order_id = relationB.order_id
+    relationB.order_id = tmp
+    relationA.save()
+    relationB.save()

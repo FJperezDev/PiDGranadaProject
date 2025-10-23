@@ -32,7 +32,7 @@ class StudentGroup(models.Model):
 class SubjectIsAboutTopic(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='topics')
     topic = models.ForeignKey('content.Topic', on_delete=models.CASCADE, related_name='subjects')
-    order_id = models.IntegerField(unique=True)
+    order_id = models.IntegerField()
 
     class Meta:
         unique_together = ('subject', 'topic', 'order_id')
