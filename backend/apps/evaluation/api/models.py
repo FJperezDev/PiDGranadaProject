@@ -10,7 +10,6 @@ from ...content.api.models import Topic, Concept
 
 class Question(models.Model):
     QUESTION_TYPES = [
-        ('single', 'Single Choice'),
         ('multiple', 'Multiple Choice'),
         ('truefalse', 'True/False'),
     ]
@@ -25,28 +24,28 @@ class Question(models.Model):
         return self.statement_es or f"Question #{self.pk}"
 
 
-class TeacherMakeChangeQuestion(models.Model):
-    ACTION_CHOICES = [
-        ('created', 'Created'),
-        ('updated', 'Updated'),
-        ('deleted', 'Deleted'),
-    ]
+# class TeacherMakeChangeQuestion(models.Model):
+#     ACTION_CHOICES = [
+#         ('created', 'Created'),
+#         ('updated', 'Updated'),
+#         ('deleted', 'Deleted'),
+#     ]
 
-    question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='changes')
-    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
-    created_at = models.DateTimeField(default=timezone.now)
-    type = models.CharField(max_length=50)
-    statement_es = models.TextField(blank=True, null=True)
-    statement_en = models.TextField(blank=True, null=True)
-    approved = models.BooleanField(default=False)
-    generated = models.BooleanField(default=False)
+#     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='changes')
+#     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
+#     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+#     created_at = models.DateTimeField(default=timezone.now)
+#     type = models.CharField(max_length=50)
+#     statement_es = models.TextField(blank=True, null=True)
+#     statement_en = models.TextField(blank=True, null=True)
+#     approved = models.BooleanField(default=False)
+#     generated = models.BooleanField(default=False)
 
-    class Meta:
-        unique_together = ('question', 'action', 'created_at')
+#     class Meta:
+#         unique_together = ('question', 'action', 'created_at')
 
-    def __str__(self):
-        return f"{self.teacher} {self.action} {self.question}"
+#     def __str__(self):
+#         return f"{self.teacher} {self.action} {self.question}"
 
 
 class Answer(models.Model):
@@ -63,27 +62,27 @@ class Answer(models.Model):
         return f"{self.text_es or self.text_en} (Q{self.question.id})"
 
 
-class TeacherMakeChangeAnswer(models.Model):
-    ACTION_CHOICES = [
-        ('created', 'Created'),
-        ('updated', 'Updated'),
-        ('deleted', 'Deleted'),
-    ]
+# class TeacherMakeChangeAnswer(models.Model):
+#     ACTION_CHOICES = [
+#         ('created', 'Created'),
+#         ('updated', 'Updated'),
+#         ('deleted', 'Deleted'),
+#     ]
 
-    answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='changes')
-    question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
-    created_at = models.DateTimeField(default=timezone.now)
-    text_es = models.TextField(blank=True, null=True)
-    text_en = models.TextField(blank=True, null=True)
-    is_correct = models.BooleanField(default=False)
+#     answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='changes')
+#     question = models.ForeignKey(Question, on_delete=models.CASCADE)
+#     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
+#     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+#     created_at = models.DateTimeField(default=timezone.now)
+#     text_es = models.TextField(blank=True, null=True)
+#     text_en = models.TextField(blank=True, null=True)
+#     is_correct = models.BooleanField(default=False)
 
-    class Meta:
-        unique_together = ('question', 'answer', 'action', 'created_at')
+#     class Meta:
+#         unique_together = ('question', 'answer', 'action', 'created_at')
 
-    def __str__(self):
-        return f"{self.teacher} {self.action} {self.answer}"
+#     def __str__(self):
+#         return f"{self.teacher} {self.action} {self.answer}"
 
 
 class QuestionBelongsToTopic(models.Model):

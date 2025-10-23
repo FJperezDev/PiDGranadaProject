@@ -21,7 +21,7 @@ class StudentGroup(models.Model):
     name_es = models.TextField()
     name_en = models.TextField()
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name='studentgroups')
-    studentCode = models.CharField(max_length=20, null=True, blank=True)
+    groupCode = models.CharField(max_length=20, null=True, blank=True)
 
     class Meta:
         unique_together = ('id', 'subject')

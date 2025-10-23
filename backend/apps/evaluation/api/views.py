@@ -1,7 +1,9 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.response import Response
+from rest_framework.decorators import action
+
 from .models import (
     Question, Answer,
-    TeacherMakeChangeQuestion, TeacherMakeChangeAnswer,
     QuestionBelongsToTopic, QuestionRelatedToConcept,
     QuestionEvaluationGroup
 )
@@ -10,97 +12,84 @@ from .serializers import (
     QuestionBelongsToTopicSerializer, QuestionRelatedToConceptSerializer,
     QuestionEvaluationGroupSerializer
 )
+from ..domain import services
 
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
 
-    def perform_create(self, serializer):
-        question = serializer.save()
-        teacher = getattr(self.request.user, 'teacher', None)
-        TeacherMakeChangeQuestion.objects.create(
-            question=question,
-            teacher=teacher,
-            action='created',
-            type=question.type,
-            statement_es=question.statement_es,
-            statement_en=question.statement_en,
-            approved=question.approved,
-            generated=question.generated,
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        topics = data.get('topics', [])
+        concepts = data.get('concepts', [])
+        question = services.create_question(
+            type=data.get('type'),
+            statement_es=data.get('statement_es'),
+            statement_en=data.get('statement_en'),
+            approved=data.get('approved', False),
+            generated=data.get('generated', False),
+            topics=QuestionBelongsToTopic.objects.filter(id__in=topics).values_list('topic', flat=True) if topics else None,
+            concepts=QuestionRelatedToConcept.objects.filter(id__in=concepts).values_list('concept', flat=True) if concepts else None
         )
+        serializer = self.get_serializer(question)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def perform_update(self, serializer):
-        question = serializer.save()
-        teacher = getattr(self.request.user, 'teacher', None)
-        TeacherMakeChangeQuestion.objects.create(
-            question=question,
-            teacher=teacher,
-            action='updated',
-            type=question.type,
-            statement_es=question.statement_es,
-            statement_en=question.statement_en,
-            approved=question.approved,
-            generated=question.generated,
+    def update(self, request, *args, **kwargs):
+        question = self.get_object()
+        data = request.data
+        topics = data.get('topics', [])
+        concepts = data.get('concepts', [])
+        question = services.update_question(
+            question,
+            type=data.get('type'),
+            statement_es=data.get('statement_es'),
+            statement_en=data.get('statement_en'),
+            approved=data.get('approved'),
+            generated=data.get('generated'),
+            topics=topics,
+            concepts=concepts
         )
+        serializer = self.get_serializer(question)
+        return Response(serializer.data)
 
-    def perform_destroy(self, instance):
-        teacher = getattr(self.request.user, 'teacher', None)
-        TeacherMakeChangeQuestion.objects.create(
-            question=instance,
-            teacher=teacher,
-            action='deleted',
-            type=instance.type,
-            statement_es=instance.statement_es,
-            statement_en=instance.statement_en,
-            approved=instance.approved,
-            generated=instance.generated,
-        )
-        instance.delete()
+    def destroy(self, request, *args, **kwargs):
+        question = self.get_object()
+        services.delete_question(question)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class AnswerViewSet(viewsets.ModelViewSet):
     queryset = Answer.objects.select_related('question').all()
     serializer_class = AnswerSerializer
 
-    def perform_create(self, serializer):
-        answer = serializer.save()
-        teacher = getattr(self.request.user, 'teacher', None)
-        TeacherMakeChangeAnswer.objects.create(
-            answer=answer,
-            question=answer.question,
-            teacher=teacher,
-            action='created',
-            text_es=answer.text_es,
-            text_en=answer.text_en,
-            is_correct=answer.is_correct,
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        question = Question.objects.get(pk=data['question'])
+        answer = services.create_answer(
+            question,
+            text_es=data.get('text_es'),
+            text_en=data.get('text_en'),
+            is_correct=data.get('is_correct', False)
         )
+        serializer = self.get_serializer(answer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def perform_update(self, serializer):
-        answer = serializer.save()
-        teacher = getattr(self.request.user, 'teacher', None)
-        TeacherMakeChangeAnswer.objects.create(
-            answer=answer,
-            question=answer.question,
-            teacher=teacher,
-            action='updated',
-            text_es=answer.text_es,
-            text_en=answer.text_en,
-            is_correct=answer.is_correct,
+    def update(self, request, *args, **kwargs):
+        answer = self.get_object()
+        data = request.data
+        answer = services.update_answer(
+            answer,
+            text_es=data.get('text_es'),
+            text_en=data.get('text_en'),
+            is_correct=data.get('is_correct')
         )
+        serializer = self.get_serializer(answer)
+        return Response(serializer.data)
 
-    def perform_destroy(self, instance):
-        teacher = getattr(self.request.user, 'teacher', None)
-        TeacherMakeChangeAnswer.objects.create(
-            answer=instance,
-            question=instance.question,
-            teacher=teacher,
-            action='deleted',
-            text_es=instance.text_es,
-            text_en=instance.text_en,
-            is_correct=instance.is_correct,
-        )
-        instance.delete()
-
+    def destroy(self, request, *args, **kwargs):
+        answer = self.get_object()
+        services.delete_answer(answer)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class QuestionBelongsToTopicViewSet(viewsets.ModelViewSet):
     queryset = QuestionBelongsToTopic.objects.all()

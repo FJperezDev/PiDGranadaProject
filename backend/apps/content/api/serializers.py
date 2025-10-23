@@ -61,6 +61,24 @@ class RelatedConceptSerializer(LanguageSerializerMixin, serializers.ModelSeriali
         lang = self.get_lang()
         return getattr(obj, f'description_{lang}', None)
 
+class ShortConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Concept
+        fields = [
+            'name',      
+            'name_es', 'name_en',     
+        ]
+        extra_kwargs = {
+            'name_es': {'write_only': True, 'required': True},
+            'name_en': {'write_only': True, 'required': True},
+        }
+
+    def get_name(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'name_{lang}', None)
+
 
 # Concept serializer
 class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
@@ -96,6 +114,24 @@ class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
         related = selectors.get_concepts_by_concept(obj.id)
         return ConceptSerializer(related, many=True, context=self.context).data
     
+class ShortTopicSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Topic
+        fields = [
+            'title',      
+            'title_es', 'title_en',     
+        ]
+        extra_kwargs = {
+            'title_es': {'write_only': True, 'required': True},
+            'title_en': {'write_only': True, 'required': True},
+        }
+
+    def get_title(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'title_{lang}', None)
+
 # Topic serializer with dynamic language support
 class TopicSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     

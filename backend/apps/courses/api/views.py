@@ -1,5 +1,6 @@
 # Create your views here.
 
+from django.forms import ValidationError
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -173,5 +174,62 @@ class StudentGroupViewSet(viewsets.ModelViewSet):
 
 
 class TeacherMakeChangeStudentGroupViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = TeacherMakeChangeStudentGroup.objects.select_related('group', 'teacher', 'subject')
+    queryset = TeacherMakeChangeStudentGroup.objects.select_related('group', 'teacher', 'subject').all()
     serializer_class = TeacherMakeChangeStudentGroupSerializer
+
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        subject = Subject.objects.get(pk=data['subject'])
+        teacher = getattr(request.user, 'teacher', None)
+        try:
+            group = services.create_student_group(
+                subject=subject,
+                name_es=data.get('name_es'),
+                name_en=data.get('name_en'),
+                teacher=teacher,
+                groupCode=data.get('groupCode')
+            )
+        except ValidationError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        # # Track teacher action
+        # TeacherMakeChangeStudentGroup.objects.create(
+        #     group=group,
+        #     subject=group.subject,
+        #     teacher=teacher,
+        #     action='created',
+        #     name_es=group.name_es,
+        #     name_en=group.name_en,
+        # )
+
+        serializer = self.get_serializer(group)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        group = self.get_object()
+        teacher = getattr(request.user, 'teacher', None)
+
+        # # Track teacher action
+        # TeacherMakeChangeStudentGroup.objects.create(
+        #     group=group,
+        #     subject=group.subject,
+        #     teacher=teacher,
+        #     action='deleted',
+        #     name_es=group.name_es,
+        #     name_en=group.name_en,
+        # )
+
+        services.delete_student_group(group)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['get'])
+    def my_groups(self, request):
+        """Retorna los grupos del teacher logueado"""
+        teacher = getattr(request.user, 'teacher', None)
+        if not teacher:
+            return Response([], status=status.HTTP_200_OK)
+
+        groups = StudentGroup.objects.filter(teacher=teacher)
+        serializer = self.get_serializer(groups, many=True)
+        return Response(serializer.data)

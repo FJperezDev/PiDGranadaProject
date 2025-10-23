@@ -1,7 +1,7 @@
 from ..api.models import Subject, StudentGroup, TeacherMakeChangeStudentGroup, SubjectIsAboutTopic
 from ...customauth.models import CustomTeacher as Teacher
-from ...content.domain.selectors import get_topic_by_title
 from ...content.api.models import Topic
+from ...evaluation.domain import selectors 
 
 def get_all_subjects():
     return Subject.objects.prefetch_related('topics').all()
@@ -15,3 +15,11 @@ def get_topics_by_subject(subject_id):
         .filter(subjects__subject_id=subject_id)
         .order_by('subjects__order_id')
     )
+
+def get_questions_for_subject(subject: Subject):
+    topics = get_topics_by_subject(subject.id)
+    questions = set()
+    for topic in topics:
+        topic_questions = selectors.get_question_by_topic(topic)
+        questions.update(topic_questions)
+    return questions
