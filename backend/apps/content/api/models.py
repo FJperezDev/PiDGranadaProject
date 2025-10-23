@@ -1,10 +1,11 @@
 from django.db import models
+from ...courses.api.models import Subject
 
 # Create your models here.
 
 class Topic(models.Model):
-    title_es = models.TextField()
-    title_en = models.TextField()
+    title_es = models.TextField(unique=True)
+    title_en = models.TextField(unique=True)
     description_es = models.TextField(null=True, blank=True)
     description_en = models.TextField(null=True, blank=True)
 
@@ -12,8 +13,8 @@ class Topic(models.Model):
         return self.title_es or self.title_en
 
 class Concept(models.Model):
-    name_es = models.TextField()
-    name_en = models.TextField()
+    name_es = models.TextField(unique=True)
+    name_en = models.TextField(unique=True)
     description_es = models.TextField(null=True, blank=True)
     description_en = models.TextField(null=True, blank=True)
 
@@ -32,7 +33,7 @@ class TopicIsAboutConcept(models.Model):
 Topic.add_to_class('concepts', models.ManyToManyField(Concept, through=TopicIsAboutConcept, related_name='topics'))
 
 class Epigraph(models.Model):
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='epigraphs')
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='epigraphs', unique=True)
     name_es = models.TextField()
     name_en = models.TextField()
     description_es = models.TextField(null=True, blank=True)

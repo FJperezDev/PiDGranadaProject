@@ -21,7 +21,7 @@ from django.contrib import admin
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('apps.customauth.urls')),
-    path('', include('apps.content.urls')),
-    path('', include('apps.courses.urls')),
-    path('', include('apps.evaluation.urls')),
+    path('', include('apps.content.domain.urls')),
+    path('', include('apps.courses.domain.urls')),
+    path('', include('apps.evaluation.domain.urls')),
 ]

@@ -2,8 +2,7 @@ from rest_framework import viewsets, permissions
 
 from ..models import CustomTeacher
 from ..serializers import CustomTeacherSerializer
-from ..permissions import IsSuperTeacher, IsTeacher
-
+from ...utils.permissions import IsSuperTeacher
 # Create your views here.
 
 """

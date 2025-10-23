@@ -1,14 +1,6 @@
 from rest_framework import serializers
 from .models import Topic, Concept, Epigraph
-
-# Utility mixin for language-aware fields
-class LanguageSerializerMixin:
-    def get_lang(self):
-        request = self.context.get('request')
-        if request:
-            lang = request.headers.get('Accept-Language', 'es')[:2]
-            return 'en' if lang == 'en' else 'es'
-        return 'es'
+from ...utils.mixins import LanguageSerializerMixin
 
 # Epigraph serializer
 class EpigraphSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
@@ -47,7 +39,7 @@ class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Concept
         fields = [
-            'id', 
+            'id',
             'name', 'description',
             'name_es', 'description_es',
             'name_en', 'description_en',
@@ -73,8 +65,8 @@ class TopicSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     
     title = serializers.SerializerMethodField(read_only=True)
     description = serializers.SerializerMethodField(read_only=True)
-    # epigraphs = EpigraphSerializer(many=True, read_only=True)
-    # concepts = ConceptSerializer(many=True, read_only=True)
+    epigraphs = EpigraphSerializer(many=True, read_only=True)
+    concepts = ConceptSerializer(many=True, read_only=True)
 
     class Meta:
         model = Topic
@@ -83,7 +75,7 @@ class TopicSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
             'title', 'description',          # lectura dinámica
             'title_es', 'title_en',          # escritura directa
             'description_es', 'description_en',  # escritura directa
-            # 'epigraphs', 'concepts'
+            'epigraphs', 'concepts'
         ]
         extra_kwargs = {
             'title_es': {'write_only': True, 'required': True},
@@ -91,11 +83,6 @@ class TopicSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
             'description_es': {'write_only': True, 'required': False},
             'description_en': {'write_only': True, 'required': False},
         }
-
-    def validate(self, attrs):
-        if not attrs.get('title_es') and not attrs.get('title_en'):
-            raise serializers.ValidationError("Debe incluir al menos un título.")
-        return attrs
 
     def get_title(self, obj):
         lang = self.get_lang()

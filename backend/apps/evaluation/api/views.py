@@ -10,8 +10,6 @@ from .serializers import (
     QuestionBelongsToTopicSerializer, QuestionRelatedToConceptSerializer,
     QuestionEvaluationGroupSerializer
 )
-from backend.apps.courses.api.models import Teacher
-
 
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()

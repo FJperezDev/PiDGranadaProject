@@ -5,9 +5,8 @@ from django.db import models
 from django.utils import timezone
 
 # Importar desde otras apps
-from backend.apps.courses.api.models import Teacher, StudentGroup
-from content.models import Topic, Concept 
-
+from ...courses.api.models import Teacher, StudentGroup
+from ...content.api.models import Topic, Concept 
 
 class Question(models.Model):
     QUESTION_TYPES = [
@@ -51,7 +50,7 @@ class TeacherMakeChangeQuestion(models.Model):
 
 
 class Answer(models.Model):
-    id = models.IntegerField()
+    id = models.IntegerField(primary_key=True, unique=True, auto_created=True)
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
     text_es = models.TextField(blank=True, null=True)
     text_en = models.TextField(blank=True, null=True)

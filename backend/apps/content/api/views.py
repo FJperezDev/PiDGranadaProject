@@ -1,34 +1,31 @@
-from rest_framework import viewsets
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from ...customauth.permissions import IsTeacher, IsSuperTeacher
+from ...utils.permissions import BaseContentViewSet
 from .serializers import ConceptSerializer, TopicSerializer, EpigraphSerializer
 from ..domain import services, selectors
 
 # Create your views here.
 
-class BaseContentViewSet(viewsets.ModelViewSet):
-    def get_permissions(self):
-        if(self.action in ['create', 'delete']):
-            permission_classes = [IsSuperTeacher]
-        else:
-            permission_classes = [IsTeacher]
-        return [perm() for perm in permission_classes]
-
 class TopicViewSet(BaseContentViewSet):
     serializer_class = TopicSerializer
     queryset = selectors.get_all_topics()
 
-    def perform_create(self, serializer):
-        data = serializer.validated_data
-        services.create_topic(
-            title_es=data.get('title_es'),
-            title_en=data.get('title_en'),
-            description_es=data.get('description_es'),
-            description_en=data.get('description_en')
-        )
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        try:
+            topic = services.create_topic(
+                title_es=data.get('title_es'),
+                title_en=data.get('title_en'),
+                description_es=data.get('description_es'),
+                description_en=data.get('description_en')
+            )
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(topic)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
     
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get'], )
     def concepts(self, request, pk=None):
         print("Dentro de concepts")
         """GET /topics/<id>/concepts/"""
@@ -43,6 +40,108 @@ class TopicViewSet(BaseContentViewSet):
         serializer = EpigraphSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
     
+    @epigraphs.mapping.post
+    def create_epigraph(self, request, pk=None):
+        """POST /topics/<id>/epigraphs/ — crea un nuevo epígrafe asociado al topic"""
+        topic = selectors.get_topic_by_id(topic_id=pk)
+        data = request.data
+
+        try:
+            epigraph = services.create_epigraph(
+                topic=topic,
+                name_es=data.get('name_es'),
+                name_en=data.get('name_en'),
+                order_id=data.get('order_id'),
+                description_es=data.get('description_es'),
+                description_en=data.get('description_en')
+            )
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = EpigraphSerializer(epigraph, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['put'], url_path='epigraphs/(?P<order_id>[^/.]+)')
+    def update_epigraph(self, request, pk=None, order_id=None):
+        """
+        PUT /topics/<topic_id>/epigraphs/<epigraph_id>/ — actualiza un epígrafe de un tema
+        """
+        topic = selectors.get_topic_by_id(topic_id=pk)
+        epigraph = selectors.get_epigraph_by_id(topic_id=pk, order_id=order_id)
+
+        if epigraph.topic.id != topic.id:
+            return Response({'detail': 'El epígrafe no pertenece a este tema.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        data = request.data
+        
+        try:
+            updated_epigraph = services.update_epigraph(
+                epigraph=epigraph,
+                name_es=data.get('name_es'),
+                name_en=data.get('name_en'),
+                order_id=data.get('order_id'),
+                description_es=data.get('description_es'),
+                description_en=data.get('description_en')
+            )
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = EpigraphSerializer(updated_epigraph, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @concepts.mapping.post
+    def link_concept(self, request, pk=None):
+        """POST /topics/<id>/concepts/ — asocia un concepto al topic"""
+        topic = selectors.get_topic_by_id(topic_id=pk)
+        data = request.data
+        concept_name = data.get('concept_name')
+        concept = selectors.get_concept_by_name(name=concept_name)
+        if not concept:
+            return Response({'detail': 'Concept not found'}, status=status.HTTP_404_NOT_FOUND)
+        order_id = data.get('order_id')
+
+        try:
+            link = services.link_concept_to_topic(
+                topic=topic,
+                concept=concept,
+                order_id=order_id
+            )
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'message': 'Concept linked to topic successfully',
+            'topic': topic.id,
+            'concept_id': concept.id,
+            'order_id': link.order_id
+        }, status=status.HTTP_200_OK)
+    
+    @concepts.mapping.delete
+    def unlink_concept(self, request, pk=None):
+        """DELETE /topics/<id>/concepts/ — asocia un concepto al topic"""
+        topic = selectors.get_topic_by_id(topic_id=pk)
+        data = request.data
+        concept_name = data.get('concept_name')
+        concept = selectors.get_concept_by_name(name=concept_name)
+        if not concept:
+            return Response({'detail': 'Concept not found'}, status=status.HTTP_404_NOT_FOUND)
+        order_id = data.get('order_id')
+
+        try:
+            link = services.unlink_concept_from_topic(
+                topic=topic,
+                concept=concept
+            )
+        except Exception as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'message': 'Concept linked to topic removed successfully',
+            'topic': topic.id,
+            'concept_id': concept.id
+        }, status=status.HTTP_200_OK)
+    
 
 class ConceptViewSet(BaseContentViewSet):
     serializer_class = ConceptSerializer
@@ -50,14 +149,25 @@ class ConceptViewSet(BaseContentViewSet):
     def get_queryset(self):
         return selectors.get_all_concepts()
     
-    def perform_create(self, serializer):
-        data = serializer.validated_data
-        services.create_concept(
-            name_es=data.get('name_es'),
-            name_en=data.get('name_en'),
-            description_es=data.get('description_es'),
-            description_en=data.get('description_en')
-        )
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        try: 
+            concept = services.create_concept(
+                name_es=data.get('name_es'),
+                name_en=data.get('name_en'),
+                description_es=data.get('description_es'),
+                description_en=data.get('description_en')
+            )
+            serializer = self.get_serializer(concept)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            concept = selectors.get_concept_by_name(data.get('name_es')) or selectors.get_concept_by_name(data.get('name_en'))
+            return Response({
+                'detail': str(e),
+                'concept': self.get_serializer(concept).data
+            }, 
+            status=status.HTTP_400_BAD_REQUEST)
+        
 
     @action(detail=True, methods=['post'])
     def topic(self, request, pk=None):

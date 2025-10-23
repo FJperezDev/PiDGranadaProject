@@ -10,16 +10,18 @@ class Subject(models.Model):
     description_es = models.TextField(blank=True, null=True)
     description_en = models.TextField(blank=True, null=True)
     modified = models.BooleanField(default=False)
+    
 
     def __str__(self):
         return self.name_es or self.name_en
 
 class StudentGroup(models.Model):
-    id = models.IntegerField()
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='groups')
+    id = models.IntegerField(primary_key=True, unique=True, auto_created=True)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='studentgroups')
     name_es = models.TextField()
     name_en = models.TextField()
-    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name='groups')
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name='studentgroups')
+    studentCode = models.CharField(max_length=20, null=True, blank=True)
 
     class Meta:
         unique_together = ('id', 'subject')
@@ -27,6 +29,16 @@ class StudentGroup(models.Model):
     def __str__(self):
         return f"{self.name_es} ({self.subject.name_es})"
     
+class SubjectIsAboutTopic(models.Model):
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='topics')
+    topic = models.ForeignKey('content.Topic', on_delete=models.CASCADE, related_name='subjects')
+    order_id = models.IntegerField(unique=True)
+
+    class Meta:
+        unique_together = ('subject', 'topic', 'order_id')
+
+    def __str__(self):
+        return f"{self.subject} is about {self.topic}"
 
 class TeacherMakeChangeStudentGroup(models.Model):
     ACTION_CHOICES = [
@@ -40,9 +52,7 @@ class TeacherMakeChangeStudentGroup(models.Model):
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     created_at = models.DateTimeField(default=timezone.now)
-    name_es = models.TextField()
-    name_en = models.TextField()
-
+    
     class Meta:
         unique_together = ('group', 'subject', 'action', 'created_at', 'teacher')
 

@@ -1,7 +1,7 @@
 # urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import TopicViewSet, ConceptViewSet, EpigraphViewSet
+from ..api.views import TopicViewSet, ConceptViewSet, EpigraphViewSet
 
 router = DefaultRouter()
 router.register(r'topics', TopicViewSet, basename='topic')
