@@ -1,5 +1,6 @@
 # apps/content/domain/selectors.py
 from ..api.models import Topic, Concept, Epigraph
+from django.db import models
 
 def get_all_topics():
     """Devuelve todos los temas con sus epígrafes y conceptos precargados."""
@@ -27,6 +28,9 @@ def get_epigraphs_by_topic(topic_id: int):
 
 
 # --- SPECIFIC SELECTORS ---
+def get_concept_by_id(concept_id: int) -> Concept:
+    """Obtiene un concepto específico por su ID."""
+    return Concept.objects.get(id=concept_id)
 
 def get_concept_by_name(name: str):
     """Devuelve un concepto específico por su nombre en cualquier idioma."""
@@ -35,6 +39,13 @@ def get_concept_by_name(name: str):
 def get_concepts_by_topic(topic_id: int):
     """Devuelve los conceptos asociados a un tema concreto."""
     return Concept.objects.filter(topics__id=topic_id).distinct()
+
+def get_concepts_by_concept(concept_id: int):
+    """Devuelve los conceptos relacionados con un concepto dado (en ambos sentidos)."""
+    return Concept.objects.filter(
+        models.Q(related_concepts_from__concept_to__id=concept_id) |
+        models.Q(related_concepts_to__concept_from__id=concept_id)
+    ).distinct()
 
 def get_epigraphs_by_topic(topic_id: int):
     """Devuelve los epígrafes pertenecientes a un tema concreto."""

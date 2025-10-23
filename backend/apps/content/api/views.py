@@ -1,3 +1,4 @@
+from django.forms import ValidationError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -149,6 +150,14 @@ class ConceptViewSet(BaseContentViewSet):
     def get_queryset(self):
         return selectors.get_all_concepts()
     
+    @action(detail=True, methods=['get'], )
+    def concepts(self, request, pk=None):
+        print("Dentro de concepts")
+        """GET /concepts/<id>/concepts/"""
+        queryset = selectors.get_concepts_by_concept(pk)
+        serializer = ConceptSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
     def create(self, request, *args, **kwargs):
         data = request.data
         try: 
@@ -167,14 +176,53 @@ class ConceptViewSet(BaseContentViewSet):
                 'concept': self.get_serializer(concept).data
             }, 
             status=status.HTTP_400_BAD_REQUEST)
-        
 
-    @action(detail=True, methods=['post'])
-    def topic(self, request, pk=None):
-        """POST /topics/<id>/epigraphs/"""
-        queryset = selectors.get_epigraphs_by_topic(pk)
-        serializer = EpigraphSerializer(queryset, many=True, context={'request': request})
-        return Response(serializer.data)
+    @concepts.mapping.post
+    def link_concept(self, request, pk=None):
+        """POST /concepts/<id>/concepts/ — enlaza este concepto con otro"""
+        concept_from = selectors.get_concept_by_id(pk)
+        concept_name = request.data.get('concept_name')
+        concept_to = selectors.get_concept_by_name(name=concept_name)
+        bidirectional = request.data.get('bidirectional', False)
+
+        if not concept_to:
+            return Response({'detail': 'Concept not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            services.link_concepts(concept_from, concept_to, bidirectional)
+        except ValidationError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'message': 'Concepts linked successfully',
+            'from_id': concept_from.id,
+            'to_id': concept_to.id,
+            'bidirectional': bidirectional
+        }, status=status.HTTP_200_OK)
+    
+    @concepts.mapping.delete
+    def unlink_concept(self, request, pk=None):
+        """DELETE /concepts/<id>/concepts/ — elimina la relación"""
+        concept_from = selectors.get_concept_by_id(pk)
+        concept_name = request.data.get('concept_name')
+        concept_to = selectors.get_concept_by_name(name=concept_name)
+        bidirectional = request.data.get('bidirectional', False)
+
+        if not concept_to:
+            return Response({'detail': 'Concept not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            services.unlink_concepts(concept_from, concept_to, bidirectional)
+        except ValidationError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'message': 'Concept link removed',
+            'from_id': concept_from.id,
+            'to_id': concept_to.id,
+            'bidirectional': bidirectional
+        }, status=status.HTTP_200_OK)
+    
 
 class EpigraphViewSet(BaseContentViewSet):
     serializer_class = EpigraphSerializer

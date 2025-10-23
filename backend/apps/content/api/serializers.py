@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Topic, Concept, Epigraph
 from ...utils.mixins import LanguageSerializerMixin
+from ..domain import selectors
 
 # Epigraph serializer
 class EpigraphSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
@@ -31,8 +32,8 @@ class EpigraphSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
         lang = self.get_lang()
         return getattr(obj, f'description_{lang}', None)
 
-# Concept serializer
-class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
+# RelatedConcept serializer
+class RelatedConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField(read_only=True)
     description = serializers.SerializerMethodField(read_only=True)
 
@@ -60,6 +61,41 @@ class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
         lang = self.get_lang()
         return getattr(obj, f'description_{lang}', None)
 
+
+# Concept serializer
+class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
+    name = serializers.SerializerMethodField(read_only=True)
+    description = serializers.SerializerMethodField(read_only=True)
+    related_concepts = RelatedConceptSerializer(many=True, read_only=True)
+    class Meta:
+        model = Concept
+        fields = [
+            'id',
+            'name', 'description',
+            'name_es', 'description_es',
+            'name_en', 'description_en',
+            'related_concepts',
+        ]
+
+        extra_kwargs = {
+            'name_es': {'write_only': True, 'required': True},
+            'name_en': {'write_only': True, 'required': True},
+            'description_es': {'write_only': True, 'required': False},
+            'description_en': {'write_only': True, 'required': False},
+        }
+
+    def get_name(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'name_{lang}', None)
+
+    def get_description(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'description_{lang}', None)
+    
+    def get_related_concepts(self, obj):
+        related = selectors.get_concepts_by_concept(obj.id)
+        return ConceptSerializer(related, many=True, context=self.context).data
+    
 # Topic serializer with dynamic language support
 class TopicSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     

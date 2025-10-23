@@ -21,6 +21,26 @@ class Concept(models.Model):
     def __str__(self):
         return self.name_es or self.name_en
 
+class ConceptIsRelatedToConcept(models.Model):
+    concept_from= models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='related_concepts_from')
+    concept_to = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='related_concepts_to')
+
+    class Meta:
+        unique_together = ('concept_from', 'concept_to')
+
+    def __str__(self):
+        return f"{self.concept_from} → {self.concept_to}"
+
+Concept.add_to_class(
+    'related_concepts',
+    models.ManyToManyField(
+        'self',
+        through='ConceptIsRelatedToConcept',
+        symmetrical=False,
+        related_name='related_to_concepts'
+    )
+)
+
 class TopicIsAboutConcept(models.Model):
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE)
     concept = models.ForeignKey(Concept, on_delete=models.CASCADE)

@@ -1,5 +1,5 @@
 # apps/content/domain/services.py
-from ..api.models import Topic, Concept, Epigraph, TopicIsAboutConcept
+from ..api.models import Topic, Concept, Epigraph, TopicIsAboutConcept, ConceptIsRelatedToConcept
 from django.core.exceptions import ValidationError
 
 # --- Topic Services ---
@@ -77,3 +77,39 @@ def unlink_concept_from_topic(topic: Topic, concept: Concept) -> None:
     if not relation.exists():
         raise ValidationError("Este concepto no está asociado al tema.")
     relation.delete()
+
+# --- Concept ↔ Concept relation ---
+def link_concepts(concept_from: Concept, concept_to: Concept, bidirectional=False):
+    """Asocia uno o dos conceptos (de forma opcional bidireccional)."""
+    if concept_from == concept_to:
+        raise ValidationError("No se puede asociar un concepto consigo mismo.")
+    
+    if ConceptIsRelatedToConcept.objects.filter(
+        concept_from=concept_from, concept_to=concept_to
+    ).exists():
+        raise ValidationError("Estos conceptos ya están relacionados.")
+    
+    ConceptIsRelatedToConcept.objects.create(
+        concept_from=concept_from, concept_to=concept_to
+    )
+
+    if bidirectional:
+        ConceptIsRelatedToConcept.objects.get_or_create(
+            concept_from=concept_to, concept_to=concept_from
+        )
+
+def unlink_concepts(concept_from: Concept, concept_to: Concept, bidirectional=False) -> None:
+    """Desasocia dos conceptos entre sí."""
+    relations = ConceptIsRelatedToConcept.objects.filter(
+        concept_from=concept_from, concept_to=concept_to
+    )
+
+    if not relations.exists():
+        raise ValidationError("Estos conceptos no están relacionados.")
+    
+    relations.delete()
+
+    if bidirectional:
+        ConceptIsRelatedToConcept.objects.filter(
+            concept_from=concept_to, concept_to=concept_from
+        ).delete()
