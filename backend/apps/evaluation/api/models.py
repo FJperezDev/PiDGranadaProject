@@ -49,7 +49,6 @@ class Question(models.Model):
 
 
 class Answer(models.Model):
-    id = models.IntegerField(primary_key=True, unique=True, auto_created=True)
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
     text_es = models.TextField(blank=True, null=True)
     text_en = models.TextField(blank=True, null=True)

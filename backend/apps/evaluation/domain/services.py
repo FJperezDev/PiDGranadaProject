@@ -29,10 +29,21 @@ def create_question(type: str, statement_es: str = None, statement_en: str = Non
 
 def update_question(question: Question, type: str = None, statement_es: str = None,
                     statement_en: str = None, approved: bool = None,
-                    generated: bool = None, topics: set[Topic] = None, concepts: set[Concept] = None) -> Question:
+                    generated: bool = None, topics: set[Topic] = None, 
+                    concepts: set[Concept] = None, is_true = None) -> Question:
     """Actualiza una pregunta con los nuevos datos proporcionados."""
     if type is not None:
         question.type = type
+        if type == 'true_false':
+            if is_true is not None:
+                answers = question.answers.all()
+                for answer in answers:
+                    delete_answer(answer)
+                create_answer(question, text_es='Verdadero', text_en='True', is_correct=is_true)
+                create_answer(question, text_es='Falso', text_en='False', is_correct=not is_true)
+            else:
+                raise ValidationError("Debe proporcionar el valor de is_true para preguntas de verdadero/falso.")
+
     if statement_es is not None:
         question.statement_es = statement_es
     if statement_en is not None:

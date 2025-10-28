@@ -7,7 +7,6 @@ from ...evaluation.api.models import QuestionEvaluationGroup
 from django.core.exceptions import ValidationError
 BIG_ENOUGH_INT = 1_000
 
-
 def create_subject(name_es: str, name_en: str, description_es=None, description_en=None) -> Subject:
     """Crea una nueva asignatura con validaciones básicas."""
     if not name_es and not name_en:
