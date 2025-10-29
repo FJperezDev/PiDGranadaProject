@@ -5,7 +5,6 @@ from apps.content.api.models import Topic, Concept
 from apps.content.domain import selectors as content_selectors
 from apps.utils.audit import makeChanges
 
-
 # --- Question Services ---
 def create_question(user, type: str, statement_es: str = None, statement_en: str = None,
                     approved: bool = False, generated: bool = False, topics: set[Topic] = None, 
@@ -109,3 +108,4 @@ def update_answer(user, answer: Answer, text_es: str = None, text_en: str = None
 def delete_answer(user, answer: Answer, _from_audit: bool = False) -> None:
     """Elimina una respuesta dada."""
     answer.delete()
+

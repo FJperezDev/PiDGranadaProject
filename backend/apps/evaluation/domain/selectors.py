@@ -1,4 +1,4 @@
-from apps.evaluation.api.models import Question
+from apps.evaluation.api.models import Answer, Question
 from apps.content.api.models import Subject, Topic
 from apps.evaluation.api.models import QuestionBelongsToTopic, TeacherMakeChangeQuestion
 from django.db import models
@@ -114,3 +114,11 @@ def get_ev_count_by_topic(topic_id: int) -> int:
     for concept in concepts:
         correct_count += get_ev_count_by_concept(concept.id)
     return {correct_count}
+
+def get_answers_for_question(question: Question) -> list[Answer]:
+    """Obtiene todas las respuestas asociadas a una pregunta dada."""
+    return list(question.answers.all())
+
+def get_correct_answer_for_question(question: Question) -> list[Answer]:
+    """Obtiene todas las respuestas correctas asociadas a una pregunta dada."""
+    return list(question.answers.filter(is_correct=True))

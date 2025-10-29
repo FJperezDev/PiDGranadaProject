@@ -244,41 +244,66 @@ This module contains the logic for creating, updating, and deleting questions an
 #### Question Management
 
 *   `create_question(user, type, statement_es, statement_en, ...)`
-    *   **Description**: Creates a new `Question` and can associate it with topics and concepts. Triggers an audit log entry.
+    *   **Description**: Creates a new `Question`. It validates that statements are provided for both languages and can associate the question with a set of topics and concepts. It also triggers an audit log entry.
     *   **Parameters**:
         *   `user` (CustomTeacher): The user performing the action.
         *   `type` (str): `'multiple'` or `'truefalse'`.
         *   `statement_es` (str), `statement_en` (str): Question statements.
-        *   `topics` (set[Topic], optional): Topics to associate.
-        *   `concepts` (set[Concept], optional): Concepts to associate.
+        *   `approved` (bool, optional): The approval status.
+        *   `generated` (bool, optional): Whether the question was auto-generated.
+        *   `topics` (set[Topic], optional): A set of `Topic` objects to associate with the question.
+        *   `concepts` (set[Concept], optional): A set of `Concept` objects to associate with the question.
     *   **Returns**: A new `Question` instance.
     *   **View Usage**: Used in `QuestionViewSet.create()`.
 
 *   `update_question(user, question, type=None, is_true=None, ...)`
-    *   **Description**: Updates an existing `Question`. Handles type changes (e.g., to `'true_false'`) by managing answers automatically. Triggers an audit log entry.
+    *   **Description**: Updates an existing `Question`. It can change the type, statements, approval status, and topic/concept associations. If the type is changed to `'true_false'`, it automatically deletes old answers and creates new "True" and "False" answers based on the `is_true` parameter. Triggers an audit log entry.
     *   **Parameters**:
         *   `user` (CustomTeacher): The user performing the action.
         *   `question` (Question): The question to update.
         *   `is_true` (bool): Required if changing `type` to `'true_false'`.
     *   **Returns**: The updated `Question` instance.
     *   **View Usage**: Used in `QuestionViewSet.update()`.
+    *   **Parameters**:
+        *   `user` (CustomTeacher): The user performing the action.
+        *   `question` (Question): The question instance to update.
+        *   Accepts optional `type`, `statement_es`, `statement_en`, `approved`, `generated`.
+        *   `topics` (list of str, optional): A list of topic titles (strings) to associate. Existing associations will be replaced.
+        *   `concepts` (list of str, optional): A list of concept names (strings) to associate. Existing associations will be replaced.
+        *   `is_true` (bool): Required only when changing `type` to `'true_false'`. Specifies which of the new answers ("True" or "False") is correct.
 
 *   `delete_question(user, question)`
     *   **Description**: Deletes a `Question` and its associated answers. Triggers an audit log entry.
+    *   **Parameters**:
+        *   `user` (CustomTeacher): The user performing the action.
+        *   `question` (Question): The question to delete.
     *   **View Usage**: Used in `QuestionViewSet.destroy()`.
 
 #### Answer Management
 
 *   `create_answer(user, question, text_es, text_en, is_correct=False)`
     *   **Description**: Creates a new `Answer` for a given `Question`.
+    *   **Parameters**:
+        *   `user` (CustomTeacher): The user performing the action.
+        *   `question` (Question): The parent question.
+        *   `text_es` (str): The answer text in Spanish.
+        *   `text_en` (str): The answer text in English.
+        *   `is_correct` (bool): Whether this answer is the correct one.
     *   **Returns**: A new `Answer` instance.
-    *   **View Usage**: Used in `AnswerViewSet.create()`.
+    *   **View Usage**: Used in `AnswerViewSet.create()` and internally by `update_question`.
 
 *   `update_answer(user, answer, text_es=None, text_en=None, is_correct=None)`
     *   **Description**: Updates an existing `Answer`. Triggers an audit log entry.
+    *   **Parameters**:
+        *   `user` (CustomTeacher): The user performing the action.
+        *   `answer` (Answer): The answer instance to update.
+        *   Accepts optional `text_es`, `text_en`, `is_correct`.
     *   **Returns**: The updated `Answer` instance.
     *   **View Usage**: Used in `AnswerViewSet.update()`.
 
 *   `delete_answer(user, answer)`
     *   **Description**: Deletes an `Answer`.
+    *   **Parameters**:
+        *   `user` (CustomTeacher): The user performing the action.
+        *   `answer` (Answer): The answer to delete.
     *   **View Usage**: Used in `AnswerViewSet.destroy()`.
