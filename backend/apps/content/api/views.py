@@ -2,15 +2,17 @@ from django.forms import ValidationError
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from ...utils.permissions import BaseContentViewSet
+from apps.utils.permissions import BaseContentViewSet
 from .serializers import ConceptSerializer, TopicSerializer, EpigraphSerializer
-from ..domain import services, selectors
+from apps.content.domain import services, selectors
 
 # Create your views here.
 
 class TopicViewSet(BaseContentViewSet):
     serializer_class = TopicSerializer
-    queryset = selectors.get_all_topics()
+
+    def get_queryset(self):
+        return selectors.get_all_topics()
 
     def create(self, request, *args, **kwargs):
         data = request.data

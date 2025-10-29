@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Topic, Concept, Epigraph
-from ...utils.mixins import LanguageSerializerMixin
-from ..domain import selectors
+from apps.utils.mixins import LanguageSerializerMixin
+from apps.content.domain import selectors
 
 # Epigraph serializer
 class EpigraphSerializer(LanguageSerializerMixin, serializers.ModelSerializer):

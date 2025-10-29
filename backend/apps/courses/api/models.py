@@ -6,11 +6,12 @@ from apps.utils.audit import ACTION_CHOICES
 # Create your models here.
 
 class Subject(models.Model):
-    name_es = models.TextField()
-    name_en = models.TextField()
+    name_es = models.TextField(unique=True)
+    name_en = models.TextField(unique=True)
     description_es = models.TextField(blank=True, null=True)
     description_en = models.TextField(blank=True, null=True)
-    
+    modified = models.BooleanField(default=False)
+
     def __str__(self):
         return self.name_es or self.name_en
 
@@ -30,8 +31,8 @@ class TeacherMakeChangeSubject(models.Model):
 
 class StudentGroup(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='studentgroups')
-    name_es = models.TextField()
-    name_en = models.TextField()
+    name_es = models.TextField(unique=True)
+    name_en = models.TextField(unique=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name='studentgroups')
     groupCode = models.CharField(max_length=20, null=True, blank=True)
 

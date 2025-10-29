@@ -17,7 +17,7 @@ class SubjectViewSet(viewsets.ModelViewSet):
         data = request.data
         try:
             subject = services.create_subject(
-                name_es=data.get('name_es'),\
+                name_es=data.get('name_es'),
                 name_en=data.get('name_en'),
                 description_es=data.get('description_es'),
                 description_en=data.get('description_en')
@@ -132,46 +132,33 @@ class SubjectViewSet(viewsets.ModelViewSet):
 
         return Response(StudentGroupSerializer(group, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['update'], url_path='groups')
+    def update_group(self, request, pk=None):
+        """PUT /subjects/<id>/groups/<id>/ — actualiza un grupo asociado a la asignatura"""
+        group = selectors.get_student_group_by_id(group_id=pk)
+        if not group:
+            return Response({'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = StudentGroupSerializer(group, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['get'], url_path='groups')
+    def get_groups(self, request, pk=None):
+        """GET /subjects/<id>/groups/ — obtiene los grupos asociados a la asignatura"""
+        subject = selectors.get_subject_by_id(subject_id=pk)
+        if not subject:
+            return Response({'detail': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        groups = selectors.get_student_groups_by_subject(subject=subject)
+        return Response(StudentGroupSerializer(groups, many=True, context={'request': request}).data)
+
 class StudentGroupViewSet(viewsets.ModelViewSet):
     queryset = StudentGroup.objects.select_related('subject', 'teacher').all()
     serializer_class = StudentGroupSerializer
-
-    def perform_create(self, serializer):
-        group = serializer.save()
-        teacher = getattr(self.request.user, 'teacher', None)
-        TeacherMakeChangeStudentGroup.objects.create(
-            group=group,
-            subject=group.subject,
-            teacher=teacher,
-            action='created',
-            name_es=group.name_es,
-            name_en=group.name_en,
-        )
-
-    def perform_update(self, serializer):
-        group = serializer.save()
-        teacher = getattr(self.request.user, 'teacher', None)
-        TeacherMakeChangeStudentGroup.objects.create(
-            group=group,
-            subject=group.subject,
-            teacher=teacher,
-            action='updated',
-            name_es=group.name_es,
-            name_en=group.name_en,
-        )
-
-    def perform_destroy(self, instance):
-        teacher = getattr(self.request.user, 'teacher', None)
-        TeacherMakeChangeStudentGroup.objects.create(
-            group=instance,
-            subject=instance.subject,
-            teacher=teacher,
-            action='deleted',
-            name_es=instance.name_es,
-            name_en=instance.name_en,
-        )
-        instance.delete()
-
+    
 
 class TeacherMakeChangeStudentGroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = TeacherMakeChangeStudentGroup.objects.select_related('group', 'teacher', 'subject').all()

@@ -99,4 +99,4 @@ class QuestionEvaluationGroup(models.Model):
         unique_together = ('group', 'question')
 
     def __str__(self):
-        return f"{self.group} evaluated Q{self.question.id}"
+        return f"{self.group} evaluated Q{self.question.id}  "

@@ -1,9 +1,8 @@
 from rest_framework import serializers
 from .models import Subject, StudentGroup, TeacherMakeChangeStudentGroup, SubjectIsAboutTopic
-from ...customauth.models import CustomTeacher as Teacher
-from ...utils.mixins import LanguageSerializerMixin
-from ...content.api.serializers import TopicSerializer
-from ...customauth.serializers import CustomTeacherSerializer as TeacherSerializer
+from apps.utils.mixins import LanguageSerializerMixin
+from apps.content.api.serializers import TopicSerializer
+from apps.customauth.serializers import CustomTeacherSerializer as TeacherSerializer
 
 class SubjectSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
@@ -38,7 +37,7 @@ class SubjectSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
         topics = [st.topic for st in subject_topics]
         return TopicSerializer(topics, many=True, context=self.context).data
 
-class StudentGroupSerializer(serializers.ModelSerializer):
+class StudentGroupSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     subject = SubjectSerializer(read_only=True)
     teacher = TeacherSerializer(read_only=True)
@@ -48,9 +47,8 @@ class StudentGroupSerializer(serializers.ModelSerializer):
         model = StudentGroup
         fields = [
             'id', 'code', 
-            'name', 'description', 
-            'name_es', 'name_en', 
-            'topics']
+            'name', 'name_es', 'name_en', 
+            'subject', 'teacher']
         extra_kwargs = {
             'name_es': {'write_only': True, 'required': True},
             'name_en': {'write_only': True, 'required': True},
@@ -60,7 +58,7 @@ class StudentGroupSerializer(serializers.ModelSerializer):
         lang = self.get_lang()
         return getattr(obj, f'name_{lang}', None)
 
-class TeacherMakeChangeStudentGroupSerializer(serializers.ModelSerializer):
+class TeacherMakeChangeStudentGroupSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     teacher = TeacherSerializer(read_only=True)
     group = StudentGroupSerializer(read_only=True)
     subject = SubjectSerializer(read_only=True)

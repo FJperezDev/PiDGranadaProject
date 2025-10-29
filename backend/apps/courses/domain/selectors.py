@@ -23,3 +23,6 @@ def get_questions_for_subject(subject: Subject):
         topic_questions = selectors.get_question_by_topic(topic)
         questions.update(topic_questions)
     return questions
+
+def get_student_group_by_id(group_id: int) -> StudentGroup:
+    return StudentGroup.objects.get(id=group_id)

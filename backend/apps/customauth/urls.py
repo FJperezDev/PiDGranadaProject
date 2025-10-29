@@ -6,6 +6,7 @@ from .views import TeacherViewSet, RegisterView, LogoutView, LoggedUserView, Log
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
+app_name = 'customauth'
 router = routers.DefaultRouter()
 
 # ViewSet for User model
