@@ -23,6 +23,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
         topics = data.get('topics', [])
         concepts = data.get('concepts', [])
         question = services.create_question(
+            user=request.user,
             type=data.get('type'),
             statement_es=data.get('statement_es'),
             statement_en=data.get('statement_en'),
@@ -40,7 +41,8 @@ class QuestionViewSet(viewsets.ModelViewSet):
         topics = data.get('topics', [])
         concepts = data.get('concepts', [])
         question = services.update_question(
-            question,
+            user=request.user,
+            question=question,
             type=data.get('type'),
             statement_es=data.get('statement_es'),
             statement_en=data.get('statement_en'),
@@ -54,7 +56,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         question = self.get_object()
-        services.delete_question(question)
+        services.delete_question(user=request.user, question=question)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -66,7 +68,8 @@ class AnswerViewSet(viewsets.ModelViewSet):
         data = request.data
         question = Question.objects.get(pk=data['question'])
         answer = services.create_answer(
-            question,
+            user=request.user,
+            question=question,
             text_es=data.get('text_es'),
             text_en=data.get('text_en'),
             is_correct=data.get('is_correct', False)
@@ -78,7 +81,8 @@ class AnswerViewSet(viewsets.ModelViewSet):
         answer = self.get_object()
         data = request.data
         answer = services.update_answer(
-            answer,
+            user=request.user,
+            answer=answer,
             text_es=data.get('text_es'),
             text_en=data.get('text_en'),
             is_correct=data.get('is_correct')
@@ -88,7 +92,10 @@ class AnswerViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         answer = self.get_object()
-        services.delete_answer(answer)
+        services.delete_answer(
+            user=request.user,
+            answer=answer
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class QuestionBelongsToTopicViewSet(viewsets.ModelViewSet):

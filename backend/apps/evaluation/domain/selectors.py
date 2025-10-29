@@ -1,6 +1,6 @@
-from ..api.models import Question
-from ...content.api.models import Subject, Topic
-from ..api.models import QuestionBelongsToTopic
+from apps.evaluation.api.models import Question
+from apps.content.api.models import Subject, Topic
+from apps.evaluation.api.models import QuestionBelongsToTopic, TeacherMakeChangeQuestion
 
 def get_questions_for_topic(topic: Topic):
     """Obtiene todas las preguntas asociadas a un topic dado."""
@@ -19,3 +19,9 @@ def get_questions_for_subject(subject: Subject):
     return Question.objects.filter(
         topics__in=subject.topics.values_list('topic', flat=True)
     ).distinct()
+
+def get_last_change_question(question: Question):
+    """Obtiene el último cambio realizado en una pregunta dada."""
+    return TeacherMakeChangeQuestion.objects.filter(
+        question=question
+    ).order_by('-created_at').first()

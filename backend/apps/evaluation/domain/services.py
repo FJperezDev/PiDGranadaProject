@@ -1,10 +1,13 @@
+from datetime import timezone
 from django.forms import ValidationError
 from ..api.models import Question, Answer, QuestionBelongsToTopic, QuestionRelatedToConcept
-from ...content.api.models import Topic, Concept
-from ...content.domain import selectors
+from apps.content.api.models import Topic, Concept
+from apps.content.domain import selectors as content_selectors
+from apps.utils.audit import makeChanges
+
 
 # --- Question Services ---
-def create_question(type: str, statement_es: str = None, statement_en: str = None,
+def create_question(user, type: str, statement_es: str = None, statement_en: str = None,
                     approved: bool = False, generated: bool = False, topics: set[Topic] = None, 
                     concepts: set[Concept] = None) -> Question:
     """Crea una nueva pregunta con validaciones básicas."""
@@ -24,10 +27,11 @@ def create_question(type: str, statement_es: str = None, statement_en: str = Non
     if concepts:
         for concept in concepts:
             QuestionRelatedToConcept.objects.create(question=question, concept=concept)
+    makeChanges(question, 'created', user)
 
     return question
 
-def update_question(question: Question, type: str = None, statement_es: str = None,
+def update_question(user, question: Question, type: str = None, statement_es: str = None,
                     statement_en: str = None, approved: bool = None,
                     generated: bool = None, topics: set[Topic] = None, 
                     concepts: set[Concept] = None, is_true = None) -> Question:
@@ -55,22 +59,24 @@ def update_question(question: Question, type: str = None, statement_es: str = No
     if topics is not None:
         QuestionBelongsToTopic.objects.filter(question=question).delete()
         for title in topics:
-            topic = selectors.get_topic_by_title(title)
+            topic = content_selectors.get_topic_by_title(title)
             QuestionBelongsToTopic.objects.create(question=question, topic=topic)
     if concepts is not None:
         QuestionRelatedToConcept.objects.filter(question=question).delete()
         for name in concepts:
-            concept = selectors.get_concept_by_name(name)
+            concept = content_selectors.get_concept_by_name(name)
             QuestionRelatedToConcept.objects.create(question=question, concept=concept)
     question.save()
+    makeChanges(question, 'updated', user)
     return question
 
-def delete_question(question: Question) -> None:
+def delete_question(user, question: Question) -> None:
     """Elimina una pregunta dada."""
+    makeChanges(question, 'deleted', user)
     question.delete()
 
 # --- Answer Services ---
-def create_answer(question: Question, text_es: str = None, text_en: str = None,
+def create_answer(user, question: Question, text_es: str = None, text_en: str = None,
                    is_correct: bool = False) -> Answer:
     """Crea una nueva respuesta para una pregunta dada."""
     if not text_es or not text_en:
@@ -81,9 +87,10 @@ def create_answer(question: Question, text_es: str = None, text_en: str = None,
         text_en=text_en,
         is_correct=is_correct,
     )
+    makeChanges(answer, 'created', user)
     return answer
 
-def update_answer(answer: Answer, text_es: str = None, text_en: str = None,
+def update_answer(user, answer: Answer, text_es: str = None, text_en: str = None,
                    is_correct: bool = None) -> Answer:
     """Actualiza una respuesta con los nuevos datos proporcionados."""
     if text_es is not None:
@@ -95,6 +102,6 @@ def update_answer(answer: Answer, text_es: str = None, text_en: str = None,
     answer.save()
     return answer
 
-def delete_answer(answer: Answer) -> None:
+def delete_answer(user, answer: Answer) -> None:
     """Elimina una respuesta dada."""
     answer.delete()

@@ -1,5 +1,7 @@
+from datetime import timezone
 from django.db import models
-from ...courses.api.models import Subject, SubjectIsAboutTopic
+from apps.customauth.models import CustomTeacher as Teacher
+from apps.utils.audit import ACTION_CHOICES
 
 # Create your models here.
 
@@ -12,6 +14,13 @@ class Topic(models.Model):
     def __str__(self):
         return self.title_es or self.title_en
 
+class TeacherMakeChangeTopic(models.Model):
+    old_topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='old_changes')
+    new_topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='changes')
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+
 class Concept(models.Model):
     name_es = models.TextField(unique=True)
     name_en = models.TextField(unique=True)
@@ -20,6 +29,13 @@ class Concept(models.Model):
 
     def __str__(self):
         return self.name_es or self.name_en
+
+class TeacherMakeChangeConcept(models.Model):
+    old_concept = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='old_changes')
+    new_concept = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='changes')
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
 
 class ConceptIsRelatedToConcept(models.Model):
     concept_from= models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='related_concepts_from')
@@ -66,3 +82,10 @@ class Epigraph(models.Model):
 
     def __str__(self):
         return self.name_es or self.name_en
+
+class TeacherMakeChangeEpigraph(models.Model):
+    old_epigraph = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='old_changes')
+    new_epigraph = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='changes')
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    created_at = models.DateTimeField(default=timezone.now)
