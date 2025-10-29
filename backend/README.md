@@ -6,6 +6,7 @@ This document provides an overview of the backend for the "Proyecto PiD" applica
 - Setup and Installation
 - Running the Application
 - Running Tests
+- API Endpoint Documentation
 - API Services Documentation
   - Courses App
   - Content App
@@ -56,6 +57,94 @@ The project uses `pytest` for testing. To run the complete test suite, execute t
 ```bash
 pytest -v
 ```
+
+---
+
+## API Endpoint Documentation
+
+This section details the available API endpoints, their functionalities, and the required permissions.
+
+### Authentication & Permissions
+
+The permission system is role-based for teachers:
+
+*   **`AllowAny`**: Read-only operations (`GET`) are generally public and do not require authentication.
+*   **`IsTeacher`**: Creation and update operations (`POST`, `PUT`, `PATCH`) require an authenticated teacher account.
+*   **`IsSuperTeacher`**: Deletion operations (`DELETE`) require an authenticated teacher account with `is_super` privileges.
+
+### 1. Content App
+
+#### Topic Endpoints (`/topics/`)
+
+*   `GET /topics/`: List all topics. (AllowAny)
+*   `POST /topics/`: Create a new topic. (IsTeacher)
+*   `GET /topics/{id}/`: Retrieve a specific topic with its epigraphs and concepts. (AllowAny)
+*   `PUT/PATCH /topics/{id}/`: Update a topic. (IsTeacher)
+*   `DELETE /topics/{id}/`: Delete a topic. (IsSuperTeacher)
+*   `GET /topics/{id}/epigraphs/`: List all epigraphs for a specific topic. (AllowAny)
+*   `POST /topics/{id}/epigraphs/`: Create a new epigraph for a topic. (IsTeacher)
+*   `PUT /topics/{id}/epigraphs/{order_id}/`: Update an epigraph within a topic. (IsTeacher)
+*   `GET /topics/{id}/concepts/`: List all concepts linked to a specific topic. (AllowAny)
+*   `POST /topics/{id}/concepts/`: Link an existing concept to a topic. (IsTeacher)
+*   `DELETE /topics/{id}/concepts/`: Unlink a concept from a topic. (IsSuperTeacher)
+
+#### Concept Endpoints (`/concepts/`)
+
+*   `GET /concepts/`: List all concepts. (AllowAny)
+*   `POST /concepts/`: Create a new concept. (IsTeacher)
+*   `GET /concepts/{id}/`: Retrieve a specific concept and its related concepts. (AllowAny)
+*   `PUT/PATCH /concepts/{id}/`: Update a concept. (IsTeacher)
+*   `DELETE /concepts/{id}/`: Delete a concept. (IsSuperTeacher)
+*   `GET /concepts/{id}/concepts/`: List concepts related to a specific concept. (AllowAny)
+*   `POST /concepts/{id}/concepts/`: Create a relationship between two concepts. (IsTeacher)
+*   `DELETE /concepts/{id}/concepts/`: Remove the relationship between two concepts. (IsSuperTeacher)
+
+#### Epigraph Endpoints (`/epigraphs/`)
+
+*   `GET /epigraphs/`: List all epigraphs across all topics. (AllowAny)
+*   *(Note: Most epigraph operations are nested under `/topics/{id}/epigraphs/` for clarity).*
+
+### 2. Courses App
+
+#### Subject Endpoints (`/subjects/`)
+
+*   `GET /subjects/`: List all subjects. (AllowAny)
+*   `POST /subjects/`: Create a new subject. (IsTeacher)
+*   `GET /subjects/{id}/`: Retrieve a specific subject. (AllowAny)
+*   `PUT/PATCH /subjects/{id}/`: Update a subject. (IsTeacher)
+*   `DELETE /subjects/{id}/`: Delete a subject. (IsSuperTeacher)
+*   `GET /subjects/{id}/topics/`: List topics linked to a subject. (AllowAny)
+*   `POST /subjects/{id}/topics/`: Link a topic to a subject. (IsTeacher)
+*   `PUT /subjects/{id}/topics/`: Swap the order of two topics within a subject. (IsTeacher)
+*   `DELETE /subjects/{id}/topics/`: Unlink a topic from a subject. (IsSuperTeacher)
+*   `GET /subjects/{id}/groups/`: List all student groups for a subject. (IsTeacher)
+*   `POST /subjects/{id}/groups/`: Create a new student group for a subject. (IsTeacher)
+*   `GET /subjects/{id}/groups/{group_pk}/`: Retrieve a specific student group. (IsTeacher)
+*   `PUT /subjects/{id}/groups/{group_pk}/`: Update a student group. (IsTeacher)
+*   `DELETE /subjects/{id}/groups/{group_pk}/`: Delete a student group. (IsSuperTeacher)
+
+#### Student Group Endpoints (`/studentgroups/`)
+
+*   `GET /studentgroups/`: List all student groups. (IsTeacher)
+*   `GET /studentgroups/my_groups/`: List all groups managed by the currently authenticated teacher. (IsTeacher)
+
+### 3. Evaluation App
+
+#### Question Endpoints (`/questions/`)
+
+*   `GET /questions/`: List all questions. (AllowAny)
+*   `POST /questions/`: Create a new question. (IsTeacher)
+*   `GET /questions/{id}/`: Retrieve a specific question with its answers. (AllowAny)
+*   `PUT/PATCH /questions/{id}/`: Update a question. (IsTeacher)
+*   `DELETE /questions/{id}/`: Delete a question. (IsSuperTeacher)
+
+#### Answer Endpoints (`/answers/`)
+
+*   `GET /answers/`: List all answers. (AllowAny)
+*   `POST /answers/`: Create a new answer for a question. (IsTeacher)
+*   `GET /answers/{id}/`: Retrieve a specific answer. (AllowAny)
+*   `PUT/PATCH /answers/{id}/`: Update an answer. (IsTeacher)
+*   `DELETE /answers/{id}/`: Delete an answer. (IsSuperTeacher)
 
 ---
 
