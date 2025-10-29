@@ -1,14 +1,9 @@
-<<<<<<< HEAD
 from apps.evaluation.api.models import Question
 from apps.content.api.models import Subject, Topic
 from apps.evaluation.api.models import QuestionBelongsToTopic, TeacherMakeChangeQuestion
-=======
-from ..api.models import Question
-from ...content.api.models import Subject, Topic
-from ..api.models import QuestionBelongsToTopic, QuestionEvaluationGroup
 from django.db import models
-from ...content.domain import selectors as content_selectors
->>>>>>> bb36cba (.)
+from apps.content.domain import selectors as content_selectors
+from apps.evaluation.api.models import QuestionEvaluationGroup
 
 def get_questions_for_topic(topic: Topic):
     """Obtiene todas las preguntas asociadas a un topic dado."""
@@ -76,16 +71,20 @@ def get_correct_count_by_group(group_id: int) -> int:
 def get_ev_count_by_concept(concept_id: int) -> int:
     """Obtiene la suma total de evaluaciones de todas las preguntas para un concepto específico."""
     return Question.objects.filter(
-<<<<<<< HEAD
-        topics__in=subject.topics.values_list('topic', flat=True)
-    ).distinct()
+        concepts__questionrelatedtoconcept__concept_id=concept_id
+    ).distinct().aggregate(
+        total_ev_count=models.Sum('evaluations__ev_count')
+    )['total_ev_count'] or 0
 
 def get_last_change_question(question: Question):
     """Obtiene el último cambio realizado en una pregunta dada."""
     return TeacherMakeChangeQuestion.objects.filter(
         question=question
     ).order_by('-created_at').first()
-=======
+
+def get_ev_count_by_concept(concept_id: int) -> int:
+    """Obtiene la suma total de evaluaciones de todas las preguntas para un concepto específico."""
+    return Question.objects.filter(
         concepts__questionrelatedtoconcept__concept_id=concept_id
     ).distinct().aggregate(
         total_ev_count=models.Sum('evaluations__ev_count')
@@ -115,4 +114,3 @@ def get_ev_count_by_topic(topic_id: int) -> int:
     for concept in concepts:
         correct_count += get_ev_count_by_concept(concept.id)
     return {correct_count}
->>>>>>> bb36cba (.)

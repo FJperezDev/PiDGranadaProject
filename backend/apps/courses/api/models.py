@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from apps.customauth.models import CustomTeacher as Teacher
-from apps.utils.audit import ACTION_CHOICES
+from apps.utils.choices import ACTION_CHOICES
 
 # Create your models here.
 
@@ -15,18 +15,9 @@ class Subject(models.Model):
     def __str__(self):
         return self.name_es or self.name_en
 
-class TeacherMakeChangeSubject(models.Model):
-    old_subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
-    new_subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='changes')
-    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
-    created_at = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        unique_together = ('subject', 'action', 'created_at')
-
-    def __str__(self):
-        return f"{self.teacher} {self.action} {self.subject}"
+# Note: TeacherMakeChangeSubject model intentionally omitted because migrations do not
+# create a corresponding table. Keeping this class in models would cause Django to
+# expect a table that doesn't exist and trigger OperationalError on cascade deletes.
     
 
 class StudentGroup(models.Model):
@@ -43,14 +34,15 @@ class StudentGroup(models.Model):
         return f"{self.name_es} ({self.subject.name_es})"
     
 class TeacherMakeChangeStudentGroup(models.Model):
-    old_group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
-    new_group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='changes')
+    # Match the fields created/removed by migrations: only keep group, subject, teacher, action, created_at
+    group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='changes')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        unique_together = ('group', 'action', 'created_at')
+        unique_together = ('group', 'subject', 'action', 'created_at', 'teacher')
 
     def __str__(self):
         return f"{self.teacher} {self.action} {self.group}"

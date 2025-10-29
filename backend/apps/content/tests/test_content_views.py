@@ -2,10 +2,15 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from apps.content.domain import services
 from apps.content.api.models import Topic, Epigraph, Concept
+from django.contrib.auth import get_user_model
+
+CustomTeacher = get_user_model()
 
 class TopicViewSetTests(APITestCase):
 
     def setUp(self):
+        self.teacher = CustomTeacher.objects.create_user(username="testteacher", password="password", is_super=True)
+        self.client.force_authenticate(user=self.teacher)
         self.topic = Topic.objects.create(title_es="Tema", title_en="Topic")
         self.epigraph_data = {
             "name_es": "Epígrafe",

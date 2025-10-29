@@ -13,8 +13,9 @@ from .serializers import (
     QuestionEvaluationGroupSerializer
 )
 from ..domain import services
+from apps.utils.permissions import BaseContentViewSet
 
-class QuestionViewSet(viewsets.ModelViewSet):
+class QuestionViewSet(BaseContentViewSet):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
 
@@ -60,7 +61,7 @@ class QuestionViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class AnswerViewSet(viewsets.ModelViewSet):
+class AnswerViewSet(BaseContentViewSet):
     queryset = Answer.objects.select_related('question').all()
     serializer_class = AnswerSerializer
 
@@ -98,16 +99,16 @@ class AnswerViewSet(viewsets.ModelViewSet):
         )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-class QuestionBelongsToTopicViewSet(viewsets.ModelViewSet):
+class QuestionBelongsToTopicViewSet(BaseContentViewSet):
     queryset = QuestionBelongsToTopic.objects.all()
     serializer_class = QuestionBelongsToTopicSerializer
 
 
-class QuestionRelatedToConceptViewSet(viewsets.ModelViewSet):
+class QuestionRelatedToConceptViewSet(BaseContentViewSet):
     queryset = QuestionRelatedToConcept.objects.all()
     serializer_class = QuestionRelatedToConceptSerializer
 
 
-class QuestionEvaluationGroupViewSet(viewsets.ModelViewSet):
+class QuestionEvaluationGroupViewSet(BaseContentViewSet):
     queryset = QuestionEvaluationGroup.objects.select_related('group', 'question').all()
     serializer_class = QuestionEvaluationGroupSerializer

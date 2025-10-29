@@ -8,7 +8,7 @@ from django.utils import timezone
 from apps.customauth.models import CustomTeacher as Teacher
 from apps.content.api.models import Topic, Concept 
 from apps.courses.api.models import StudentGroup
-from apps.utils.audit import ACTION_CHOICES
+from apps.utils.choices import ACTION_CHOICES
 
 class Question(models.Model):
     QUESTION_TYPES = [
@@ -28,16 +28,16 @@ class Question(models.Model):
 
 class TeacherMakeChangeQuestion(models.Model):
     old_question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
-    new_question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='changes')
+    new_question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        unique_together = ('question', 'action', 'created_at')
+        unique_together = ('old_question', 'new_question', 'action', 'created_at')
 
     def __str__(self):
-        return f"{self.teacher} {self.action} {self.question}"
+        return f"{self.teacher} {self.action} {self.old_question} -> {self.new_question}"
 
 
 class Answer(models.Model):
@@ -55,16 +55,16 @@ class Answer(models.Model):
 
 class TeacherMakeChangeAnswer(models.Model):
     old_answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
-    new_answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='changes')
+    new_answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        unique_together = ('question', 'answer', 'action', 'created_at')
+        unique_together = ('old_answer', 'new_answer', 'action', 'created_at')
 
     def __str__(self):
-        return f"{self.teacher} {self.action} {self.answer}"
+        return f"{self.teacher} {self.action} {self.old_answer} -> {self.new_answer}"
 
 
 class QuestionBelongsToTopic(models.Model):

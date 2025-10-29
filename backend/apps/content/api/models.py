@@ -1,11 +1,8 @@
-from datetime import timezone
+from django.utils import timezone
 from django.db import models
-<<<<<<< HEAD
 from apps.customauth.models import CustomTeacher as Teacher
-from apps.utils.audit import ACTION_CHOICES
-=======
+from apps.utils.choices import ACTION_CHOICES
 from apps.courses.api.models import Subject, SubjectIsAboutTopic
->>>>>>> bb36cba (.)
 
 # Create your models here.
 

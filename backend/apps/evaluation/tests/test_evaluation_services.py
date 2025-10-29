@@ -1,11 +1,13 @@
 import pytest
 from django.forms import ValidationError
+from unittest.mock import patch
 
 from apps.evaluation.domain import services
 from apps.evaluation.api.models import Question, Answer, QuestionBelongsToTopic, QuestionRelatedToConcept
 from apps.content.api.models import Topic, Concept, Subject
 from apps.courses.domain import services as course_services
 from apps.content.domain import services as content_services
+from apps.customauth.models import CustomTeacher
 
 pytestmark = pytest.mark.django_db
 
@@ -14,6 +16,10 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def subject():
     return course_services.create_subject(name_es="Asignatura de prueba", name_en="Test Subject", description_en="Description", description_es="Descripción")
+
+@pytest.fixture
+def user():
+    return CustomTeacher.objects.create_user(username="testuser", password="password")
 
 @pytest.fixture
 def topic1(subject):
@@ -46,20 +52,23 @@ def question_data():
     }
 
 @pytest.fixture
-def question(question_data):
-    return services.create_question(**question_data)
+def question(user, question_data):
+    return services.create_question(user=user, **question_data)
 
 # --- Question Service Tests ---
 
-def test_create_question(question_data):
-    question = services.create_question(**question_data)
+def test_create_question(user, question_data):
+    question = services.create_question(user=user, **question_data)
+    for question in Question.objects.all():
+        print(question)
     assert Question.objects.count() == 1
     assert question.type == question_data['type']
     assert question.statement_es == question_data['statement_es']
     assert question.approved
 
-def test_create_question_with_topics_and_concepts(question_data, topic1, concept1):
+def test_create_question_with_topics_and_concepts(user, question_data, topic1, concept1):
     question = services.create_question(
+        user=user,
         **question_data,
         topics=set([topic1]),
         concepts=set([concept1])
@@ -69,28 +78,30 @@ def test_create_question_with_topics_and_concepts(question_data, topic1, concept
     assert QuestionBelongsToTopic.objects.filter(question=question, topic=topic1).exists()
     assert QuestionRelatedToConcept.objects.filter(question=question, concept=concept1).exists()
 
-def test_create_question_raises_validation_error_on_missing_statement():
+def test_create_question_raises_validation_error_on_missing_statement(user):
     with pytest.raises(ValidationError, match="Debe proporcionar el enunciado en ambos idiomas."):
-        services.create_question(type='multiple', statement_es='Solo ES')
+        services.create_question(user=user, type='multiple', statement_es='Solo ES')
 
-def test_update_question_basic_fields(question):
+def test_update_question_basic_fields(user, question):
     updated_question = services.update_question(
-        question,
+        user=user,
+        question=question,
         statement_es="Nuevo enunciado",
         approved=False
     )
     assert updated_question.statement_es == "Nuevo enunciado"
     assert not updated_question.approved
 
-def test_update_question_topics_and_concepts(mocker, question, topic1, topic2, concept1, concept2):
-    # Mock selectors used in update_question
-    mocker.patch('apps.content.domain.selectors.get_topic_by_title', side_effect=[topic1, topic2])
-    mocker.patch('apps.content.domain.selectors.get_concept_by_name', side_effect=[concept1, concept2])
-
+@patch('apps.content.domain.selectors.get_topic_by_title')
+@patch('apps.content.domain.selectors.get_concept_by_name')
+def test_update_question_topics_and_concepts(mock_get_concept, mock_get_topic, user, question, topic1, topic2, concept1, concept2):
+    mock_get_topic.side_effect = [topic1, topic2]
+    mock_get_concept.side_effect = [concept1, concept2]
     QuestionBelongsToTopic.objects.create(question=question, topic=topic1)
     
     services.update_question(
-        question,
+        user=user,
+        question=question,
         topics=["Topic 1", "Topic 2"],
         concepts=["Concept 1", "Concept 2"]
     )
@@ -100,24 +111,24 @@ def test_update_question_topics_and_concepts(mocker, question, topic1, topic2, c
     assert question.concepts.count() == 2
     assert {str(c.concept) for c in question.concepts.all()} == {"Concepto 1", "Concepto 2"}
 
-def test_update_question_to_true_false(question):
-    services.create_answer(question, text_es="A", text_en="A")
+def test_update_question_to_true_false(user, question):
+    services.create_answer(user=user, question=question, text_es="A", text_en="A")
     assert question.answers.count() == 1
 
-    services.update_question(question, type='true_false', is_true=True)
+    services.update_question(user=user, question=question, type='true_false', is_true=True)
 
     assert question.type == 'true_false'
     assert question.answers.count() == 2
     assert question.answers.filter(is_correct=True).first().text_en == 'True'
     assert question.answers.filter(is_correct=False).first().text_en == 'False'
 
-def test_update_question_to_true_false_requires_is_true(question):
+def test_update_question_to_true_false_requires_is_true(user, question):
     with pytest.raises(ValidationError, match="Debe proporcionar el valor de is_true"):
-        services.update_question(question, type='true_false')
+        services.update_question(user=user, question=question, type='true_false')
 
-def test_delete_question(question):
+def test_delete_question(user, question):
     assert Question.objects.count() == 1
-    services.delete_question(question)
+    services.delete_question(user=user, question=question)
     assert Question.objects.count() == 0
 
 # --- Answer Service Tests ---
@@ -131,40 +142,40 @@ def answer_data(question):
         'is_correct': True,
     }
 
-def test_create_answer(answer_data):
-    answer = services.create_answer(**answer_data)
+def test_create_answer(user, answer_data):
+    answer = services.create_answer(user=user, **answer_data)
     assert Answer.objects.count() == 1
     assert answer.question == answer_data['question']
     assert answer.text_es == 'Madrid'
     assert answer.is_correct
 
-def test_create_answer_raises_validation_error_on_missing_text():
+def test_create_answer_raises_validation_error_on_missing_text(user):
     with pytest.raises(ValidationError, match="Debe proporcionar el texto de la respuesta en ambos idiomas."):
-        services.create_answer(question=Question(), text_es='Solo ES')
+        services.create_answer(user=user, question=Question(), text_es='Solo ES')
 
-def test_update_answer(answer_data):
-    answer = services.create_answer(**answer_data)
+def test_update_answer(user, answer_data):
+    answer = services.create_answer(user=user, **answer_data)
     updated_answer = services.update_answer(
-        answer,
+        user=user,
+        answer=answer,
         text_en="New Answer",
         is_correct=False
     )
     assert updated_answer.text_en == "New Answer"
     assert not updated_answer.is_correct
 
-def test_delete_answer(answer_data):
-    answer = services.create_answer(**answer_data)
+def test_delete_answer(user, answer_data):
+    answer = services.create_answer(user=user, **answer_data)
     assert Answer.objects.count() == 1
-    print(answer.id)
-    services.delete_answer(answer)
+    services.delete_answer(user=user, answer=answer)
     assert Answer.objects.count() == 0
 
-def test_update_question_type_true_false_with_is_true_false(question):
+def test_update_question_type_true_false_with_is_true_false(user, question):
     """
     Tests that when a question is updated to 'true_false' with is_true=False,
     the correct answers are created.
     """
-    services.update_question(question, type='true_false', is_true=False)
+    services.update_question(user=user, question=question, type='true_false', is_true=False)
 
     assert question.answers.count() == 2
     correct_answer = question.answers.get(is_correct=True)

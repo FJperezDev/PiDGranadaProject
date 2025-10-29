@@ -23,9 +23,12 @@ class SubjectViewSetTests(APITestCase):
             is_super=True,
             username="admin"
         )
+        self.client.force_authenticate(user=self.teacher)
         self.student_group = StudentGroup.objects.create(
             subject=self.subject,
             teacher=self.teacher,
+            name_es="Grupo Inicial",
+            name_en="Initial Group"
         )
     
     def test_create_subject(self):
@@ -69,7 +72,8 @@ class SubjectViewSetTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_update_subject_group(self):
-        response = self.client.put(f"/subjects/{self.subject.id}/groups/{self.student_group.id}/", {
+        url = reverse('subject-group-detail', kwargs={'pk': self.subject.id, 'group_pk': self.student_group.id})
+        response = self.client.put(url, {
             "name_es": "Grupo de Matemáticas Modificado",
             "name_en": "Modified Mathematics Group"
         }, format="json")
@@ -77,15 +81,18 @@ class SubjectViewSetTests(APITestCase):
         self.assertEqual(response.data["name"], "Grupo de Matemáticas Modificado")
 
     def test_delete_subject_group(self):
-        response = self.client.delete(f"/subjects/{self.subject.id}/groups/{self.student_group.id}/")
+        url = reverse('subject-group-detail', kwargs={'pk': self.subject.id, 'group_pk': self.student_group.id})
+        response = self.client.delete(url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_get_subject_groups(self):
-        response = self.client.get(f"/subjects/{self.subject.id}/groups/")
+        url = reverse('subject-groups', kwargs={'pk': self.subject.id})
+        response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn(self.student_group.name_es, [group["name"] for group in response.data])
 
     def test_get_subject_group_detail(self):
-        response = self.client.get(f"/subjects/{self.subject.id}/groups/{self.student_group.id}/")
+        url = reverse('subject-group-detail', kwargs={'pk': self.subject.id, 'group_pk': self.student_group.id})
+        response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], self.student_group.name_es)
