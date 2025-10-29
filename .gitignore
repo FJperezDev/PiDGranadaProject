@@ -6,3 +6,4 @@ migration
 .env
 *.log
 migrations
+*cache*
