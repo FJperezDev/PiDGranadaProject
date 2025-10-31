@@ -4,29 +4,37 @@ from apps.evaluation.api.models import QuestionBelongsToTopic, TeacherMakeChange
 from django.db import models
 from apps.content.domain import selectors as content_selectors
 from apps.evaluation.api.models import QuestionEvaluationGroup
+import random
+
+from apps.courses.api.models import StudentGroup
 
 def get_questions_for_topic(topic: Topic):
     """Obtiene todas las preguntas asociadas a un topic dado."""
     return Question.objects.filter(
-        topics__questionbelongstotopic__topic=topic
+        topics__topic=topic
     ).distinct()
 
-def get_random_question_from_topics(topics: set[Topic]):
-    """Obtiene una pregunta aleatoria de un conjunto de topics dados."""
-    return Question.objects.filter(
-        topics__questionbelongstotopic__topic__in=topics
-    ).distinct().order_by('?').first()
+def get_random_question_from_topic(topic: Topic) -> Question:
+    return get_questions_for_topic(topic).order_by('?').first()
 
-def get_random_questions_from_topics(topics: set[Topic], count: int) -> set[Question]:
-    questions = {}
-    for _ in range(count):
-        question = get_random_question_from_topics(topics)
+def get_random_questions_from_topics(topics: list[Topic], num_questions: int) -> list[Question]:
+    """Obtiene un conjunto de preguntas aleatorias de los topics dados."""
+    questions = []
+    random.shuffle(topics)
+    for topic in topics:
+        question = get_random_question_from_topic(topic)
         if question and question not in questions:
-            questions.add(question)
+            questions.append(question)
+        if len(questions) >= num_questions:
+            break
+    return questions
 
-def get_question_evaluation_group(question: Question, group_id: int):
+def get_question_evaluation_group(question: Question, group: StudentGroup) -> QuestionEvaluationGroup:
     """Obtiene la evaluación de una pregunta para un grupo específico."""
-    return question.evaluations.filter(group_id=group_id).first()
+    try:
+        return QuestionEvaluationGroup.objects.get(question=question, group=group)
+    except QuestionEvaluationGroup.DoesNotExist:
+        return None
 
 def get_question_evaluation_group_correct_count(question: Question, group_id: int) -> int:
     """Obtiene el conteo de respuestas correctas de una pregunta para un grupo específico."""

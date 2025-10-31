@@ -1,9 +1,11 @@
 from datetime import timezone
 from django.forms import ValidationError
-from ..api.models import Question, Answer, QuestionBelongsToTopic, QuestionRelatedToConcept
+from apps.evaluation.api.models import Question, Answer, QuestionBelongsToTopic, QuestionRelatedToConcept, QuestionEvaluationGroup
 from apps.content.api.models import Topic, Concept
 from apps.content.domain import selectors as content_selectors
 from apps.utils.audit import makeChanges
+from apps.courses.api.models import StudentGroup
+from apps.evaluation.domain import selectors as evaluation_selectors
 
 # --- Question Services ---
 def create_question(user, type: str, statement_es: str = None, statement_en: str = None,
@@ -109,3 +111,50 @@ def delete_answer(user, answer: Answer, _from_audit: bool = False) -> None:
     """Elimina una respuesta dada."""
     answer.delete()
 
+def evaluate_question(student_group: StudentGroup, question: Question, answer: Answer) -> bool:
+    """Evalúa una pregunta para un grupo de estudiantes dado y actualiza las métricas correspondientes."""
+
+    if answer.question != question:
+        raise ValidationError("La respuesta proporcionada no pertenece a la pregunta dada.")
+
+    is_correct = answer.is_correct
+    qeg, created = QuestionEvaluationGroup.objects.get_or_create(
+        question=question,
+        group=student_group,
+        defaults={'ev_count': 0, 'correct_count': 0}
+    )
+    qeg.ev_count += 1
+    if is_correct:
+        qeg.correct_count += 1
+    qeg.save()
+    return is_correct
+
+def create_exam(user, topics: set[Topic], num_questions: int) -> list[Question]:
+    exam_questions = []
+    for topic in topics:
+        question = evaluation_selectors.get_random_question_from_topic(topic)
+        if question and question not in exam_questions:
+            exam_questions.append(question)
+            
+    if len(exam_questions) >= num_questions:
+        return exam_questions[:num_questions]
+
+    remaining_questions_needed = num_questions - len(exam_questions)
+    additional_questions = evaluation_selectors.get_random_questions_from_topics(topics, remaining_questions_needed)
+    for question in additional_questions:
+        if question not in exam_questions:
+            exam_questions.append(question)
+        if len(exam_questions) >= num_questions:
+            break
+    
+
+    return exam_questions
+
+def correct_exam(student_group: StudentGroup, questions_and_answers: dict[Question, Answer]) -> int:
+    """Corrige un examen dado un conjunto de preguntas y respuestas."""
+    mark = 0
+    for question, answer in questions_and_answers.items():
+        is_correct = evaluate_question(student_group, question, answer)
+        if is_correct:
+            mark += 1
+    return mark
