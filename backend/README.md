@@ -138,13 +138,23 @@ The permission system is role-based for teachers:
 *   `PUT/PATCH /questions/{id}/`: Update a question. (IsTeacher)
 *   `DELETE /questions/{id}/`: Delete a question. (IsSuperTeacher)
 
-#### Answer Endpoints (`/answers/`)
+#### Answer Endpoints (`/answers/`) - *Servicios de Evaluación*
 
 *   `GET /answers/`: List all answers. (AllowAny)
 *   `POST /answers/`: Create a new answer for a question. (IsTeacher)
 *   `GET /answers/{id}/`: Retrieve a specific answer. (AllowAny)
 *   `PUT/PATCH /answers/{id}/`: Update an answer. (IsTeacher)
 *   `DELETE /answers/{id}/`: Delete an answer. (IsSuperTeacher)
+
+#### Relaciones de Preguntas (`/question-topic/`, `/question-concept/`)
+
+*   `GET /question-topic/`: Lista las relaciones entre preguntas y temas. (AllowAny)
+*   `GET /question-concept/`: Lista las relaciones entre preguntas y conceptos. (AllowAny)
+
+#### Evaluaciones (`/evaluations/`)
+
+*   `GET /evaluations/`: Lista las métricas de evaluación de cada pregunta por grupo de estudiantes. (IsTeacher)
+
 
 ---
 
@@ -239,7 +249,7 @@ This module manages the core content models: `Topic`, `Concept`, and `Epigraph`,
 
 ### 3. Evaluation App (`apps.evaluation.domain.services`)
 
-This module contains the logic for creating, updating, and deleting questions and answers, and handles the audit trail for these actions.
+Este módulo contiene la lógica para crear, actualizar, y eliminar preguntas y respuestas, gestionar exámenes y evaluar las respuestas de los estudiantes. También maneja el registro de auditoría para los cambios.
 
 #### Question Management
 
@@ -283,7 +293,7 @@ This module contains the logic for creating, updating, and deleting questions an
 
 *   `create_answer(user, question, text_es, text_en, is_correct=False)`
     *   **Description**: Creates a new `Answer` for a given `Question`.
-    *   **Parameters**:
+    *   **Parámetros**:
         *   `user` (CustomTeacher): The user performing the action.
         *   `question` (Question): The parent question.
         *   `text_es` (str): The answer text in Spanish.
@@ -294,7 +304,7 @@ This module contains the logic for creating, updating, and deleting questions an
 
 *   `update_answer(user, answer, text_es=None, text_en=None, is_correct=None)`
     *   **Description**: Updates an existing `Answer`. Triggers an audit log entry.
-    *   **Parameters**:
+    *   **Parámetros**:
         *   `user` (CustomTeacher): The user performing the action.
         *   `answer` (Answer): The answer instance to update.
         *   Accepts optional `text_es`, `text_en`, `is_correct`.
@@ -303,7 +313,32 @@ This module contains the logic for creating, updating, and deleting questions an
 
 *   `delete_answer(user, answer)`
     *   **Description**: Deletes an `Answer`.
-    *   **Parameters**:
+    *   **Parámetros**:
         *   `user` (CustomTeacher): The user performing the action.
         *   `answer` (Answer): The answer to delete.
     *   **View Usage**: Used in `AnswerViewSet.destroy()`.
+
+#### Exam and Evaluation Management
+
+*   `evaluate_question(student_group, question, answer)`
+    *   **Descripción**: Evalúa una respuesta proporcionada por un grupo de estudiantes para una pregunta específica. Actualiza los contadores de evaluación (`ev_count`) y aciertos (`correct_count`) para esa pregunta y grupo.
+    *   **Parámetros**:
+        *   `student_group` (StudentGroup): El grupo de estudiantes que responde.
+        *   `question` (Question): La pregunta que se está evaluando.
+        *   `answer` (Answer): La respuesta seleccionada.
+    *   **Retorna**: `True` si la respuesta es correcta, `False` en caso contrario.
+
+*   `create_exam(user, topics, num_questions)`
+    *   **Descripción**: Genera un examen seleccionando un número específico de preguntas de forma aleatoria a partir de un conjunto de temas. La selección es eficiente y se realiza en una única consulta a la base de datos.
+    *   **Parámetros**:
+        *   `user` (CustomTeacher): El usuario que genera el examen.
+        *   `topics` (set[Topic]): Un conjunto de objetos `Topic` de los cuales se seleccionarán las preguntas.
+        *   `num_questions` (int): El número de preguntas que debe tener el examen.
+    *   **Retorna**: Una lista de objetos `Question`.
+
+*   `correct_exam(student_group, questions_and_answers)`
+    *   **Descripción**: Corrige un examen completo para un grupo de estudiantes. Itera sobre las preguntas y respuestas, utiliza `evaluate_question` para registrar las métricas de cada una, y calcula la calificación final.
+    *   **Parámetros**:
+        *   `student_group` (StudentGroup): El grupo de estudiantes que realizó el examen.
+        *   `questions_and_answers` (dict[Question, Answer]): Un diccionario que mapea cada pregunta del examen a la respuesta seleccionada por el estudiante.
+    *   **Retorna**: Un `int` que representa la calificación total (número de respuestas correctas).
