@@ -3,6 +3,7 @@ from apps.content.api.models import Topic
 from apps.customauth.models import CustomTeacher as Teacher
 from apps.evaluation.api.models import QuestionEvaluationGroup
 from apps.evaluation.domain import selectors as evaluation_selectors
+from apps.courses.utils import generate_groupCode
 
 from django.core.exceptions import ValidationError
 BIG_ENOUGH_INT = 1_000
@@ -45,11 +46,13 @@ def swap_order(relationA: SubjectIsAboutTopic, relationB: SubjectIsAboutTopic):
     relationB.save()
 
 # --- StudentGroup Services ---
-def create_student_group(subject: Subject, name_es: str, name_en: str, teacher: Teacher, groupCode: str) -> StudentGroup:
-    """Crea un nuevo grupo de estudiantes con validaciones básicas."""
+def create_student_group(subject: Subject, name_es: str, name_en: str, teacher: Teacher) -> StudentGroup:
+
     if StudentGroup.objects.filter(subject=subject, name_es=name_es).exists() or StudentGroup.objects.filter(subject=subject, name_en=name_en).exists():
         raise ValidationError("Ya existe un grupo de estudiantes con ese nombre para esta asignatura, año y semestre.")
     
+    groupCode=generate_groupCode()
+    print(groupCode)
     group = StudentGroup.objects.create(
         subject=subject,
         name_es=name_es,

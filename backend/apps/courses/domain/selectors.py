@@ -1,7 +1,5 @@
-from ..api.models import Subject, StudentGroup, TeacherMakeChangeStudentGroup, SubjectIsAboutTopic
-from ...customauth.models import CustomTeacher as Teacher
-from ...content.api.models import Topic
-from ...evaluation.domain import selectors 
+from ..api.models import Subject, StudentGroup, SubjectIsAboutTopic
+from apps.content.api.models import Topic
 
 def get_all_subjects():
     return Subject.objects.prefetch_related('topics').filter(old=False).all()
@@ -24,6 +22,9 @@ def get_subject_topic_relation_by_both(subject: Subject, topic: Topic) -> Subjec
 
 def get_student_group_by_id(group_id: int) -> StudentGroup:
     return StudentGroup.objects.get(id=group_id)
+
+def get_student_group_by_code(group_code: str) -> StudentGroup:
+    return StudentGroup.objects.get(groupCode=group_code)
 
 def get_all_student_groups():
     return StudentGroup.objects.filter(old=False).all()

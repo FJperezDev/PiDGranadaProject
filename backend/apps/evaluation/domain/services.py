@@ -9,8 +9,8 @@ from apps.evaluation.domain import selectors as evaluation_selectors
 
 # --- Question Services ---
 def create_question(user, type: str, statement_es: str = None, statement_en: str = None,
-                    approved: bool = False, generated: bool = False, topics_ids: set[int] = None, 
-                    concepts_ids: set[int] = None, answers: set[Answer] = None, is_true = None) -> Question:
+                    approved: bool = False, generated: bool = False, topics_titles: set[str] = None, 
+                    concepts_names: set[str] = None, is_true = None) -> Question:
     """Crea una nueva pregunta con validaciones básicas."""
 
     if not statement_es or not statement_en:
@@ -30,21 +30,15 @@ def create_question(user, type: str, statement_es: str = None, statement_en: str
             else:
                 raise ValidationError("Debe proporcionar el valor de is_true para preguntas de verdadero/falso.")
 
-    if topics_ids:
-        topics = {}
-        for topic_id in topics_ids:
-            topic = content_selectors.get_topic_by_id(topic_id)
+    if topics_titles:
+        for title in topics_titles:
+            topic = content_selectors.get_topic_by_title(title)
             QuestionBelongsToTopic.objects.create(question=question, topic=topic)
     
-    if concepts_ids:
-        for concept_id in concepts_ids:
-            concept = content_selectors.get_concept_by_id(concept_id)
+    if concepts_names:
+        for name in concepts_names:
+            concept = content_selectors.get_concept_by_name(name)
             QuestionRelatedToConcept.objects.create(question=question, concept=concept)
-
-    if answers:
-        for answer in answers:
-            answer.question = question
-            answer.save()
 
     makeChanges(user=user, old_object=None, new_object=question)
 
@@ -53,7 +47,7 @@ def create_question(user, type: str, statement_es: str = None, statement_en: str
 def update_question(user, question: Question, type: str = None, statement_es: str = None,
                     statement_en: str = None, approved: bool = None,
                     generated: bool = None, topics: set[Topic] = None, 
-                    concepts: set[Concept] = None, is_true = None, _from_audit: bool = False) -> Question:
+                    concepts: set[Concept] = None, is_true = None) -> Question:
     """Actualiza una pregunta con los nuevos datos proporcionados."""
     old_question = Question.objects.get(pk=question.pk)
     old_question.pk = None 
@@ -90,7 +84,7 @@ def update_question(user, question: Question, type: str = None, statement_es: st
     makeChanges(user, old_object=old_question, new_object=question)
     return question
 
-def delete_question(user, question: Question, _from_audit: bool = False) -> None:
+def delete_question(user, question: Question) -> None:
     """Elimina una pregunta dada."""
     makeChanges(user, old_object=question, new_object=None)
     question.delete()
@@ -110,7 +104,7 @@ def create_answer(user, question: Question, text_es: str = None, text_en: str = 
     return answer
 
 def update_answer(user, answer: Answer, text_es: str = None, text_en: str = None,
-                   is_correct: bool = None, _from_audit: bool = False) -> Answer:
+                   is_correct: bool = None) -> Answer:
     """Actualiza una respuesta con los nuevos datos proporcionados."""
     old_answer = Answer.objects.get(pk=answer.pk)
     old_answer.pk = None
@@ -125,7 +119,7 @@ def update_answer(user, answer: Answer, text_es: str = None, text_en: str = None
     makeChanges(user, old_object=old_answer, new_object=answer)
     return answer
 
-def delete_answer(user, answer: Answer, _from_audit: bool = False) -> None:
+def delete_answer(user, answer: Answer) -> None:
     """Elimina una respuesta dada."""
     makeChanges(user, old_object=answer, new_object=None)
     answer.delete()

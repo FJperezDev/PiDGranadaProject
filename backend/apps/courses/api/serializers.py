@@ -41,12 +41,12 @@ class StudentGroupSerializer(LanguageSerializerMixin, serializers.ModelSerialize
     name = serializers.SerializerMethodField()
     subject = SubjectSerializer(read_only=True)
     teacher = TeacherSerializer(read_only=True)
-    code = serializers.CharField(read_only=True)
+    groupCode = serializers.CharField(read_only=True)
 
     class Meta:
         model = StudentGroup
         fields = [
-            'id', 'code', 
+            'id', 'groupCode', 
             'name', 'name_es', 'name_en', 
             'subject', 'teacher']
         extra_kwargs = {

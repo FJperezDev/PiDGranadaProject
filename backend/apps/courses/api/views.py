@@ -112,7 +112,7 @@ class SubjectViewSet(BaseContentViewSet):
             'topicB': TopicSerializer(topicB, context={'request': request}).data
         }, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['get', 'post'], url_path='groups')
+    @action(detail=True, methods=['get', 'post', 'delete'], url_path='groups')
     def groups(self, request, pk=None):
         """GET /subjects/<id>/groups/ — obtiene los grupos asociados a la asignatura
            POST /subjects/<id>/groups/ — crea un grupo asociado a la asignatura"""
@@ -129,13 +129,21 @@ class SubjectViewSet(BaseContentViewSet):
             subject = selectors.get_subject_by_id(subject_id=pk)
             if not subject:
                 return Response({'detail': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
+            group = services.create_student_group(
+                subject=subject,
+                name_es=request.data.get('name_es'),
+                name_en=request.data.get('name_en'),
+                teacher=request.user
+            )
+            serializer = StudentGroupSerializer(group, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        elif request.method == 'DELETE':
+            subject = selectors.get_subject_by_id(subject_id=pk)
+            for group in subject.studentgroups.all():
+                services.delete_student_group(group)
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
-            serializer = StudentGroupSerializer(data=request.data, context={'request': request})
-            if not serializer.is_valid():
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            group = serializer.save(subject=subject, teacher=request.user)
-            return Response(StudentGroupSerializer(group, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['get', 'put', 'delete'], url_path='groups/(?P<group_pk>[^/.]+)')
     def group_detail(self, request, pk=None, group_pk=None):

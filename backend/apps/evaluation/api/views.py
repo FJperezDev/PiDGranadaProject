@@ -24,8 +24,8 @@ class QuestionViewSet(BaseContentViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        topics_ids = data.get('topics', [])
-        concepts_ids = data.get('concepts', [])
+        topics_titles = data.get('topics', [])
+        concepts_names = data.get('concepts', [])
         question = services.create_question(
             user=request.user,
             type=data.get('type'),
@@ -34,8 +34,8 @@ class QuestionViewSet(BaseContentViewSet):
             statement_en=data.get('statement_en'),
             approved=data.get('approved', False),
             generated=data.get('generated', False),
-            topics_ids=topics_ids,
-            concepts_ids=concepts_ids
+            topics_titles=topics_titles,
+            concepts_names=concepts_names
         )
         serializer = self.get_serializer(question)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -43,8 +43,8 @@ class QuestionViewSet(BaseContentViewSet):
     def update(self, request, *args, **kwargs):
         question = self.get_object()
         data = request.data
-        topics = data.get('topics', [])
-        concepts = data.get('concepts', [])
+        topics_titles = data.get('topics', [])
+        concept_names = data.get('concepts', [])
         question = services.update_question(
             user=request.user,
             question=question,
@@ -53,8 +53,8 @@ class QuestionViewSet(BaseContentViewSet):
             statement_en=data.get('statement_en'),
             approved=data.get('approved'),
             generated=data.get('generated'),
-            topics=topics,
-            concepts=concepts
+            topics=topics_titles,
+            concepts=concept_names
         )
         serializer = self.get_serializer(question)
         return Response(serializer.data)
@@ -98,13 +98,13 @@ class ExamViewSet(BaseContentViewSet):
     @action(detail=False, methods=['get'], url_path='generate-exam', url_name='generate-exam')
     def create_exam(self, request):
         data = request.data
-        topics_ids = data.get('topics', [])
+        topics_titles = data.get('topics', [])
         num_questions = data.get('num_questions', 10)
-        if not topics_ids or not isinstance(topics_ids, list):
-            return Response({"detail": "Se requiere una lista de IDs de temas ('topics')."}, status=status.HTTP_400_BAD_REQUEST)
+        if not topics_titles or not isinstance(topics_titles, list):
+            return Response({"detail": "'topics' is required and must be a titles list."}, status=status.HTTP_400_BAD_REQUEST)
         topics = []
-        for topic_id in topics_ids:
-            topics.append(content_selectors.get_topic_by_id(topic_id))
+        for topic_title in topics_titles:
+            topics.append(content_selectors.get_topic_by_title(title=topic_title))
 
         exam_questions = services.create_exam(user=request.user, topics=set(topics), num_questions=num_questions)
         serializer = self.get_serializer(exam_questions, many=True)
@@ -113,7 +113,7 @@ class ExamViewSet(BaseContentViewSet):
     @action(detail=False, methods=['get'], url_path='evaluate-exam', url_name='evaluate-exam')
     def evaluate_exam(self, request):
         data = request.data
-        student_group = courses_selectors.get_student_group_by_id(data.get('student_group_id'))
+        student_group = courses_selectors.get_student_group_by_code(data.get('student_group_code'))
         questions_and_answers = data.get('questions_and_answers', [])
         questions_and_answers_dict = {}
         for qa in questions_and_answers:

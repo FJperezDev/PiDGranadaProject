@@ -106,8 +106,8 @@ def test_create_question_with_topics_and_concepts(user, question_data, topic1, c
     question = services.create_question(
         user=user,
         **question_data,
-        topics_ids=set([topic1.id]),
-        concepts_ids=set([concept1.id])
+        topics_titles=set([topic1.title_es]),
+        concepts_names=set([concept1.name_es])
     )
     assert question.topics.count() == 1
     assert question.concepts.count() == 1
