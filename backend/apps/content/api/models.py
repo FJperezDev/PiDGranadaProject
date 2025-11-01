@@ -11,6 +11,7 @@ class Topic(models.Model):
     title_en = models.TextField(unique=True)
     description_es = models.TextField(null=True, blank=True)
     description_en = models.TextField(null=True, blank=True)
+    old = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title_es or self.title_en
@@ -20,13 +21,16 @@ class TeacherMakeChangeTopic(models.Model):
     new_topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='changes')
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    
+    def __str__(self):
+        return f"{self.teacher} changed {self.old_topic} to {self.new_topic}"
 
 class Concept(models.Model):
     name_es = models.TextField(unique=True)
     name_en = models.TextField(unique=True)
     description_es = models.TextField(null=True, blank=True)
     description_en = models.TextField(null=True, blank=True)
+    old = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name_es or self.name_en
@@ -36,7 +40,10 @@ class TeacherMakeChangeConcept(models.Model):
     new_concept = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='changes')
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    
+    def __str__(self):
+        return f"{self.teacher} changed {self.old_concept} to {self.new_concept}"
+
 
 class ConceptIsRelatedToConcept(models.Model):
     concept_from= models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='related_concepts_from')
@@ -76,6 +83,7 @@ class Epigraph(models.Model):
     description_es = models.TextField(null=True, blank=True)
     description_en = models.TextField(null=True, blank=True)
     order_id = models.IntegerField()
+    old = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('id', 'topic')
@@ -88,5 +96,7 @@ class TeacherMakeChangeEpigraph(models.Model):
     old_epigraph = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='old_changes')
     new_epigraph = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='changes')
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.teacher} changed {self.old_epigraph} to {self.new_epigraph}"

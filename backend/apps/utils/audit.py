@@ -1,9 +1,3 @@
-from django.utils import timezone
-from apps.utils.choices import ACTION_CHOICES
-
-# NOTE: avoid importing other apps at module import time to prevent circular
-# imports. Import models and service helpers locally inside functions.
-
 def removeChangesUpTo(datetime):
     removeAnswerChangesUpTo(datetime)
     removeQuestionChangesUpTo(datetime)
@@ -85,183 +79,92 @@ def removeEpigraphChangesUpTo(datetime):
     changes_to_delete_e.delete()
     TeacherMakeChangeEpigraph.objects.filter(created_at__lte=datetime).delete()
 
-def makeChanges(user, object, action, json_after=None):
-    # import model classes locally to avoid circular imports
+def makeChanges(user, old_object, new_object):
+    
     from apps.evaluation.api.models import Question, Answer
     from apps.courses.api.models import Subject, StudentGroup
     from apps.content.api.models import Topic, Concept, Epigraph
-    
-    if isinstance(object, Question):
-        makeChangesQuestion(user, object, action, json_after)
-    elif isinstance(object, Answer):
-        makeChangesAnswer(user, object, action, json_after)
-    elif isinstance(object, Subject):
-        makeChangesSubject(user, object, action, json_after)
-    elif isinstance(object, StudentGroup):
-        makeChangesStudentGroup(user, object, action, json_after)
-    elif isinstance(object, Topic):
-        makeChangesTopic(user, object, action, json_after)
-    elif isinstance(object, Concept):
-        makeChangesConcept(user, object, action, json_after)
-    elif isinstance(object, Epigraph):
-        makeChangesEpigraph(user, object, action, json_after)
+    if isinstance(old_object, Question) or isinstance(new_object, Question):
+        makeChangesQuestion(user, old_object, new_object)
+    elif isinstance(old_object, Answer) or isinstance(new_object, Answer):
+        makeChangesAnswer(user, old_object, new_object)
+    elif isinstance(old_object, Subject) or isinstance(new_object, Subject):
+        makeChangesSubject(user, old_object, new_object)
+    elif isinstance(old_object, StudentGroup) or isinstance(new_object, StudentGroup):
+        makeChangesStudentGroup(user, old_object, new_object)
+    elif isinstance(old_object, Topic) or isinstance(new_object, Topic):
+        makeChangesTopic(user, old_object, new_object)
+    elif isinstance(old_object, Concept) or isinstance(new_object, Concept):
+        makeChangesConcept(user, old_object, new_object)
+    elif isinstance(old_object, Epigraph) or isinstance(new_object, Epigraph):
+        makeChangesEpigraph(user, old_object, new_object)
     else:
         raise ValueError(f"Unsupported object type: {type(object)}")
 
-def makeChangesQuestion(user, object, action, json_after=None):
-    statement_es = json_after.get('statement_es') if json_after else object.statement_es
-    statement_en = json_after.get('statement_en') if json_after else object.statement_en
-    approved = json_after.get('approved') if json_after else object.approved
-    generated = json_after.get('generated') if json_after else object.generated
-    topics = json_after.get('topics') if json_after else None
-    concepts = json_after.get('concepts') if json_after else None
-    type_ = json_after.get('type') if json_after else object.type
+def makeChangesQuestion(user, old_object, new_object):
     from apps.evaluation.api.models import TeacherMakeChangeQuestion
-    from apps.evaluation.api.models import Question, QuestionBelongsToTopic, QuestionRelatedToConcept
-
-    new_question_instance = object
-    if action != 'deleted' and action != 'created':
-        new_question_instance = Question.objects.create(
-            type=type_,
-            statement_es=statement_es,
-            statement_en=statement_en,
-            approved=approved,
-            generated=generated,
-        )
-        # Copy topics and concepts if they exist on the original object
-        if object and hasattr(object, 'topics') and object.topics.exists():
-            for qbt in object.topics.all():
-                QuestionBelongsToTopic.objects.create(question=new_question_instance, topic=qbt.topic)
-        if object and hasattr(object, 'concepts') and object.concepts.exists():
-            for qrc in object.concepts.all():
-                QuestionRelatedToConcept.objects.create(question=new_question_instance, concept=qrc.concept)
-
+    
     TeacherMakeChangeQuestion.objects.create(
-        old_question=object if action != 'created' else None,
-        new_question=new_question_instance,
+        old_question=old_object,
+        new_question=new_object,
         teacher=user,
-        action=action,
     )
 
-def makeChangesAnswer(user, object, action, json_after=None):
-    teacher = user
-    text_es = json_after.get('text_es') if json_after else object.text_es
-    text_en = json_after.get('text_en') if json_after else object.text_en
-    is_correct = json_after.get('is_correct') if json_after else object.is_correct
+def makeChangesAnswer(user, old_object, new_object):
     
-    from apps.evaluation.api.models import TeacherMakeChangeAnswer, Answer
+    from apps.evaluation.api.models import TeacherMakeChangeAnswer
 
-    new_answer_instance = None
-    if action != 'deleted':
-        new_answer_instance = Answer.objects.create(
-            question=object.question,
-            text_es=text_es,
-            text_en=text_en,
-            is_correct=is_correct,
-        )
     TeacherMakeChangeAnswer.objects.create(
-        old_answer=object if action != 'created' else None,
-        new_answer=new_answer_instance,
-        teacher=teacher,
-        action=action,
+        old_answer=old_object,
+        new_answer=new_object,
+        teacher=user,
     )
 
-def makeChangesSubject(user, object, action, json_after=None):
-    teacher = user
-    name_es = json_after.get('name_es') if json_after else object.name_es
-    name_en = json_after.get('name_en') if json_after else object.name_en
-    description_es = json_after.get('description_es') if json_after else object.description_es
-    description_en = json_after.get('description_en') if json_after else object.description_en
+def makeChangesSubject(user, old_object, new_object):
     
-    from apps.courses.api.models import TeacherMakeChangeSubject, Subject
-
+    from apps.courses.api.models import TeacherMakeChangeSubject
+    
     TeacherMakeChangeSubject.objects.create(
-        old_subject=object if action != 'created' else None,
-        new_subject=Subject.objects.create(
-            name_es=name_es,
-            name_en=name_en,
-            description_es=description_es,
-            description_en=description_en
-        ) if action != 'deleted' else None,
-        teacher=teacher,
+        old_subject=old_object,
+        new_subject=new_object,
+        teacher=user,
     )
 
-def makeChangesStudentGroup(user, object, action, json_after=None):
-    teacher = user
-    subject = object.subject
-    name_es = json_after.get('name_es') if json_after else object.name_es
-    name_en = json_after.get('name_en') if json_after else object.name_en
-    groupCode = json_after.get('groupCode') if json_after else object.groupCode
+def makeChangesStudentGroup(user, old_object, new_object):
     
-    from apps.courses.api.models import TeacherMakeChangeStudentGroup, StudentGroup
+    from apps.courses.api.models import TeacherMakeChangeStudentGroup
 
     TeacherMakeChangeStudentGroup.objects.create(
-        old_group=object if action != 'created' else None,
-        new_group=StudentGroup.objects.create(
-            subject=subject,
-            name_es=name_es,
-            name_en=name_en,
-            teacher=object.teacher,
-            groupCode=groupCode
-        ) if action != 'deleted' else None,
-        teacher=teacher,
+        old_group=old_object,
+        new_group=new_object,
+        teacher=user,
     )
 
-def makeChangesTopic(user, object, action, json_after=None):
-    teacher = user
-    title_es = json_after.get('title_es') if json_after else object.title_es
-    title_en = json_after.get('title_en') if json_after else object.title_en
-    description_es = json_after.get('description_es') if json_after else object.description_es
-    description_en = json_after.get('description_en') if json_after else object.description_en
+def makeChangesTopic(user, old_object, new_object):
     
-    from apps.content.api.models import TeacherMakeChangeTopic, Topic
+    from apps.content.api.models import TeacherMakeChangeTopic
 
     TeacherMakeChangeTopic.objects.create(
-        old_topic=object if action != 'created' else None,
-        new_topic=Topic.objects.create(
-            title_es=title_es,
-            title_en=title_en,
-            description_es=description_es,
-            description_en=description_en
-        ) if action != 'deleted' else None,
-        teacher=teacher,
+        old_topic=old_object,
+        new_topic=new_object,
+        teacher=user,
     )
 
-def makeChangesConcept(user, object, action, json_after=None):
-    teacher = user
-    name_es = json_after.get('name_es') if json_after else object.name_es
-    name_en = json_after.get('name_en') if json_after else object.name_en
-    description_es = json_after.get('description_es') if json_after else object.description_es
-    description_en = json_after.get('description_en') if json_after else object.description_en
+def makeChangesConcept(user, old_object, new_object):
     
-    from apps.content.api.models import TeacherMakeChangeConcept, Concept
+    from apps.content.api.models import TeacherMakeChangeConcept
 
     TeacherMakeChangeConcept.objects.create(
-        old_concept=object if action != 'created' else None,
-        new_concept=Concept.objects.create(
-            name_es=name_es,
-            name_en=name_en,
-            description_es=description_es,
-            description_en=description_en
-        ) if action != 'deleted' else None,
-        teacher=teacher,
+        old_concept=old_object,
+        new_concept=new_object,
+        teacher=user,
     )
 
-def makeChangesEpigraph(user, object, action, json_after=None):
-    teacher = user
-    title_es = json_after.get('title_es') if json_after else object.title_es
-    title_en = json_after.get('title_en') if json_after else object.title_en
-    description_es = json_after.get('description_es') if json_after else object.description_es
-    description_en = json_after.get('description_en') if json_after else object.description_en
-    from apps.content.api.models import TeacherMakeChangeEpigraph, Epigraph
+def makeChangesEpigraph(user, old_object, new_object):
+    from apps.content.api.models import TeacherMakeChangeEpigraph
 
     TeacherMakeChangeEpigraph.objects.create(
-        old_epigraph=object if action != 'created' else None,
-        new_epigraph=Epigraph.objects.create(
-            title_es=title_es,
-            title_en=title_en,
-            description_es=description_es,
-            description_en=description_en
-        ) if action != 'deleted' else None,
-        teacher=teacher,
+        old_epigraph=old_object,
+        new_epigraph=new_object,
+        teacher=user,
     )

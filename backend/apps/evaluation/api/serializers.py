@@ -32,7 +32,6 @@ class QuestionSerializer(serializers.ModelSerializer):
         }
     def get_topics(self, obj):
         queryset = [qt.topic for qt in obj.topics.all()]  # a través de QuestionBelongsToTopic
-        print("queryset topics:", queryset)
         return ShortTopicSerializer(queryset, many=True, context=self.context).data
 
     def get_concepts(self, obj):

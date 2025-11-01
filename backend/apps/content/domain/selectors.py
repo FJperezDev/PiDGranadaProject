@@ -4,7 +4,7 @@ from django.db import models
 
 def get_all_topics():
     """Devuelve todos los temas con sus epígrafes y conceptos precargados."""
-    return Topic.objects.prefetch_related('epigraphs', 'concepts').all()
+    return Topic.objects.prefetch_related('epigraphs', 'concepts').filter(old=False).all()
 
 def get_topic_by_id(topic_id: int) -> Topic:
     """Obtiene un topic específico con sus relaciones."""
@@ -14,13 +14,16 @@ def get_topic_by_title(title: str):
     """Devuelve un topic específico por su título en cualquier idioma."""
     return Topic.objects.filter(title_es=title).first() or Topic.objects.filter(title_en=title).first()
 
+def get_topics_by_subject(subject_id: int):
+    return Topic.objects.filter(subjects__subject_id=subject_id).order_by('subjects__order_id')
+
 def get_all_concepts():
     """Devuelve todos los conceptos."""
-    return Concept.objects.all()
+    return Concept.objects.filter(old=False).all()
 
 def get_all_epigraphs():
     """Devuelve todos los epígrafes."""
-    return Epigraph.objects.select_related('topic').all()
+    return Epigraph.objects.select_related('topic').filter(old=False).all()
 
 def get_epigraphs_by_topic(topic_id: int):
     """Devuelve todos los epígrafes pertenecientes a un tema."""

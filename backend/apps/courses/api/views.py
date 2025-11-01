@@ -6,12 +6,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Subject, StudentGroup, TeacherMakeChangeStudentGroup
 from .serializers import SubjectSerializer, StudentGroupSerializer, TeacherMakeChangeStudentGroupSerializer
-from ..domain import services, selectors
+from apps.courses.domain import services, selectors
+from apps.content.domain import selectors as content_selectors
+from apps.courses.domain import selectors as courses_selectors
 from apps.content.api.serializers import TopicSerializer
 from apps.utils.permissions import BaseContentViewSet
 
 class SubjectViewSet(BaseContentViewSet):
-    queryset = Subject.objects.all()
+    queryset = selectors.get_all_subjects()
     serializer_class = SubjectSerializer
     permission_classes = [permissions.AllowAny] # Allow any access for now
 
@@ -44,7 +46,7 @@ class SubjectViewSet(BaseContentViewSet):
         subject = selectors.get_subject_by_id(subject_id=pk)
         data = request.data
         topic_name = data.get('topic_name')
-        topic = selectors.get_topic_by_title(title=topic_name)
+        topic = content_selectors.get_topic_by_title(title=topic_name)
         if not topic:
             return Response({'detail': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
         order_id = data.get('order_id')
@@ -71,7 +73,7 @@ class SubjectViewSet(BaseContentViewSet):
         subject = selectors.get_subject_by_id(subject_id=pk)
         data = request.data
         topic_name = data.get('topic_name')
-        topic = selectors.get_topic_by_title(title=topic_name)
+        topic = content_selectors.get_topic_by_title(title=topic_name)
         if not topic:
             return Response({'detail': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
         order_id = data.get('order_id')
@@ -95,10 +97,10 @@ class SubjectViewSet(BaseContentViewSet):
         """PUT /subjects/<id>/topics/ — asocia un topic a la subject"""
         subject = selectors.get_subject_by_id(subject_id=pk)
         data = request.data
-        topicA = selectors.get_topic_by_title(title=data.get('topicA'))
-        topicB = selectors.get_topic_by_title(title=data.get('topicB'))
-        relationA = selectors.get_subject_topic_relation_by_both(subject=subject, topic=topicA)
-        relationB = selectors.get_subject_topic_relation_by_both(subject=subject, topic=topicB)
+        topicA = content_selectors.get_topic_by_title(title=data.get('topicA'))
+        topicB = content_selectors.get_topic_by_title(title=data.get('topicB'))
+        relationA = courses_selectors.get_subject_topic_relation_by_both(subject=subject, topic=topicA)
+        relationB = courses_selectors.get_subject_topic_relation_by_both(subject=subject, topic=topicB)
         if not relationA or not relationB:
             return Response({'detail': 'At least one relation is not found'}, status=status.HTTP_404_NOT_FOUND)
         
@@ -119,7 +121,7 @@ class SubjectViewSet(BaseContentViewSet):
             if not subject:
                 return Response({'detail': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            groups = subject.studentgroups.all()
+            groups = subject.studentgroups.filter(old=False).all()
             serializer = StudentGroupSerializer(groups, many=True, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         
@@ -158,67 +160,5 @@ class SubjectViewSet(BaseContentViewSet):
 
 
 class StudentGroupViewSet(BaseContentViewSet):
-    queryset = StudentGroup.objects.select_related('subject', 'teacher').all()
+    queryset = selectors.get_all_student_groups()
     serializer_class = StudentGroupSerializer
-    
-
-class TeacherMakeChangeStudentGroupViewSet(BaseContentViewSet):
-    queryset = TeacherMakeChangeStudentGroup.objects.select_related('group', 'teacher', 'subject').all()
-    serializer_class = TeacherMakeChangeStudentGroupSerializer
-
-
-    def create(self, request, *args, **kwargs):
-        data = request.data
-        subject = Subject.objects.get(pk=data['subject'])
-        teacher = getattr(request.user, 'teacher', None)
-        try:
-            group = services.create_student_group(
-                subject=subject,
-                name_es=data.get('name_es'),
-                name_en=data.get('name_en'),
-                teacher=teacher,
-                groupCode=data.get('groupCode')
-            )
-        except ValidationError as e:
-            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        # # Track teacher action
-        # TeacherMakeChangeStudentGroup.objects.create(
-        #     group=group,
-        #     subject=group.subject,
-        #     teacher=teacher,
-        #     action='created',
-        #     name_es=group.name_es,
-        #     name_en=group.name_en,
-        # )
-
-        serializer = self.get_serializer(group)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def destroy(self, request, *args, **kwargs):
-        group = self.get_object()
-        teacher = getattr(request.user, 'teacher', None)
-
-        # # Track teacher action
-        # TeacherMakeChangeStudentGroup.objects.create(
-        #     group=group,
-        #     subject=group.subject,
-        #     teacher=teacher,
-        #     action='deleted',
-        #     name_es=group.name_es,
-        #     name_en=group.name_en,
-        # )
-
-        services.delete_student_group(group)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(detail=False, methods=['get'])
-    def my_groups(self, request):
-        """Retorna los grupos del teacher logueado"""
-        teacher = getattr(request.user, 'teacher', None)
-        if not teacher:
-            return Response([], status=status.HTTP_200_OK)
-
-        groups = StudentGroup.objects.filter(teacher=teacher)
-        serializer = self.get_serializer(groups, many=True)
-        return Response(serializer.data)

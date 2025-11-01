@@ -9,9 +9,10 @@ from apps.evaluation.domain import selectors as evaluation_selectors
 
 # --- Question Services ---
 def create_question(user, type: str, statement_es: str = None, statement_en: str = None,
-                    approved: bool = False, generated: bool = False, topics: set[Topic] = None, 
-                    concepts: set[Concept] = None, _from_audit: bool = False) -> Question:
+                    approved: bool = False, generated: bool = False, topics_ids: set[int] = None, 
+                    concepts_ids: set[int] = None, answers: set[Answer] = None, is_true = None) -> Question:
     """Crea una nueva pregunta con validaciones básicas."""
+
     if not statement_es or not statement_en:
         raise ValidationError("Debe proporcionar el enunciado en ambos idiomas.")
     question = Question.objects.create(
@@ -21,15 +22,31 @@ def create_question(user, type: str, statement_es: str = None, statement_en: str
         approved=approved,
         generated=generated,
     )
-    if topics:
-        for topic in topics:
+    if type is not None:
+        if type == 'true_false':
+            if is_true is not None:
+                create_answer(user, question, text_es='Verdadero', text_en='True', is_correct=is_true)
+                create_answer(user, question, text_es='Falso', text_en='False', is_correct=not is_true)
+            else:
+                raise ValidationError("Debe proporcionar el valor de is_true para preguntas de verdadero/falso.")
+
+    if topics_ids:
+        topics = {}
+        for topic_id in topics_ids:
+            topic = content_selectors.get_topic_by_id(topic_id)
             QuestionBelongsToTopic.objects.create(question=question, topic=topic)
     
-    if concepts:
-        for concept in concepts:
+    if concepts_ids:
+        for concept_id in concepts_ids:
+            concept = content_selectors.get_concept_by_id(concept_id)
             QuestionRelatedToConcept.objects.create(question=question, concept=concept)
-    if not _from_audit:
-        makeChanges(user, question, 'created')
+
+    if answers:
+        for answer in answers:
+            answer.question = question
+            answer.save()
+
+    makeChanges(user=user, old_object=None, new_object=question)
 
     return question
 
@@ -38,6 +55,8 @@ def update_question(user, question: Question, type: str = None, statement_es: st
                     generated: bool = None, topics: set[Topic] = None, 
                     concepts: set[Concept] = None, is_true = None, _from_audit: bool = False) -> Question:
     """Actualiza una pregunta con los nuevos datos proporcionados."""
+    old_question = Question.objects.get(pk=question.pk)
+    old_question.pk = None 
     if type is not None:
         question.type = type
         if type == 'true_false':
@@ -67,20 +86,18 @@ def update_question(user, question: Question, type: str = None, statement_es: st
             concept = content_selectors.get_concept_by_name(name)
             QuestionRelatedToConcept.objects.create(question=question, concept=concept)
     question.save()
-    if not _from_audit:
-        makeChanges(user, question, 'updated')
+    old_question.save()
+    makeChanges(user, old_object=old_question, new_object=question)
     return question
 
 def delete_question(user, question: Question, _from_audit: bool = False) -> None:
     """Elimina una pregunta dada."""
-    if not _from_audit:
-        makeChanges(user, question, 'deleted')
+    makeChanges(user, old_object=question, new_object=None)
     question.delete()
 
 # --- Answer Services ---
 def create_answer(user, question: Question, text_es: str = None, text_en: str = None,
                    is_correct: bool = False) -> Answer:
-    """Crea una nueva respuesta para una pregunta dada."""
     if not text_es or not text_en:
         raise ValidationError("Debe proporcionar el texto de la respuesta en ambos idiomas.")
     answer = Answer.objects.create(
@@ -89,13 +106,14 @@ def create_answer(user, question: Question, text_es: str = None, text_en: str = 
         text_en=text_en,
         is_correct=is_correct,
     )
-    # This service is simple, so we can remove the audit call to prevent loops.
-    # The audit will be handled by the calling function (e.g., update_question).
+    makeChanges(user, old_object=None, new_object=answer)
     return answer
 
 def update_answer(user, answer: Answer, text_es: str = None, text_en: str = None,
                    is_correct: bool = None, _from_audit: bool = False) -> Answer:
     """Actualiza una respuesta con los nuevos datos proporcionados."""
+    old_answer = Answer.objects.get(pk=answer.pk)
+    old_answer.pk = None
     if text_es is not None:
         answer.text_es = text_es
     if text_en is not None:
@@ -103,12 +121,13 @@ def update_answer(user, answer: Answer, text_es: str = None, text_en: str = None
     if is_correct is not None:
         answer.is_correct = is_correct
     answer.save()
-    if not _from_audit:
-        makeChanges(user, answer, 'updated')
+    old_answer.save()
+    makeChanges(user, old_object=old_answer, new_object=answer)
     return answer
 
 def delete_answer(user, answer: Answer, _from_audit: bool = False) -> None:
     """Elimina una respuesta dada."""
+    makeChanges(user, old_object=answer, new_object=None)
     answer.delete()
 
 def evaluate_question(student_group: StudentGroup, question: Question, answer: Answer) -> bool:
@@ -135,7 +154,6 @@ def create_exam(user, topics: set[Topic], num_questions: int) -> list[Question]:
         question = evaluation_selectors.get_random_question_from_topic(topic)
         if question and question not in exam_questions:
             exam_questions.append(question)
-            
     if len(exam_questions) >= num_questions:
         return exam_questions[:num_questions]
 
@@ -146,13 +164,13 @@ def create_exam(user, topics: set[Topic], num_questions: int) -> list[Question]:
             exam_questions.append(question)
         if len(exam_questions) >= num_questions:
             break
-    
 
     return exam_questions
 
 def correct_exam(student_group: StudentGroup, questions_and_answers: dict[Question, Answer]) -> int:
     """Corrige un examen dado un conjunto de preguntas y respuestas."""
     mark = 0
+
     for question, answer in questions_and_answers.items():
         is_correct = evaluate_question(student_group, question, answer)
         if is_correct:

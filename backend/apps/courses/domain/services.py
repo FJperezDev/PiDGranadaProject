@@ -1,8 +1,8 @@
-from ..api.models import Subject, StudentGroup, TeacherMakeChangeStudentGroup, SubjectIsAboutTopic
-from ...content.api.models import Topic
-from . import selectors
-from ...customauth.models import CustomTeacher as Teacher
-from ...evaluation.api.models import QuestionEvaluationGroup
+from apps.courses.api.models import Subject, StudentGroup, TeacherMakeChangeStudentGroup, SubjectIsAboutTopic
+from apps.content.api.models import Topic
+from apps.customauth.models import CustomTeacher as Teacher
+from apps.evaluation.api.models import QuestionEvaluationGroup
+from apps.evaluation.domain import selectors as evaluation_selectors
 
 from django.core.exceptions import ValidationError
 BIG_ENOUGH_INT = 1_000
@@ -58,7 +58,7 @@ def create_student_group(subject: Subject, name_es: str, name_en: str, teacher: 
         groupCode=groupCode,
     )
 
-    questions = selectors.get_questions_for_subject(subject)
+    questions = evaluation_selectors.get_questions_by_subject(subject)
     for question in questions:
         QuestionEvaluationGroup.objects.create(group=group, question=question)
 

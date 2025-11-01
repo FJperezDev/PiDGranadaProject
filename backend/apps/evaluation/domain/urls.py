@@ -1,17 +1,13 @@
 from rest_framework.routers import DefaultRouter
 from ..api.views import (
     QuestionViewSet,
-    AnswerViewSet,
-    QuestionBelongsToTopicViewSet,
-    QuestionRelatedToConceptViewSet,
-    QuestionEvaluationGroupViewSet,
+    ExamViewSet,
+    AnswerViewSet
 )
 
 router = DefaultRouter()
 router.register(r'questions', QuestionViewSet, basename='question')
 router.register(r'answers', AnswerViewSet, basename='answer')
-router.register(r'question-topic', QuestionBelongsToTopicViewSet, basename='questiontopic')
-router.register(r'question-concept', QuestionRelatedToConceptViewSet, basename='questionconcept')
-router.register(r'evaluations', QuestionEvaluationGroupViewSet, basename='questionevaluation')
+router.register(r'exams', ExamViewSet, basename='exam')
 
 urlpatterns = router.urls

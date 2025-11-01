@@ -1,6 +1,9 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from apps.content.api.models import Topic
+from apps.content.domain import selectors as content_selectors
+from apps.courses.domain import selectors as courses_selectors
 
 from .models import (
     Question, Answer,
@@ -12,26 +15,27 @@ from .serializers import (
     QuestionBelongsToTopicSerializer, QuestionRelatedToConceptSerializer,
     QuestionEvaluationGroupSerializer
 )
-from ..domain import services
+from apps.evaluation.domain import selectors, services
 from apps.utils.permissions import BaseContentViewSet
 
 class QuestionViewSet(BaseContentViewSet):
-    queryset = Question.objects.all()
+    queryset = selectors.get_all_questions()
     serializer_class = QuestionSerializer
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        topics = data.get('topics', [])
-        concepts = data.get('concepts', [])
+        topics_ids = data.get('topics', [])
+        concepts_ids = data.get('concepts', [])
         question = services.create_question(
             user=request.user,
             type=data.get('type'),
+            is_true=data.get('is_true'),
             statement_es=data.get('statement_es'),
             statement_en=data.get('statement_en'),
             approved=data.get('approved', False),
             generated=data.get('generated', False),
-            topics=QuestionBelongsToTopic.objects.filter(id__in=topics).values_list('topic', flat=True) if topics else None,
-            concepts=QuestionRelatedToConcept.objects.filter(id__in=concepts).values_list('concept', flat=True) if concepts else None
+            topics_ids=topics_ids,
+            concepts_ids=concepts_ids
         )
         serializer = self.get_serializer(question)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -60,14 +64,23 @@ class QuestionViewSet(BaseContentViewSet):
         services.delete_question(user=request.user, question=question)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(detail=True, methods=['get'], url_path='last-modified', url_name='last-modified')
+    def last_modified(self, request, pk=None):
+        question = selectors.get_question_by_id(pk)
+        last_question = selectors.get_last_change_question(question)
+        if last_question:
+            serializer = self.get_serializer(last_question)
+            return Response(serializer.data)
+        return Response({'detail': 'No questions found.'}, status=status.HTTP_404_NOT_FOUND)
 
 class AnswerViewSet(BaseContentViewSet):
-    queryset = Answer.objects.select_related('question').all()
+    queryset = Answer.objects.all()
     serializer_class = AnswerSerializer
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        question = Question.objects.get(pk=data['question'])
+        question_id = data.get('question_id')
+        question = selectors.get_question_by_id(question_id)
         answer = services.create_answer(
             user=request.user,
             question=question,
@@ -78,37 +91,38 @@ class AnswerViewSet(BaseContentViewSet):
         serializer = self.get_serializer(answer)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    def update(self, request, *args, **kwargs):
-        answer = self.get_object()
+class ExamViewSet(BaseContentViewSet):
+    queryset = Question.objects.none()
+    serializer_class = QuestionSerializer 
+
+    @action(detail=False, methods=['get'], url_path='generate-exam', url_name='generate-exam')
+    def create_exam(self, request):
         data = request.data
-        answer = services.update_answer(
-            user=request.user,
-            answer=answer,
-            text_es=data.get('text_es'),
-            text_en=data.get('text_en'),
-            is_correct=data.get('is_correct')
-        )
-        serializer = self.get_serializer(answer)
+        topics_ids = data.get('topics', [])
+        num_questions = data.get('num_questions', 10)
+        if not topics_ids or not isinstance(topics_ids, list):
+            return Response({"detail": "Se requiere una lista de IDs de temas ('topics')."}, status=status.HTTP_400_BAD_REQUEST)
+        topics = []
+        for topic_id in topics_ids:
+            topics.append(content_selectors.get_topic_by_id(topic_id))
+
+        exam_questions = services.create_exam(user=request.user, topics=set(topics), num_questions=num_questions)
+        serializer = self.get_serializer(exam_questions, many=True)
         return Response(serializer.data)
 
-    def destroy(self, request, *args, **kwargs):
-        answer = self.get_object()
-        services.delete_answer(
-            user=request.user,
-            answer=answer
-        )
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-class QuestionBelongsToTopicViewSet(BaseContentViewSet):
-    queryset = QuestionBelongsToTopic.objects.all()
-    serializer_class = QuestionBelongsToTopicSerializer
-
-
-class QuestionRelatedToConceptViewSet(BaseContentViewSet):
-    queryset = QuestionRelatedToConcept.objects.all()
-    serializer_class = QuestionRelatedToConceptSerializer
-
-
-class QuestionEvaluationGroupViewSet(BaseContentViewSet):
-    queryset = QuestionEvaluationGroup.objects.select_related('group', 'question').all()
-    serializer_class = QuestionEvaluationGroupSerializer
+    @action(detail=False, methods=['get'], url_path='evaluate-exam', url_name='evaluate-exam')
+    def evaluate_exam(self, request):
+        data = request.data
+        student_group = courses_selectors.get_student_group_by_id(data.get('student_group_id'))
+        questions_and_answers = data.get('questions_and_answers', [])
+        questions_and_answers_dict = {}
+        for qa in questions_and_answers:
+            print(questions_and_answers[qa])
+            question = selectors.get_question_by_id(qa)
+            answer = selectors.get_answer_by_id(questions_and_answers[qa])
+            questions_and_answers_dict[question] = answer
+        mark = services.correct_exam(student_group, questions_and_answers_dict)
+        return Response({'mark': mark})
+    
+    
+    

@@ -1,48 +1,47 @@
 # Backend Documentation - Proyecto PiD
 
-This document provides an overview of the backend for the "Proyecto PiD" application. The backend is built with Django and Django REST Framework. It follows a service-oriented architecture where business logic is encapsulated within a `domain.services` layer for each application. This keeps the views (controllers) clean and focused on handling HTTP requests and responses.
+Este documento proporciona una descripción general del backend para la aplicación "Proyecto PiD". El backend está construido con Django y Django REST Framework. Sigue una arquitectura orientada a servicios donde la lógica de negocio se encapsula dentro de una capa `domain.services` para cada aplicación. Esto mantiene las vistas (controladores) limpias y enfocadas en manejar las peticiones y respuestas HTTP.
 
 ## Table of Contents
 - Setup and Installation
 - Running the Application
 - Running Tests
 - API Endpoint Documentation
-- API Services Documentation
-  - Courses App
-  - Content App
-  - Evaluation App
+- API Services Documentation (Capa de Dominio)
+  - App `courses`
+  - App `content`
+  - App `evaluation`
 
 ## Setup and Installation
 
-1.  **Clone the repository.**
-2.  **Navigate to the `backend` directory:**
+1.  **Clona el repositorio.**
+2.  **Navega al directorio `backend`:**
     ```sh
     cd backend
     ```
-3.  **Create and activate a Python virtual environment:**
+3.  **Crea y activa un entorno virtual de Python:**
     ```sh
-    # Create the virtual environment
+    # Crear el entorno virtual
     python -m venv venv
 
-    # Activate on Windows
+    # Activar en Windows
     .\venv\Scripts\activate
 
-    # Activate on macOS/Linux
+    # Activar en macOS/Linux
     source venv/bin/activate
     ```
-4.  **Install dependencies:**
-    (Assuming a `requirements.txt` file exists)
+4.  **Instala las dependencias:**
     ```sh
     pip install -r requirements.txt
     ```
-5.  **Apply database migrations:**
+5.  **Aplica las migraciones de la base de datos:**
     ```sh
     python manage.py migrate
     ```
 
 ## Running the Application
 
-To start the development server, run the following command from the `backend` directory:
+Para iniciar el servidor de desarrollo, ejecuta el siguiente comando desde el directorio `backend`:
 
 ```bash
 python manage.py runserver
@@ -154,6 +153,11 @@ The permission system is role-based for teachers:
 #### Evaluaciones (`/evaluations/`)
 
 *   `GET /evaluations/`: Lista las métricas de evaluación de cada pregunta por grupo de estudiantes. (IsTeacher)
+
+#### Endpoints de Exámenes (`/exams/`)
+
+*   `GET /exams/generate-exam/`: Genera un nuevo examen. Requiere una lista de IDs de temas (`topics`) y un número de preguntas (`num_questions`) en el cuerpo de la petición. (IsTeacher)
+*   `GET /exams/evaluate-exam/`: Evalúa un examen enviado. Requiere el ID del grupo de estudiantes (`student_group_id`) y un diccionario de preguntas y respuestas (`questions_and_answers`). (IsTeacher)
 
 
 ---

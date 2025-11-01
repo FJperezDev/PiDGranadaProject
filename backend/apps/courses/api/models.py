@@ -10,15 +10,22 @@ class Subject(models.Model):
     name_en = models.TextField(unique=True)
     description_es = models.TextField(blank=True, null=True)
     description_en = models.TextField(blank=True, null=True)
-    modified = models.BooleanField(default=False)
+    old = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name_es or self.name_en
 
-# Note: TeacherMakeChangeSubject model intentionally omitted because migrations do not
-# create a corresponding table. Keeping this class in models would cause Django to
-# expect a table that doesn't exist and trigger OperationalError on cascade deletes.
-    
+class TeacherMakeChangeSubject(models.Model):
+    old_subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='changes')
+    new_subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='+')
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('old_subject', 'new_subject', 'created_at', 'teacher')
+
+    def __str__(self):
+        return f"{self.teacher} changed {self.old_subject} to {self.new_subject}"
 
 class StudentGroup(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='studentgroups')
@@ -26,6 +33,7 @@ class StudentGroup(models.Model):
     name_en = models.TextField(unique=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name='studentgroups')
     groupCode = models.CharField(max_length=20, null=True, blank=True)
+    old = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('id', 'subject')
@@ -35,17 +43,16 @@ class StudentGroup(models.Model):
     
 class TeacherMakeChangeStudentGroup(models.Model):
     # Match the fields created/removed by migrations: only keep group, subject, teacher, action, created_at
-    group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='changes')
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    old_group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='changes')
+    new_group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='+')
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
-    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        unique_together = ('group', 'subject', 'action', 'created_at', 'teacher')
+        unique_together = ('old_group', 'new_group','created_at', 'teacher')
 
     def __str__(self):
-        return f"{self.teacher} {self.action} {self.group}"
+        return f"{self.teacher} changed {self.old_group} to {self.new_group}"
 
 class SubjectIsAboutTopic(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='topics')

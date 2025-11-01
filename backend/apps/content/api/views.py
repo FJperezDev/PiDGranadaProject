@@ -28,9 +28,10 @@ class TopicViewSet(BaseContentViewSet):
         serializer = self.get_serializer(topic)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
+    # Audit update and delete Topic
+
     @action(detail=True, methods=['get'], )
     def concepts(self, request, pk=None):
-        print("Dentro de concepts")
         """GET /topics/<id>/concepts/"""
         queryset = selectors.get_concepts_by_topic(pk)
         serializer = ConceptSerializer(queryset, many=True, context={'request': request})
@@ -154,11 +155,12 @@ class ConceptViewSet(BaseContentViewSet):
     
     @action(detail=True, methods=['get'], )
     def concepts(self, request, pk=None):
-        print("Dentro de concepts")
         """GET /concepts/<id>/concepts/"""
         queryset = selectors.get_concepts_by_concept(pk)
         serializer = ConceptSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
+
+    # Audit create, update and delete Concept
 
     def create(self, request, *args, **kwargs):
         data = request.data
@@ -225,21 +227,3 @@ class ConceptViewSet(BaseContentViewSet):
             'bidirectional': bidirectional
         }, status=status.HTTP_200_OK)
     
-
-class EpigraphViewSet(BaseContentViewSet):
-    serializer_class = EpigraphSerializer
-
-    def get_queryset(self):
-        return selectors.get_all_epigraphs()
-
-    def perform_create(self, serializer):
-        data = serializer.validated_data
-        topic = data.get('topic')
-        services.create_epigraph(
-            topic=topic,
-            name_es=data.get('name_es'),
-            name_en=data.get('name_en'),
-            order_id=data.get('order_id'),
-            description_es=data.get('description_es'),
-            description_en=data.get('description_en')
-        )
