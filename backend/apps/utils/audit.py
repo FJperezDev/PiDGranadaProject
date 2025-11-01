@@ -79,7 +79,7 @@ def removeEpigraphChangesUpTo(datetime):
     changes_to_delete_e.delete()
     TeacherMakeChangeEpigraph.objects.filter(created_at__lte=datetime).delete()
 
-def makeChanges(user, old_object, new_object):
+def makeChanges(user, old_object=None, new_object=None):
     
     from apps.evaluation.api.models import Question, Answer
     from apps.courses.api.models import Subject, StudentGroup

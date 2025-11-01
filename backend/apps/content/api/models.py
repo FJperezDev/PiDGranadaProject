@@ -17,8 +17,8 @@ class Topic(models.Model):
         return self.title_es or self.title_en
 
 class TeacherMakeChangeTopic(models.Model):
-    old_topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='old_changes')
-    new_topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='changes')
+    old_topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
+    new_topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     
@@ -36,8 +36,8 @@ class Concept(models.Model):
         return self.name_es or self.name_en
 
 class TeacherMakeChangeConcept(models.Model):
-    old_concept = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='old_changes')
-    new_concept = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='changes')
+    old_concept = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
+    new_concept = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     
@@ -93,8 +93,8 @@ class Epigraph(models.Model):
         return self.name_es or self.name_en
 
 class TeacherMakeChangeEpigraph(models.Model):
-    old_epigraph = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='old_changes')
-    new_epigraph = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='changes')
+    old_epigraph = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
+    new_epigraph = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 

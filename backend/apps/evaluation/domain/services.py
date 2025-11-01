@@ -6,9 +6,10 @@ from apps.content.domain import selectors as content_selectors
 from apps.utils.audit import makeChanges
 from apps.courses.api.models import StudentGroup
 from apps.evaluation.domain import selectors as evaluation_selectors
+from apps.customauth.models import CustomTeacher as Teacher
 
 # --- Question Services ---
-def create_question(user, type: str, statement_es: str = None, statement_en: str = None,
+def create_question(teacher: Teacher, type: str, statement_es: str = None, statement_en: str = None,
                     approved: bool = False, generated: bool = False, topics_titles: set[str] = None, 
                     concepts_names: set[str] = None, is_true = None) -> Question:
     """Crea una nueva pregunta con validaciones básicas."""
@@ -25,8 +26,8 @@ def create_question(user, type: str, statement_es: str = None, statement_en: str
     if type is not None:
         if type == 'true_false':
             if is_true is not None:
-                create_answer(user, question, text_es='Verdadero', text_en='True', is_correct=is_true)
-                create_answer(user, question, text_es='Falso', text_en='False', is_correct=not is_true)
+                create_answer(teacher, question, text_es='Verdadero', text_en='True', is_correct=is_true)
+                create_answer(teacher, question, text_es='Falso', text_en='False', is_correct=not is_true)
             else:
                 raise ValidationError("Debe proporcionar el valor de is_true para preguntas de verdadero/falso.")
 
@@ -40,11 +41,11 @@ def create_question(user, type: str, statement_es: str = None, statement_en: str
             concept = content_selectors.get_concept_by_name(name)
             QuestionRelatedToConcept.objects.create(question=question, concept=concept)
 
-    makeChanges(user=user, old_object=None, new_object=question)
+    makeChanges(user=teacher, old_object=None, new_object=question)
 
     return question
 
-def update_question(user, question: Question, type: str = None, statement_es: str = None,
+def update_question(teacher: Teacher, question: Question, type: str = None, statement_es: str = None,
                     statement_en: str = None, approved: bool = None,
                     generated: bool = None, topics: set[Topic] = None, 
                     concepts: set[Concept] = None, is_true = None) -> Question:
@@ -56,9 +57,9 @@ def update_question(user, question: Question, type: str = None, statement_es: st
         if type == 'true_false':
             if is_true is not None:
                 for answer in question.answers.all():
-                    delete_answer(user, answer)
-                create_answer(user, question, text_es='Verdadero', text_en='True', is_correct=is_true)
-                create_answer(user, question, text_es='Falso', text_en='False', is_correct=not is_true)
+                    delete_answer(teacher, answer)
+                create_answer(teacher, question, text_es='Verdadero', text_en='True', is_correct=is_true)
+                create_answer(teacher, question, text_es='Falso', text_en='False', is_correct=not is_true)
             else:
                 raise ValidationError("Debe proporcionar el valor de is_true para preguntas de verdadero/falso.")
     if statement_es is not None:
@@ -81,16 +82,16 @@ def update_question(user, question: Question, type: str = None, statement_es: st
             QuestionRelatedToConcept.objects.create(question=question, concept=concept)
     question.save()
     old_question.save()
-    makeChanges(user, old_object=old_question, new_object=question)
+    makeChanges(teacher, old_object=old_question, new_object=question)
     return question
 
-def delete_question(user, question: Question) -> None:
+def delete_question(teacher: Teacher, question: Question) -> None:
     """Elimina una pregunta dada."""
-    makeChanges(user, old_object=question, new_object=None)
+    makeChanges(teacher, old_object=question, new_object=None)
     question.delete()
 
 # --- Answer Services ---
-def create_answer(user, question: Question, text_es: str = None, text_en: str = None,
+def create_answer(teacher: Teacher, question: Question, text_es: str = None, text_en: str = None,
                    is_correct: bool = False) -> Answer:
     if not text_es or not text_en:
         raise ValidationError("Debe proporcionar el texto de la respuesta en ambos idiomas.")
@@ -100,10 +101,10 @@ def create_answer(user, question: Question, text_es: str = None, text_en: str = 
         text_en=text_en,
         is_correct=is_correct,
     )
-    makeChanges(user, old_object=None, new_object=answer)
+    makeChanges(teacher, old_object=None, new_object=answer)
     return answer
 
-def update_answer(user, answer: Answer, text_es: str = None, text_en: str = None,
+def update_answer(teacher: Teacher, answer: Answer, text_es: str = None, text_en: str = None,
                    is_correct: bool = None) -> Answer:
     """Actualiza una respuesta con los nuevos datos proporcionados."""
     old_answer = Answer.objects.get(pk=answer.pk)
@@ -116,12 +117,12 @@ def update_answer(user, answer: Answer, text_es: str = None, text_en: str = None
         answer.is_correct = is_correct
     answer.save()
     old_answer.save()
-    makeChanges(user, old_object=old_answer, new_object=answer)
+    makeChanges(teacher, old_object=old_answer, new_object=answer)
     return answer
 
-def delete_answer(user, answer: Answer) -> None:
+def delete_answer(teacher: Teacher, answer: Answer) -> None:
     """Elimina una respuesta dada."""
-    makeChanges(user, old_object=answer, new_object=None)
+    makeChanges(teacher, old_object=answer, new_object=None)
     answer.delete()
 
 def evaluate_question(student_group: StudentGroup, question: Question, answer: Answer) -> bool:

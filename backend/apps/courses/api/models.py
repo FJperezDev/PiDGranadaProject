@@ -16,8 +16,8 @@ class Subject(models.Model):
         return self.name_es or self.name_en
 
 class TeacherMakeChangeSubject(models.Model):
-    old_subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='changes')
-    new_subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='+')
+    old_subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
+    new_subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='+', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
@@ -43,8 +43,8 @@ class StudentGroup(models.Model):
     
 class TeacherMakeChangeStudentGroup(models.Model):
     # Match the fields created/removed by migrations: only keep group, subject, teacher, action, created_at
-    old_group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='changes')
-    new_group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='+')
+    old_group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
+    new_group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='+', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 

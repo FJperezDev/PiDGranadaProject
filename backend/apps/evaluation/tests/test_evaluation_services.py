@@ -22,22 +22,22 @@ def user():
     return CustomTeacher.objects.create_user(username="testuser", password="password")
 
 @pytest.fixture
-def topic1(subject):
-    return content_services.create_topic(title_en="Topic 1", title_es="Tema 1", description_en="Description", description_es="Descripción")
+def topic1(user):
+    return content_services.create_topic(title_en="Topic 1", title_es="Tema 1", description_en="Description", description_es="Descripción", teacher=user)
 
 @pytest.fixture
-def topic2(subject):
-    return content_services.create_topic(title_en="Topic 2", title_es="Tema 2", description_en="Description", description_es="Descripción")
+def topic2(user):
+    return content_services.create_topic(title_en="Topic 2", title_es="Tema 2", description_en="Description", description_es="Descripción", teacher=user)
 
 @pytest.fixture
-def concept1(topic1):
-    concept1 = content_services.create_concept(name_es="Concepto 1", name_en="Concept 1", description_es="Descripción", description_en="Description")
+def concept1(topic1, user):
+    concept1 = content_services.create_concept(name_es="Concepto 1", name_en="Concept 1", description_es="Descripción", description_en="Description", teacher=user)
     content_services.link_concept_to_topic(topic1, concept1, order_id=1)
     return concept1
 
 @pytest.fixture
-def concept2(topic1):
-    concept2 = content_services.create_concept(name_es="Concepto 2", name_en="Concept 2", description_es="Descripción", description_en="Description")
+def concept2(topic1, user):
+    concept2 = content_services.create_concept(name_es="Concepto 2", name_en="Concept 2", description_es="Descripción", description_en="Description", teacher=user)
     content_services.link_concept_to_topic(topic1, concept2, order_id=2)
     return concept2
 
@@ -53,11 +53,11 @@ def question_data():
 
 @pytest.fixture
 def question(user, question_data):
-    return services.create_question(user=user, **question_data)
+    return services.create_question(teacher=user, **question_data)
 
 @pytest.fixture
-def subject():
-    return course_services.create_subject(name_es="Asignatura", name_en="Subject", description_en="Description", description_es="Descripción")
+def subject(user):
+    return course_services.create_subject(name_es="Asignatura", name_en="Subject", description_en="Description", description_es="Descripción", teacher=user)
 
 @pytest.fixture
 def student_groupA(user, subject):
@@ -65,8 +65,7 @@ def student_groupA(user, subject):
         subject=subject,
         name_es="Grupo 1",
         name_en="Group 1",
-        teacher=user,
-        groupCode="G1"
+        teacher=user
     )
 
 @pytest.fixture
@@ -75,28 +74,27 @@ def student_groupB(user, subject):
         subject=subject,
         name_es="Grupo B",
         name_en="Group B",
-        teacher=user,
-        groupCode="G2"
+        teacher=user
     )
 
 @pytest.fixture
 def question_with_answers(user):
-    question = services.create_question(user=user, type='multiple', statement_es='Q1', statement_en='Q1')
-    services.create_answer(user=user, question=question, text_es='A1', text_en='A1', is_correct=True)
-    services.create_answer(user=user, question=question, text_es='A2', text_en='A2', is_correct=False)
+    question = services.create_question(teacher=user, type='multiple', statement_es='Q1', statement_en='Q1')
+    services.create_answer(teacher=user, question=question, text_es='A1', text_en='A1', is_correct=True)
+    services.create_answer(teacher=user, question=question, text_es='A2', text_en='A2', is_correct=False)
     return question
 
 @pytest.fixture
 def question_with_answers_2(user):
-    question = services.create_question(user=user, type='multiple', statement_es='Q2', statement_en='Q2')
-    services.create_answer(user=user, question=question, text_es='B1', text_en='B1', is_correct=True)
-    services.create_answer(user=user, question=question, text_es='B2', text_en='B2', is_correct=False)
+    question = services.create_question(teacher=user, type='multiple', statement_es='Q2', statement_en='Q2')
+    services.create_answer(teacher=user, question=question, text_es='B1', text_en='B1', is_correct=True)
+    services.create_answer(teacher=user, question=question, text_es='B2', text_en='B2', is_correct=False)
     return question
 
 # --- Question Service Tests ---
 
 def test_create_question(user, question_data):
-    question = services.create_question(user=user, **question_data)
+    question = services.create_question(teacher=user, **question_data)
     assert Question.objects.count() == 1
     assert question.type == question_data['type']
     assert question.statement_es == question_data['statement_es']
@@ -104,7 +102,7 @@ def test_create_question(user, question_data):
 
 def test_create_question_with_topics_and_concepts(user, question_data, topic1, concept1):
     question = services.create_question(
-        user=user,
+        teacher=user,
         **question_data,
         topics_titles=set([topic1.title_es]),
         concepts_names=set([concept1.name_es])
@@ -116,11 +114,11 @@ def test_create_question_with_topics_and_concepts(user, question_data, topic1, c
 
 def test_create_question_raises_validation_error_on_missing_statement(user):
     with pytest.raises(ValidationError, match="Debe proporcionar el enunciado en ambos idiomas."):
-        services.create_question(user=user, type='multiple', statement_es='Solo ES')
+        services.create_question(teacher=user, type='multiple', statement_es='Solo ES')
 
 def test_update_question_basic_fields(user, question):
     updated_question = services.update_question(
-        user=user,
+        teacher=user,
         question=question,
         statement_es="Nuevo enunciado",
         approved=False
@@ -136,7 +134,7 @@ def test_update_question_topics_and_concepts(mock_get_concept, mock_get_topic, u
     QuestionBelongsToTopic.objects.create(question=question, topic=topic1)
     
     services.update_question(
-        user=user,
+        teacher=user,
         question=question,
         topics=["Topic 1", "Topic 2"],
         concepts=["Concept 1", "Concept 2"]
@@ -148,10 +146,10 @@ def test_update_question_topics_and_concepts(mock_get_concept, mock_get_topic, u
     assert {str(c.concept) for c in question.concepts.all()} == {"Concepto 1", "Concepto 2"}
 
 def test_update_question_to_true_false(user, question):
-    services.create_answer(user=user, question=question, text_es="A", text_en="A")
+    services.create_answer(teacher=user, question=question, text_es="A", text_en="A")
     assert question.answers.count() == 1
 
-    services.update_question(user=user, question=question, type='true_false', is_true=True)
+    services.update_question(teacher=user, question=question, type='true_false', is_true=True)
 
     assert question.type == 'true_false'
     assert question.answers.count() == 2
@@ -160,11 +158,11 @@ def test_update_question_to_true_false(user, question):
 
 def test_update_question_to_true_false_requires_is_true(user, question):
     with pytest.raises(ValidationError, match="Debe proporcionar el valor de is_true"):
-        services.update_question(user=user, question=question, type='true_false')
+        services.update_question(teacher=user, question=question, type='true_false')
 
 def test_delete_question(user, question):
     assert Question.objects.count() == 1
-    services.delete_question(user=user, question=question)
+    services.delete_question(teacher=user, question=question)
     assert Question.objects.count() == 0
 
 # --- Answer Service Tests ---
@@ -179,7 +177,7 @@ def answer_data(question):
     }
 
 def test_create_answer(user, answer_data):
-    answer = services.create_answer(user=user, **answer_data)
+    answer = services.create_answer(teacher=user, **answer_data)
     assert Answer.objects.count() == 1
     assert answer.question == answer_data['question']
     assert answer.text_es == 'Madrid'
@@ -187,12 +185,12 @@ def test_create_answer(user, answer_data):
 
 def test_create_answer_raises_validation_error_on_missing_text(user):
     with pytest.raises(ValidationError, match="Debe proporcionar el texto de la respuesta en ambos idiomas."):
-        services.create_answer(user=user, question=Question(), text_es='Solo ES')
+        services.create_answer(teacher=user, question=Question(), text_es='Solo ES')
 
 def test_update_answer(user, answer_data):
-    answer = services.create_answer(user=user, **answer_data)
+    answer = services.create_answer(teacher=user, **answer_data)
     updated_answer = services.update_answer(
-        user=user,
+        teacher=user,
         answer=answer,
         text_en="New Answer",
         is_correct=False
@@ -201,9 +199,9 @@ def test_update_answer(user, answer_data):
     assert not updated_answer.is_correct
 
 def test_delete_answer(user, answer_data):
-    answer = services.create_answer(user=user, **answer_data)
+    answer = services.create_answer(teacher=user, **answer_data)
     assert Answer.objects.count() == 1
-    services.delete_answer(user=user, answer=answer)
+    services.delete_answer(teacher=user, answer=answer)
     assert Answer.objects.count() == 0
 
 def test_update_question_type_true_false_with_is_true_false(user, question):
@@ -211,7 +209,7 @@ def test_update_question_type_true_false_with_is_true_false(user, question):
     Tests that when a question is updated to 'true_false' with is_true=False,
     the correct answers are created.
     """
-    services.update_question(user=user, question=question, type='true_false', is_true=False)
+    services.update_question(teacher=user, question=question, type='true_false', is_true=False)
 
     assert question.answers.count() == 2
     correct_answer = question.answers.get(is_correct=True)
@@ -227,11 +225,11 @@ def test_update_question_type_true_false_overwrites_existing_answers(user, quest
     Tests that when a question is updated to 'true_false',
     existing answers are deleted and replaced with true/false answers.
     """
-    services.create_answer(user=user, question=question, text_es="Old Answer", text_en="Old Answer")
+    services.create_answer(teacher=user, question=question, text_es="Old Answer", text_en="Old Answer")
 
     assert question.answers.count() == 1
 
-    services.update_question(user=user, question=question, type='true_false', is_true=True)
+    services.update_question(teacher=user, question=question, type='true_false', is_true=True)
 
     assert question.answers.count() == 2
     correct_answer = question.answers.get(is_correct=True)
@@ -247,10 +245,10 @@ def test_update_question_type_non_true_false_doesnt_remove_true_false_answers(us
     Tests that when a question is updated to a non 'true_false' type,
     existing true/false answers are deleted.
     """
-    services.update_question(user=user, question=question, type='true_false', is_true=True)
+    services.update_question(teacher=user, question=question, type='true_false', is_true=True)
     assert question.answers.count() == 2
 
-    services.update_question(user=user, question=question, type='multiple')
+    services.update_question(teacher=user, question=question, type='multiple')
     assert question.answers.count() == 2
 
 # --- Evaluation Service Tests (evaluate_question) ---
@@ -293,8 +291,8 @@ def test_evaluate_question_different_groups(user, question_with_answers, student
     assert selectors.get_question_evaluation_correct_count(question_with_answers) == 2
 
 def test_evaluate_question_invalid_answer_raises_error(user, student_groupA, question_with_answers):
-    other_question = services.create_question(user=user, type='multiple', statement_es='Otra pregunta', statement_en='Another question')
-    other_answer = services.create_answer(user=user, question=other_question, text_es='Otra respuesta', text_en='Another answer', is_correct=True)
+    other_question = services.create_question(teacher=user, type='multiple', statement_es='Otra pregunta', statement_en='Another question')
+    other_answer = services.create_answer(teacher=user, question=other_question, text_es='Otra respuesta', text_en='Another answer', is_correct=True)
 
     with pytest.raises(ValidationError, match="La respuesta proporcionada no pertenece a la pregunta dada."):
         services.evaluate_question(student_groupA, question_with_answers, other_answer)

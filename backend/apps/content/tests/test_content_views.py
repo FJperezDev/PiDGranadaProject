@@ -19,11 +19,27 @@ class TopicViewSetTests(APITestCase):
             "description_es": "Descripción del epígrafe",
             "description_en": "Epigraph description"
         }
+        self.updated_epigraph_data = {
+            "name_es": "Epígrafe Actualizado",
+            "name_en": "Updated Epigraph",
+            "order_id": 3,
+            "description_es": "Descripción del epígrafe",
+            "description_en": "Epigraph description"
+        }
         self.concept_data = {
             "concept_name": "Concepto",
             "order_id": 1
         }
-
+        self.epigraph = services.create_epigraph(
+            self.topic,
+            name_es="Epígrafe B",
+            teacher=self.teacher,  
+            name_en="Epigraph B",
+            order_id=2,
+            description_es="Descripción del epígrafe",
+            description_en="Epigraph description"
+        )
+            
     def test_create_topic(self):
         response = self.client.post("/topics/", {
             "title_es": "Nuevo Tema",
@@ -44,14 +60,7 @@ class TopicViewSetTests(APITestCase):
         self.assertEqual(response.data["name"], self.epigraph_data["name_es"]) 
 
     def test_update_epigraph(self):
-        epigraph = services.create_epigraph(self.topic, **self.epigraph_data)
-        response = self.client.put(f"/topics/{self.topic.id}/epigraphs/{epigraph.order_id}/", {
-            "name_es": "Epígrafe Actualizado",
-            "name_en": "Updated Epigraph",
-            "order_id": epigraph.order_id,
-            "description_es": "Descripción actualizada",
-            "description_en": "Updated description"
-        }, format="json")
+        response = self.client.put(f"/topics/{self.topic.id}/epigraphs/{self.epigraph.order_id}/", self.updated_epigraph_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], "Epígrafe Actualizado")
 
@@ -78,6 +87,8 @@ class TopicViewSetTests(APITestCase):
 
 class EpigraphViewSetTests(APITestCase):
     def setUp(self):
+        self.teacher = CustomTeacher.objects.create_user(username="testteacher2", password="password", is_super=True)
+        self.client.force_authenticate(user=self.teacher) 
         self.topic = Topic.objects.create(title_es="Tema", title_en="Topic")
         self.epigraph = services.create_epigraph(
             self.topic,
@@ -85,7 +96,8 @@ class EpigraphViewSetTests(APITestCase):
             name_en="Epigraph",
             order_id=1,
             description_es="Descripción del epígrafe",
-            description_en="Epigraph description"
+            description_en="Epigraph description",
+            teacher=self.teacher
         )
 
     def test_get_epigraphs(self):

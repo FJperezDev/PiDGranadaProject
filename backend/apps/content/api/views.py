@@ -14,6 +14,14 @@ class TopicViewSet(BaseContentViewSet):
     def get_queryset(self):
         return selectors.get_all_topics()
 
+    def update(self, request, *args, **kwargs):
+        topic = selectors.get_topic_by_id(kwargs['pk'])
+        topic = services.update_topic(topic, teacher=request.user, **request.data)
+        return Response(self.get_serializer(topic).data, status=status.HTTP_200_OK)
+      
+    def destroy(self, request, *args, **kwargs):
+        return services.delete_topic(selectors.get_topic_by_id(kwargs['pk']), teacher=request.user)
+
     def create(self, request, *args, **kwargs):
         data = request.data
         try:
@@ -21,14 +29,13 @@ class TopicViewSet(BaseContentViewSet):
                 title_es=data.get('title_es'),
                 title_en=data.get('title_en'),
                 description_es=data.get('description_es'),
-                description_en=data.get('description_en')
+                description_en=data.get('description_en'),
+                teacher=request.user
             )
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(topic)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
-    # Audit update and delete Topic
 
     @action(detail=True, methods=['get'], )
     def concepts(self, request, pk=None):
@@ -37,63 +44,61 @@ class TopicViewSet(BaseContentViewSet):
         serializer = ConceptSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=['get', 'post', 'delete'], url_path='epigraphs')
     def epigraphs(self, request, pk=None):
-        """GET /topics/<id>/epigraphs/"""
-        queryset = selectors.get_epigraphs_by_topic(pk)
-        serializer = EpigraphSerializer(queryset, many=True, context={'request': request})
-        return Response(serializer.data)
-    
-    @epigraphs.mapping.post
-    def create_epigraph(self, request, pk=None):
-        """POST /topics/<id>/epigraphs/ — crea un nuevo epígrafe asociado al topic"""
-        topic = selectors.get_topic_by_id(topic_id=pk)
-        data = request.data
+        """GET /topics/<id>/epigraphs/ — obtiene los epigrafes asociados al topic tiene los grupos asociados a la asignatura
+           POST /topics/<id>/epigraphs/ — crea un grupo asociado a la asignatura
+           DELETE /topics/<id>/epigraphs/ — elimina los grupos."""
+        if request.method == 'GET':
+            topic = selectors.get_topic_by_id(topic_id=pk)
+            if not topic:
+                return Response({'detail': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        try:
+            epigraphs = selectors.get_epigraphs_by_topic(topic)
+            serializer = EpigraphSerializer(epigraphs, many=True, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif request.method == 'POST':
+            topic = selectors.get_topic_by_id(topic_id=pk)
+            if not topic:
+                return Response({'detail': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
             epigraph = services.create_epigraph(
                 topic=topic,
-                name_es=data.get('name_es'),
-                name_en=data.get('name_en'),
-                order_id=data.get('order_id'),
-                description_es=data.get('description_es'),
-                description_en=data.get('description_en')
+                name_es=request.data.get('name_es'),
+                name_en=request.data.get('name_en'),
+                description_es=request.data.get('description_es'),
+                description_en=request.data.get('description_en'),
+                order_id=request.data.get('order_id'),
+                teacher=request.user
             )
-        except Exception as e:
-            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        serializer = EpigraphSerializer(epigraph, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
-    @action(detail=True, methods=['put'], url_path='epigraphs/(?P<order_id>[^/.]+)')
-    def update_epigraph(self, request, pk=None, order_id=None):
-        """
-        PUT /topics/<topic_id>/epigraphs/<epigraph_id>/ — actualiza un epígrafe de un tema
-        """
-        topic = selectors.get_topic_by_id(topic_id=pk)
-        epigraph = selectors.get_epigraph_by_id(topic_id=pk, order_id=order_id)
-
-        if epigraph.topic.id != topic.id:
-            return Response({'detail': 'El epígrafe no pertenece a este tema.'},
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        data = request.data
+            serializer = EpigraphSerializer(epigraph, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         
-        try:
-            updated_epigraph = services.update_epigraph(
-                epigraph=epigraph,
-                name_es=data.get('name_es'),
-                name_en=data.get('name_en'),
-                order_id=data.get('order_id'),
-                description_es=data.get('description_es'),
-                description_en=data.get('description_en')
-            )
-        except Exception as e:
-            return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        elif request.method == 'DELETE':
+            topic = selectors.get_topic_by_id(topic_id=pk)
+            services.delete_epigraphs_by_topic(topic, teacher=request.user)
+            return Response(status=status.HTTP_204_NO_CONTENT)
 
-        serializer = EpigraphSerializer(updated_epigraph, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
+    @action(detail=True, methods=['get', 'put', 'delete'], url_path='epigraphs/(?P<order_id>[^/.]+)')
+    def epigraph_detail(self, request, pk=None, order_id=None):
+        """GET /topics/<id>/epigraphs/<id>/ — obtiene un epigrafe específico.
+           PUT /topics/<id>/epigraphs/<id>/ — actualiza un epigrafe asociado al tema.
+           DELETE /topics/<id>/epigraphs/<id>/ — elimina un epigrafe."""
+        epigraph = selectors.get_epigraph_by_id(topic_id=pk, order_id=order_id)
+        if not epigraph or epigraph.topic.id != int(pk):
+            return Response({'detail': 'Epigraph not found in this topic'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.method == 'GET':
+            serializer = EpigraphSerializer(epigraph, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        elif request.method == 'PUT':
+            epigraph = services.update_epigraph(epigraph, teacher=request.user, **request.data)
+            serializer = EpigraphSerializer(epigraph, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        elif request.method == 'DELETE':
+            services.delete_epigraph(epigraph, teacher=request.user)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
     @concepts.mapping.post
     def link_concept(self, request, pk=None):
         """POST /topics/<id>/concepts/ — asocia un concepto al topic"""
@@ -162,6 +167,15 @@ class ConceptViewSet(BaseContentViewSet):
 
     # Audit create, update and delete Concept
 
+    def update(self, request, *args, **kwargs):
+        concept = selectors.get_concept_by_id(kwargs['pk'])
+        services.update_concept(concept, teacher=request.user, **request.data)
+        serializer = self.get_serializer(concept)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    def delete(self, request, *args, **kwargs):
+        return services.delete_concept(selectors.get_concept_by_id(kwargs['pk']), teacher=request.user)
+
     def create(self, request, *args, **kwargs):
         data = request.data
         try: 
@@ -169,7 +183,8 @@ class ConceptViewSet(BaseContentViewSet):
                 name_es=data.get('name_es'),
                 name_en=data.get('name_en'),
                 description_es=data.get('description_es'),
-                description_en=data.get('description_en')
+                description_en=data.get('description_en'),
+                teacher=request.user
             )
             serializer = self.get_serializer(concept)
             return Response(serializer.data, status=status.HTTP_201_CREATED)

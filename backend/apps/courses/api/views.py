@@ -11,6 +11,7 @@ from apps.content.domain import selectors as content_selectors
 from apps.courses.domain import selectors as courses_selectors
 from apps.content.api.serializers import TopicSerializer
 from apps.utils.permissions import BaseContentViewSet
+from apps.utils.audit import makeChanges
 
 class SubjectViewSet(BaseContentViewSet):
     queryset = selectors.get_all_subjects()
@@ -24,13 +25,30 @@ class SubjectViewSet(BaseContentViewSet):
                 name_es=data.get('name_es'),
                 name_en=data.get('name_en'),
                 description_es=data.get('description_es'),
-                description_en=data.get('description_en')
+                description_en=data.get('description_en'),
+                teacher=request.user
             )
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(subject)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     
+    def update(self, request, *args, **kwargs):
+        
+        subject = services.update_subject(
+            subject=selectors.get_subject_by_id(kwargs['pk']),
+            name_es=request.data.get('name_es'),
+            name_en=request.data.get('name_en'),
+            description_es=request.data.get('description_es'),
+            description_en=request.data.get('description_en'),
+            teacher=request.user
+        )
+        return Response(self.get_serializer(subject).data, status=status.HTTP_200_OK)
+    
+    def delete(self, request, *args, **kwargs):
+        return services.delete_subject(selectors.get_subject_by_id(kwargs['pk']), teacher=request.user)
+
+
     @action(detail=True, methods=['get'], )
     def topics(self, request, pk=None):
         """GET /subject/<id>/topics/"""
@@ -121,10 +139,10 @@ class SubjectViewSet(BaseContentViewSet):
             if not subject:
                 return Response({'detail': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            groups = subject.studentgroups.filter(old=False).all()
+            groups = selectors.get_all_student_groups()
             serializer = StudentGroupSerializer(groups, many=True, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
-        
+
         elif request.method == 'POST':
             subject = selectors.get_subject_by_id(subject_id=pk)
             if not subject:
@@ -140,10 +158,8 @@ class SubjectViewSet(BaseContentViewSet):
         
         elif request.method == 'DELETE':
             subject = selectors.get_subject_by_id(subject_id=pk)
-            for group in subject.studentgroups.all():
-                services.delete_student_group(group)
+            services.delete_student_groups_by_subject(subject)
             return Response(status=status.HTTP_204_NO_CONTENT)
-
 
     @action(detail=True, methods=['get', 'put', 'delete'], url_path='groups/(?P<group_pk>[^/.]+)')
     def group_detail(self, request, pk=None, group_pk=None):
@@ -158,14 +174,12 @@ class SubjectViewSet(BaseContentViewSet):
             serializer = StudentGroupSerializer(group, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         elif request.method == 'PUT':
-            serializer = StudentGroupSerializer(group, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
+            group = services.update_student_group(group, teacher=request.user, **request.data)
+            serializer = StudentGroupSerializer(group, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         elif request.method == 'DELETE':
-            group.delete()
+            services.delete_student_group(group, teacher=request.user)
             return Response(status=status.HTTP_204_NO_CONTENT)
-
 
 class StudentGroupViewSet(BaseContentViewSet):
     queryset = selectors.get_all_student_groups()
