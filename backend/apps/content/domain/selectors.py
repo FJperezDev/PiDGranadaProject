@@ -1,5 +1,5 @@
 # apps/content/domain/selectors.py
-from ..api.models import Topic, Concept, Epigraph
+from ..api.models import Topic, Concept, Epigraph, TeacherMakeChangeConcept, TeacherMakeChangeEpigraph, TeacherMakeChangeTopic
 from django.db import models
 
 def get_all_topics():
@@ -57,3 +57,31 @@ def get_epigraphs_by_topic(topic_id: int):
 def get_epigraph_by_id(topic_id: int, order_id: int) -> Epigraph:
     """Obtiene un epígrafe específico por su ID."""
     return Epigraph.objects.get(order_id=order_id, topic_id=topic_id)
+
+def get_all_changes():
+    lista = list(get_all_concept_changes())
+    for topic in get_all_topics():
+        lista.extend(get_all_epigraph_changes(topic.id))
+    lista.extend(get_all_topic_changes())
+    return lista
+
+def get_all_concept_changes():
+    return TeacherMakeChangeConcept.objects.all().order_by('-created_at').all()
+
+def get_concept_changes(concept_id: int):
+    from django.db.models import Q
+    return get_all_concept_changes().filter(Q(old_object__concept_id=concept_id) | Q(new_object__concept_id=concept_id)).distinct().order_by('-created_at').all()
+
+def get_all_epigraph_changes(topic_id: int):
+    from django.db.models import Q
+    return TeacherMakeChangeEpigraph.objects.filter(Q(old_object__topic_id=topic_id) | Q(new_object__topic_id=topic_id)).distinct().order_by('-created_at')
+
+def get_epigraph_changes(topic_id: int, epigraph_id: int):
+    return get_all_epigraph_changes(topic_id=topic_id).filter(old_object__epigraph_id=epigraph_id).all().order_by('-created_at').all()
+
+def get_all_topic_changes():
+    return TeacherMakeChangeTopic.objects.all().order_by('-created_at').all()
+
+def get_topic_changes(topic_id: int):
+    from django.db.models import Q
+    return get_all_topic_changes().filter(Q(old_object__topic_id=topic_id) | Q(new_object__topic_id=topic_id)).distinct().order_by('-created_at').all()

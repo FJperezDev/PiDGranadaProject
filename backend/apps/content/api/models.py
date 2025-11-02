@@ -17,13 +17,13 @@ class Topic(models.Model):
         return self.title_es or self.title_en
 
 class TeacherMakeChangeTopic(models.Model):
-    old_topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
-    new_topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
+    old_object = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
+    new_object = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     
     def __str__(self):
-        return f"{self.teacher} changed {self.old_topic} to {self.new_topic}"
+        return f"{self.teacher} changed {self.old_object} to {self.new_object}"
 
 class Concept(models.Model):
     name_es = models.TextField(unique=True)
@@ -36,13 +36,13 @@ class Concept(models.Model):
         return self.name_es or self.name_en
 
 class TeacherMakeChangeConcept(models.Model):
-    old_concept = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
-    new_concept = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
+    old_object = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
+    new_object = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     
     def __str__(self):
-        return f"{self.teacher} changed {self.old_concept} to {self.new_concept}"
+        return f"{self.teacher} changed {self.old_object} to {self.new_object}"
 
 
 class ConceptIsRelatedToConcept(models.Model):
@@ -93,10 +93,10 @@ class Epigraph(models.Model):
         return self.name_es or self.name_en
 
 class TeacherMakeChangeEpigraph(models.Model):
-    old_epigraph = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
-    new_epigraph = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
+    old_object = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
+    new_object = models.ForeignKey(Epigraph, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"{self.teacher} changed {self.old_epigraph} to {self.new_epigraph}"
+        return f"{self.teacher} changed {self.old_object} to {self.new_object}"

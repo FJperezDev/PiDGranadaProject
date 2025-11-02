@@ -1,6 +1,6 @@
 from apps.evaluation.api.models import Answer, Question
 from apps.content.api.models import Subject, Topic
-from apps.evaluation.api.models import QuestionBelongsToTopic, TeacherMakeChangeQuestion
+from apps.evaluation.api.models import QuestionBelongsToTopic, TeacherMakeChangeQuestion, TeacherMakeChangeAnswer
 from django.db import models
 from apps.content.domain import selectors as content_selectors
 from apps.evaluation.api.models import QuestionEvaluationGroup
@@ -158,3 +158,19 @@ def get_answer_by_id(answer_id: int) -> Answer:
 def get_correct_answer_for_question(question: Question) -> list[Answer]:
     """Obtiene todas las respuestas correctas asociadas a una pregunta dada."""
     return list(question.answers.filter(is_correct=True))
+
+def get_all_changes():
+    from itertools import chain
+    return list(chain(get_all_question_changes(), get_all_answer_changes()))
+
+def get_all_question_changes():
+    return TeacherMakeChangeQuestion.objects.all().order_by('-created_at').all()
+
+def get_question_changes(question_id: int):
+    return get_all_question_changes().filter(old_object__question_id=question_id).order_by('-created_at').all()
+
+def get_all_answer_changes():
+    return TeacherMakeChangeAnswer.objects.all().order_by('-created_at').all()
+
+def get_answer_changes(question_id: int):
+    return get_all_answer_changes().filter(old_object__question_id=question_id).order_by('-created_at').all()

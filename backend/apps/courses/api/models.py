@@ -16,16 +16,16 @@ class Subject(models.Model):
         return self.name_es or self.name_en
 
 class TeacherMakeChangeSubject(models.Model):
-    old_subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
-    new_subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='+', null=True, blank=True)
+    old_object = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
+    new_object = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='+', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        unique_together = ('old_subject', 'new_subject', 'created_at', 'teacher')
+        unique_together = ('old_object', 'new_object', 'created_at', 'teacher')
 
     def __str__(self):
-        return f"{self.teacher} changed {self.old_subject} to {self.new_subject}"
+        return f"{self.teacher} changed {self.old_object} to {self.new_object}"
 
 class StudentGroup(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='studentgroups')
@@ -43,16 +43,16 @@ class StudentGroup(models.Model):
     
 class TeacherMakeChangeStudentGroup(models.Model):
     # Match the fields created/removed by migrations: only keep group, subject, teacher, action, created_at
-    old_group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
-    new_group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='+', null=True, blank=True)
+    old_object = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
+    new_object = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='+', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        unique_together = ('old_group', 'new_group','created_at', 'teacher')
+        unique_together = ('old_object', 'new_object','created_at', 'teacher')
 
     def __str__(self):
-        return f"{self.teacher} changed {self.old_group} to {self.new_group}"
+        return f"{self.teacher} changed {self.old_object} to {self.new_object}"
 
 class SubjectIsAboutTopic(models.Model):
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='topics')

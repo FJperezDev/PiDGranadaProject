@@ -24,4 +24,5 @@ urlpatterns = [
     path('', include('apps.content.domain.urls')),
     path('', include('apps.courses.domain.urls')),
     path('', include('apps.evaluation.domain.urls')),
+    path('', include('apps.audit.urls')),
 ]

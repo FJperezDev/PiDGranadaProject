@@ -105,8 +105,8 @@ def makeChangesQuestion(user, old_object, new_object):
     from apps.evaluation.api.models import TeacherMakeChangeQuestion
     
     TeacherMakeChangeQuestion.objects.create(
-        old_question=old_object,
-        new_question=new_object,
+        old_object=old_object,
+        new_object=new_object,
         teacher=user,
     )
 
@@ -115,8 +115,8 @@ def makeChangesAnswer(user, old_object, new_object):
     from apps.evaluation.api.models import TeacherMakeChangeAnswer
 
     TeacherMakeChangeAnswer.objects.create(
-        old_answer=old_object,
-        new_answer=new_object,
+        old_object=old_object,
+        new_object=new_object,
         teacher=user,
     )
 
@@ -125,8 +125,8 @@ def makeChangesSubject(user, old_object, new_object):
     from apps.courses.api.models import TeacherMakeChangeSubject
     
     TeacherMakeChangeSubject.objects.create(
-        old_subject=old_object,
-        new_subject=new_object,
+        old_object=old_object,
+        new_object=new_object,
         teacher=user,
     )
 
@@ -135,8 +135,8 @@ def makeChangesStudentGroup(user, old_object, new_object):
     from apps.courses.api.models import TeacherMakeChangeStudentGroup
 
     TeacherMakeChangeStudentGroup.objects.create(
-        old_group=old_object,
-        new_group=new_object,
+        old_object=old_object,
+        new_object=new_object,
         teacher=user,
     )
 
@@ -145,8 +145,8 @@ def makeChangesTopic(user, old_object, new_object):
     from apps.content.api.models import TeacherMakeChangeTopic
 
     TeacherMakeChangeTopic.objects.create(
-        old_topic=old_object,
-        new_topic=new_object,
+        old_object=old_object,
+        new_object=new_object,
         teacher=user,
     )
 
@@ -155,16 +155,16 @@ def makeChangesConcept(user, old_object, new_object):
     from apps.content.api.models import TeacherMakeChangeConcept
 
     TeacherMakeChangeConcept.objects.create(
-        old_concept=old_object,
-        new_concept=new_object,
+        old_object=old_object,
+        new_object=new_object,
         teacher=user,
     )
 
 def makeChangesEpigraph(user, old_object, new_object):
     from apps.content.api.models import TeacherMakeChangeEpigraph
-
+    print (old_object, new_object, user)
     TeacherMakeChangeEpigraph.objects.create(
-        old_epigraph=old_object,
-        new_epigraph=new_object,
+        old_object=old_object,
+        new_object=new_object,
         teacher=user,
     )

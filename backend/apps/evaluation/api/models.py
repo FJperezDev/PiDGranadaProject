@@ -28,13 +28,13 @@ class Question(models.Model):
 
 
 class TeacherMakeChangeQuestion(models.Model):
-    old_question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
-    new_question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
+    old_object = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
+    new_object = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"{self.teacher} changed {self.old_question} to {self.new_question}"
+        return f"{self.teacher} changed {self.old_object} to {self.new_object}"
 
 class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
@@ -51,13 +51,13 @@ class Answer(models.Model):
 
 
 class TeacherMakeChangeAnswer(models.Model):
-    old_answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
-    new_answer = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
+    old_object = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
+    new_object = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='changes', null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"{self.teacher} changed {self.old_answer} to {self.new_answer}"
+        return f"{self.teacher} changed {self.old_object} to {self.new_object}"
 
 
 class QuestionBelongsToTopic(models.Model):

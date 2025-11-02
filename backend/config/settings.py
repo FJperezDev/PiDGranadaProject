@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'apps.content',
     'apps.courses',
     'apps.evaluation',
+    'apps.audit',
 
     # REST + JWT
     'rest_framework',
