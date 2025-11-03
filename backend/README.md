@@ -93,7 +93,7 @@ This section details the available API endpoints, their functionalities, and the
 
 *   `GET /topics/{id}/concepts/`: List all concepts linked to a specific topic. (AllowAny)
 *   `POST /topics/{id}/concepts/`: Link an existing concept to a topic. (IsTeacher)
-*   `DELETE /topics/{id}/concepts/`: Unlink a concept from a topic. (IsSuperTeacher)
+*   `DELETE /topics/{id}/concepts/`: Unlink a concept from a topic. Requiere `concept_name` en el body. (IsSuperTeacher)
 
 #### Endpoints de Conceptos (`/concepts/`)
 
@@ -107,7 +107,7 @@ This section details the available API endpoints, their functionalities, and the
 
 *   `GET /concepts/{id}/concepts/`: List concepts related to a specific concept. (AllowAny)
 *   `POST /concepts/{id}/concepts/`: Create a relationship between two concepts. (IsTeacher)
-*   `DELETE /concepts/{id}/concepts/`: Remove the relationship between two concepts. (IsSuperTeacher)
+*   `DELETE /concepts/{id}/concepts/`: Remove the relationship between two concepts. Requiere `concept_name` en el body. (IsSuperTeacher)
 
 ### 2. Courses App
 
@@ -130,6 +130,7 @@ This section details the available API endpoints, their functionalities, and the
 
 *   `GET /subjects/{id}/groups/`: List all student groups for a subject. (IsTeacher)
 *   `POST /subjects/{id}/groups/`: Create a new student group for a subject. (IsTeacher)
+*   `DELETE /subjects/{id}/groups/`: Delete all student groups for a subject. (IsSuperTeacher)
 *   `GET /subjects/{id}/groups/{group_pk}/`: Retrieve a specific student group. (IsTeacher)
 *   `PUT /subjects/{id}/groups/{group_pk}/`: Update a student group. (IsTeacher)
 *   `DELETE /subjects/{id}/groups/{group_pk}/`: Delete a student group. (IsSuperTeacher)
@@ -137,7 +138,7 @@ This section details the available API endpoints, their functionalities, and the
 #### Endpoints de Grupos de Estudiantes (`/studentgroups/`)
 
 *   `GET /studentgroups/`: List all student groups. (IsTeacher)
-*   `GET /studentgroups/my_groups/`: List all groups managed by the currently authenticated teacher. (IsTeacher)
+*   `GET /studentgroups/my-groups/`: List all groups managed by the currently authenticated teacher. (IsTeacher)
 
 ### 3. Evaluation App
 
@@ -149,6 +150,9 @@ This section details the available API endpoints, their functionalities, and the
 *   `PUT/PATCH /questions/{id}/`: Update a question. (IsTeacher)
 *   `DELETE /questions/{id}/`: Delete a question. (IsSuperTeacher)
 *   `GET /questions/{id}/answers/`: List all answers for a question. (AllowAny)
+*   `POST /questions/{id}/answers/`: Create a new answer for a question. (IsTeacher)
+*   `PUT /questions/{id}/answers/{answer_id}/`: Update a specific answer. (IsTeacher)
+*   `DELETE /questions/{id}/answers/{answer_id}/`: Delete a specific answer. (IsSuperTeacher)
 
 #### Endpoints de Respuestas (`/answers/`)
 
@@ -157,11 +161,6 @@ This section details the available API endpoints, their functionalities, and the
 *   `GET /answers/{id}/`: Retrieve a specific answer. (AllowAny)
 *   `PUT/PATCH /answers/{id}/`: Update an answer. (IsTeacher)
 *   `DELETE /answers/{id}/`: Delete an answer. (IsSuperTeacher)
-
-#### Endpoints de Relaciones de Preguntas
-
-*   `GET /question-topic/`: Lista las relaciones entre preguntas y temas. (AllowAny)
-*   `GET /question-concept/`: Lista las relaciones entre preguntas y conceptos. (AllowAny)
 
 #### Endpoints de Evaluaciones
 
