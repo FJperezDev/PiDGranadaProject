@@ -12,6 +12,7 @@ from apps.courses.domain import selectors as courses_selectors
 from apps.content.api.serializers import TopicSerializer
 from apps.utils.permissions import BaseContentViewSet
 from apps.utils.audit import makeChanges
+from apps.utils.permissions import IsTeacher
 
 class SubjectViewSet(BaseContentViewSet):
     queryset = selectors.get_all_subjects()
@@ -183,3 +184,26 @@ class SubjectViewSet(BaseContentViewSet):
 class StudentGroupViewSet(BaseContentViewSet):
     queryset = selectors.get_all_student_groups()
     serializer_class = StudentGroupSerializer
+
+    def get_queryset(self):
+        # Only allow teachers to see their own groups
+        if self.request.user.is_authenticated:
+            return selectors.get_all_student_groups()
+
+    def update(self, request, *args, **kwargs):
+        group = self.get_object()
+        if group.teacher != request.user:
+            return Response({'detail': 'You do not have permission to perform this action.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        group = self.get_object()
+        if group.teacher != request.user:
+            return Response({'detail': 'You do not have permission to perform this action.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
+    
+    @action(detail=False, methods=['get'], url_path='my-groups', url_name='my-groups')
+    def my_groups(self, request):
+        groups = selectors.get_all_student_groups().filter(teacher=request.user)
+        serializer = StudentGroupSerializer(groups, many=True)
+        return Response(serializer.data)

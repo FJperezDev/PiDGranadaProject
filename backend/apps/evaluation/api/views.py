@@ -96,6 +96,28 @@ class QuestionViewSet(BaseContentViewSet):
         serializer = AnswerSerializer(answer)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get', 'put', 'delete'], url_path='answers/(?P<answer_id>[^/.]+)')
+    def answer_detail(self, request, pk=None, answer_id=None):
+        """GET /questions/<id>/answers/<id>/ — obtiene un epigrafe específico.
+           PUT /questions/<id>/answers/<id>/ — actualiza un epigrafe asociado al tema.
+           DELETE /questions/<id>/answers/<id>/ — elimina un epigrafe."""
+        answer = selectors.get_answer_by_id(answer_id=answer_id)
+        if not answer or answer.question.id != int(pk):
+            return Response({'detail': 'Answer not found in this question'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.method == 'GET':
+            serializer = AnswerSerializer(answer, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        elif request.method == 'PUT':
+            answer = services.update_answer(answer, teacher=request.user, **request.data)
+            serializer = AnswerSerializer(answer, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif request.method == 'DELETE':
+            services.delete_answer(answer, teacher=request.user)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
 class ExamViewSet(BaseContentViewSet):
     queryset = Question.objects.none()
     serializer_class = QuestionSerializer 
