@@ -11,6 +11,7 @@ Este documento proporciona una descripción general del backend para la aplicaci
   - App `courses`
   - App `content`
   - App `evaluation`
+  - App `audit`
 
 ## Setup and Installation
 
@@ -164,12 +165,27 @@ This section details the available API endpoints, their functionalities, and the
 
 #### Endpoints de Evaluaciones
 
-*   `GET /evaluations/`: Lista las métricas de evaluación de cada pregunta por grupo de estudiantes. (IsTeacher)
+*   Este endpoint no existe actualmente. Las métricas de evaluación se pueden consultar a través de otros endpoints o se deben implementar.
 
 #### Endpoints de Exámenes
 
-*   `GET /exams/generate-exam/`: Genera un nuevo examen. Requiere una lista de IDs de temas (`topics`) y un número de preguntas (`num_questions`) en el cuerpo de la petición. (IsTeacher)
-*   `GET /exams/evaluate-exam/`: Evalúa un examen enviado. Requiere el ID del grupo de estudiantes (`student_group_id`) y un diccionario de preguntas y respuestas (`questions_and_answers`). (IsTeacher)
+*   `GET /exams/generate-exam/`: Genera un nuevo examen. Requiere una lista de títulos de temas (`topics`) y un número de preguntas (`num_questions`) en el cuerpo de la petición. (IsTeacher)
+*   `GET /exams/evaluate-exam/`: Evalúa un examen enviado. Requiere el código del grupo de estudiantes (`student_group_code`) y un diccionario de preguntas y respuestas (`questions_and_answers`). (IsTeacher)
+
+### 4. Audit App
+
+#### Endpoints de Auditoría (`/audits/`)
+
+Estos endpoints requieren permisos de `IsSuperTeacher`.
+
+*   `GET /audits/changes/`: Obtiene una lista de todos los cambios realizados en el sistema.
+*   `GET /audits/questions/`: Obtiene los cambios específicos de las preguntas.
+*   `GET /audits/questions/{question_id}/answers/`: Obtiene los cambios de las respuestas para una pregunta específica.
+*   `GET /audits/concepts/`: Obtiene los cambios de los conceptos.
+*   `GET /audits/topics/`: Obtiene los cambios de los temas.
+*   `GET /audits/topics/{topic_id}/epigraphs/`: Obtiene los cambios de los epígrafes para un tema específico.
+*   `GET /audits/groups/`: Obtiene los cambios de los grupos de estudiantes.
+*   `GET /audits/subjects/`: Obtiene los cambios de las asignaturas.
 
 
 ---

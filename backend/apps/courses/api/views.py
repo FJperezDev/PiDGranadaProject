@@ -48,7 +48,6 @@ class SubjectViewSet(BaseContentViewSet):
     def delete(self, request, *args, **kwargs):
         return services.delete_subject(selectors.get_subject_by_id(kwargs['pk']), teacher=request.user)
 
-
     @action(detail=True, methods=['get'], )
     def topics(self, request, pk=None):
         """GET /subject/<id>/topics/"""
@@ -60,7 +59,7 @@ class SubjectViewSet(BaseContentViewSet):
 
     @topics.mapping.post
     def link_topic(self, request, pk=None):
-        """POST /subjects/<id>/topics/ — asocia un concepto al topic"""
+        """POST /subjects/<id>/topics/ — links a topic to the subject"""
         subject = selectors.get_subject_by_id(subject_id=pk)
         data = request.data
         topic_name = data.get('topic_name')

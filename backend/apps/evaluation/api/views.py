@@ -72,24 +72,29 @@ class QuestionViewSet(BaseContentViewSet):
             serializer = self.get_serializer(last_question)
             return Response(serializer.data)
         return Response({'detail': 'No questions found.'}, status=status.HTTP_404_NOT_FOUND)
-
-class AnswerViewSet(BaseContentViewSet):
-    queryset = Answer.objects.all()
-    serializer_class = AnswerSerializer
-
-    def create(self, request, *args, **kwargs):
+    
+    @action(detail=True, methods=['get'], )
+    def answers(self, request, pk=None):
+        """GET /questions/<id>/answers/"""
+        question = selectors.get_question_by_id(pk)
+        queryset = (
+            selectors.get_answers_for_question(question=question)
+        )
+        serializer = AnswerSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+    
+    @answers.mapping.post
+    def add_answer(self, request, pk=None):
+        question = selectors.get_question_by_id(pk)
         data = request.data
-        question_id = data.get('question_id')
-        question = selectors.get_question_by_id(question_id)
         answer = services.create_answer(
-            user=request.user,
             question=question,
             text_es=data.get('text_es'),
             text_en=data.get('text_en'),
-            is_correct=data.get('is_correct', False)
+            is_correct=data.get('is_correct')
         )
-        serializer = self.get_serializer(answer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer = AnswerSerializer(answer)
+        return Response(serializer.data)
 
 class ExamViewSet(BaseContentViewSet):
     queryset = Question.objects.none()
