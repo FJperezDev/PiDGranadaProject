@@ -1,10 +1,17 @@
+import { Text } from "react-native";
+import { StyledButton } from "../components/StyledButton";
 import {useLanguage} from "../context/LanguageContext";
 import { useState } from 'react';
+import { View } from "react-native";
+import { StyledTextInput } from "../components/StyledTextInput";
+import { CheckSquare, Square } from "lucide-react-native";
+import { useNavigation } from '@react-navigation/native';
 
-export const  ExamSetupScreen = ({ setPage, params, onGoBack, setAlert }) => {
+export const  ExamSetupScreen = ({ route, onGoBack, setAlert }) => {
   const { t } = useLanguage();
-  const { topics } = params;
-  
+  const { topics } = route.params;
+  const navigation = useNavigation();
+
   const [selectedTopics, setSelectedTopics] = useState(
     topics.reduce((acc, topic) => ({ ...acc, [topic.id]: false }), {})
   );
@@ -15,8 +22,8 @@ export const  ExamSetupScreen = ({ setPage, params, onGoBack, setAlert }) => {
   };
 
   const handleGenerate = () => {
-    const topicIds = Object.keys(selectedTopics).filter(id => selectedTopics[id]);
-    if (topicIds.length === 0) {
+    const topics = Object.keys(selectedTopics).filter(id => selectedTopics[id]);
+    if (topics.length === 0) {
       setAlert({ title: t('error'), message: t('errorMinTopics') });
       return;
     }
@@ -26,16 +33,16 @@ export const  ExamSetupScreen = ({ setPage, params, onGoBack, setAlert }) => {
       return;
     }
 
-    setPage({ name: 'Exam', params: { topicIds, nQuestions } });
+    navigation.navigate
   };
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-2xl mx-auto p-5">
-      <div className="flex-1 overflow-y-auto">
-        <h3 className="text-xl font-bold my-5 text-black">{t('selectTopics')}</h3>
-        <div className="space-y-3">
+    <View className="flex-1 flex flex-col w-full max-w-2xl mx-auto p-5">
+      <View className="flex-1 overflow-y-auto">
+        <Text className="text-xl font-bold my-5 text-black">{t('selectTopics')}</Text>
+        <View className="space-y-3">
           {topics.map(topic => (
-            <button
+            <StyledButton
               key={topic.id}
               className="flex flex-row items-center w-full p-4 bg-white rounded-lg shadow-sm border"
               onClick={() => toggleTopic(topic.id)}
@@ -44,12 +51,12 @@ export const  ExamSetupScreen = ({ setPage, params, onGoBack, setAlert }) => {
                 <CheckSquare size={24} className="text-cyan-500" /> : 
                 <Square size={24} className="text-slate-400" />
               }
-              <span className="text-lg ml-3">{topic.name}</span>
-            </button>
+              <Text className="text-lg ml-3">{topic.name}</Text>
+            </StyledButton>
           ))}
-        </div>
+        </View>
 
-        <h3 className="text-xl font-bold mt-8 mb-4 text-black">{t('numQuestions')}</h3>
+        <Text className="text-xl font-bold mt-8 mb-4 text-black">{t('numQuestions')}</Text>
         <StyledTextInput
           placeholder="10"
           value={numQuestions}
@@ -57,16 +64,16 @@ export const  ExamSetupScreen = ({ setPage, params, onGoBack, setAlert }) => {
           type="number"
           className="w-full md:w-1/2"
         />
-      </div>
+      </View>
       
-      <div className="flex flex-row justify-between w-full mt-8 py-4 border-t border-slate-300">
+      <View className="flex flex-row justify-between w-full mt-8 py-4 border-t border-slate-300">
         <StyledButton title={t('back')} onClick={onGoBack} />
         <StyledButton 
           title={t('generateExam')} 
           onClick={handleGenerate} 
           className="bg-cyan-200 hover:bg-cyan-300" 
         />
-      </div>
-    </div>
+      </View>
+    </View>
   );
 };

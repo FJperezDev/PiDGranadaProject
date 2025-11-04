@@ -1,6 +1,7 @@
 import {useLanguage} from '../context/LanguageContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ChevronLeft, BookMarked } from 'lucide-react-native';
+import { StyledButton } from './StyledButton';
 
 
 export const CustomHeader = ({ page, onGoBack }) => {
@@ -8,24 +9,24 @@ export const CustomHeader = ({ page, onGoBack }) => {
   const routeName = page.name;
 
   return (
-    <div className="w-full flex flex-row items-center justify-between bg-cyan-50 p-4 shadow-sm border-b border-slate-300">
-      <div className="flex-1">
+    <View className="w-full flex flex-row items-center justify-between bg-cyan-50 p-4 shadow-sm border-b border-slate-300">
+      <View className="flex-1">
         {routeName === 'Home' ? (
           <BookMarked size={32} className="text-black" />
         ) : (
-          <button onClick={onGoBack} className="p-2">
+          <StyledButton onClick={onGoBack} className="p-2">
             <ChevronLeft size={32} className="text-black" />
-          </button>
+          </StyledButton>
         )}
-      </div>
+      </View>
       
-      <div className="flex-2 text-center">
-        <h1 className="text-xl font-bold text-black">{t('appName')}</h1>
-      </div>
+      <View className="flex-2 text-center">
+        <Text className="text-xl font-bold text-black">{t('appName')}</Text>
+      </View>
       
-      <div className="flex-1 flex justify-end">
+      <View className="flex-1 flex justify-end">
         <LanguageSwitcher />
-      </div>
-    </div>
+      </View>
+    </View>
   );
 };

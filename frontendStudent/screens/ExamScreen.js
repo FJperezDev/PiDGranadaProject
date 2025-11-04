@@ -1,11 +1,16 @@
 import {useLanguage} from "../context/LanguageContext";
 import { useState } from 'react';
 import { mockApi } from '../services/api';
+import { StyledButton } from "../components/StyledButton";
+import { useEffect } from "react";
+import { Text, View } from "react-native";
+import { useMemo } from "react";
+import { useNavigation } from '@react-navigation/native';
 
-export const ExamScreen = ({ setPage, params, setAlert }) => {
+export const ExamScreen = ({ route, setAlert }) => {
   const { t } = useLanguage();
-  const { topicIds, nQuestions } = params;
-  
+  const navigation = useNavigation();
+  const { topics, nQuestions } = route.params;
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [currentQ, setCurrentQ] = useState(0);
@@ -15,11 +20,12 @@ export const ExamScreen = ({ setPage, params, setAlert }) => {
 
   // Cargar preguntas
   useEffect(() => {
-    mockApi.generateExam(topicIds, nQuestions).then(data => {
+    mockApi.generateExam(topics, nQuestions).then(data => {
+      console.log("data: ", data)
       setQuestions(data);
       setIsLoading(false);
     });
-  }, [topicIds, nQuestions]);
+  }, [topics, nQuestions]);
 
   const handleFinish = useMemo(() => () => {
     // Calcular resultados
@@ -33,15 +39,9 @@ export const ExamScreen = ({ setPage, params, setAlert }) => {
       }
     });
 
-    setPage({ 
-      name: 'ExamResult', 
-      params: { 
-        score, 
-        total: questions.length, 
-        recommendations: [...new Set(recommendations)]
-      }
-    });
-  }, [questions, answers, setPage]);
+    navigation.navigate('ExamResult', { score, total: questions.length, recommendations });
+    setAlert(prev => ({ ...prev, allowBack: true }));
+  }, [questions, answers]);
 
 
   // Timer
@@ -77,7 +77,7 @@ export const ExamScreen = ({ setPage, params, setAlert }) => {
   };
 
 
-  if (isLoading) return <div className="flex-1 flex items-center justify-center"><p>{t('generatingExam')}</p></div>;
+  if (isLoading) return <View className="flex-1 flex items-center justify-center"><Text>{t('generatingExam')}</Text></View>;
 
   const question = questions[currentQ];
   const selectedAnswer = answers[question.id];
@@ -90,19 +90,19 @@ export const ExamScreen = ({ setPage, params, setAlert }) => {
 
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-5 w-full max-w-2xl mx-auto">
-      <div className="w-full flex justify-between items-center absolute top-28 md:top-24 px-5">
-        <p className="text-slate-500">{`${currentQ + 1} / ${questions.length}`}</p>
-        <p className="text-red-700 font-bold text-lg">
+    <View className="flex-1 flex flex-col items-center justify-center p-5 w-full max-w-2xl mx-auto">
+      <View className="w-full flex justify-between items-center absolute top-28 md:top-24 px-5">
+        <Text className="text-slate-500">{`${currentQ + 1} / ${questions.length}`}</Text>
+        <Text className="text-red-700 font-bold text-lg">
           {`${t('timeRemaining')}: ${Math.floor(timeLeft / 60)}:${('0' + (timeLeft % 60)).slice(-2)}`}
-        </p>
-      </div>
+        </Text>
+      </View>
       
-      <p className="text-2xl font-medium text-center my-10">{question.text}</p>
+      <Text className="text-2xl font-medium text-center my-10">{question.text}</Text>
       
-      <div className="w-full">
+      <View className="w-full">
         {question.options.map(opt => (
-          <button
+          <StyledButton
             key={opt}
             className={`w-full p-4 mb-4 rounded-lg border-2 text-lg text-center
               ${selectedAnswer === opt 
@@ -111,11 +111,11 @@ export const ExamScreen = ({ setPage, params, setAlert }) => {
             onClick={() => handleSelectAnswer(question.id, opt)}
           >
             {opt}
-          </button>
+          </StyledButton>
         ))}
-      </div>
+      </View>
 
-      <div className="flex flex-row justify-between w-full mt-8">
+      <View className="flex flex-row justify-between w-full mt-8">
         <StyledButton title={t('previous')} onClick={handlePrev} disabled={currentQ === 0} />
         {currentQ === questions.length - 1 ? (
           <StyledButton 
@@ -130,7 +130,7 @@ export const ExamScreen = ({ setPage, params, setAlert }) => {
             className="bg-cyan-200 hover:bg-cyan-300"
           />
         )}
-      </div>
-    </div>
+      </View>
+    </View>
   );
 };

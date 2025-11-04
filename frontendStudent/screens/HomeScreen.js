@@ -19,7 +19,6 @@ export function HomeScreen() {
     setError('');
 
     try {
-      console.log("codeAntes: ", code)
       const response = await mockApi.validateSubjectCode(code);
       if (response.exists) {
         navigation.navigate('Subject', { subjectData: response.subject });
@@ -28,7 +27,6 @@ export function HomeScreen() {
       }
     } catch (err) {
       setError(t('errorConnection'));
-      console.log("Error al validar el código:", err);
     } finally {
       setIsLoading(false);
     }

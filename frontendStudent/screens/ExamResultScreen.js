@@ -1,32 +1,38 @@
+import { View, Text } from "react-native";
 import {useLanguage} from "../context/LanguageContext";
+import { StyledButton } from "../components/StyledButton";
 
 export const ExamResultScreen = ({ setPage, params }) => {
   const { t } = useLanguage();
   const { score, total, recommendations } = params;
 
   return (
-    <div className="flex-1 flex flex-col items-center w-full max-w-2xl mx-auto p-5 overflow-y-auto">
-      <h2 className="text-3xl font-bold text-black mt-10">{t('results')}</h2>
-      <p className="text-4xl font-bold my-6">{`${t('score')}: ${score} / ${total}`}</p>
+    <View style={{ flex: 1, alignItems: 'center', width: '100%', maxWidth: 800, alignSelf: 'center', padding: 20 }}>
+      <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#000', marginTop: 40 }}>{t('results')}</Text>
+      <Text style={{ fontSize: 36, fontWeight: 'bold', marginVertical: 24 }}>{`${t('score')}: ${score} / ${total}`}</Text>
 
-      <div className="w-full bg-white p-6 rounded-lg shadow">
-        <h3 className="text-xl font-bold mb-4 text-black">{t('recommendations')}</h3>
+      <View style={{ width: '100%', backgroundColor: 'white', padding: 24, borderRadius: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 }}>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: '#000' }}>{t('recommendations')}</Text>
         {recommendations.length > 0 ? (
-          <ul className="list-disc list-inside space-y-2">
+          <View>
             {recommendations.map((rec, index) => (
-              <li key={index} className="text-base">{rec}</li>
+              <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 }}>
+                <Text style={{ fontSize: 16, marginRight: 8 }}>•</Text>
+                <Text style={{ fontSize: 16, flex: 1 }}>{rec}</Text>
+              </View>
             ))}
-          </ul>
+          </View>
         ) : (
-          <p className="text-base italic">¡Felicidades! No hay recomendaciones.</p>
+          <Text style={{ fontSize: 16, fontStyle: 'italic' }}>¡Felicidades! No hay recomendaciones.</Text>
         )}
-      </div>
+      </View>
 
       <StyledButton 
         title={t('leaveGroup')} 
         onClick={() => setPage({ name: 'Home' })} // Vuelve al inicio
-        className="mt-10 bg-cyan-200 hover:bg-cyan-300"
+        className="mt-10"
+        style={{ backgroundColor: '#a7f3d0' }} // Un verde claro para el botón de finalizar
       />
-    </div>
+    </View>
   );
 };

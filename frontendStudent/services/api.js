@@ -16,7 +16,6 @@ export const mockApi = {
             },
             
           });
-          console.log("code: ", code)
         } else {
           resolve({ exists: false });
         }
@@ -51,7 +50,10 @@ export const mockApi = {
       );
     });
   },
-  generateExam: (topicIds, numQuestions) => {
+  generateExam: (topics, numQuestions) => {
+    console.log("topics: ", topics)
+    console.log("numQuestions: ", numQuestions)
+    const topicIds = topics.map(topic => topic.id);
     return new Promise((resolve) => {
       resolve(
         Array.from({ length: numQuestions }, (_, i) => ({

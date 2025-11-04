@@ -1,8 +1,14 @@
 import {useLanguage} from "../context/LanguageContext";
 import { useState } from 'react';
 import { mockApi } from '../services/api';
+import { StyledButton } from "../components/StyledButton";
+import { useEffect } from "react";
+import { Text, View } from "react-native";
+import { useNavigation } from '@react-navigation/native';
 
-export const GameScreen = ({ setPage }) => {
+export const GameScreen = () => {
+  const navigation = useNavigation();
+
   const { t } = useLanguage();
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
@@ -24,7 +30,7 @@ export const GameScreen = ({ setPage }) => {
     if (currentQ < questions.length - 1) {
       setCurrentQ(currentQ + 1);
     } else {
-      setPage({ name: 'GameResult' });
+      navigation.navigate('GameResult');
     }
   };
 
@@ -34,19 +40,19 @@ export const GameScreen = ({ setPage }) => {
     }
   };
   
-  if (isLoading) return <div className="flex-1 flex items-center justify-center"><p>{t('loadingGame')}</p></div>;
+  if (isLoading) return <View className="flex-1 flex items-center justify-center"><Text>{t('loadingGame')}</Text></View>;
   
   const question = questions[currentQ];
   const selectedAnswer = answers[question.id];
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-5 w-full max-w-2xl mx-auto">
-      <p className="text-slate-500 absolute top-28 md:top-24 right-5">{`${currentQ + 1} / ${questions.length}`}</p>
-      <p className="text-2xl font-medium text-center my-10">{question.text}</p>
+    <View className="flex-1 flex flex-col items-center justify-center p-5 w-full max-w-2xl mx-auto">
+      <Text className="text-slate-500 absolute top-28 md:top-24 right-5">{`${currentQ + 1} / ${questions.length}`}</Text>
+      <Text className="text-2xl font-medium text-center my-10">{question.text}</Text>
       
-      <div className="w-full">
+      <View className="w-full">
         {question.options.map(opt => (
-          <button
+          <StyledButton
             key={opt}
             className={`w-full p-4 mb-4 rounded-lg border-2 text-lg text-center
               ${selectedAnswer === opt 
@@ -55,18 +61,18 @@ export const GameScreen = ({ setPage }) => {
             onClick={() => handleSelectAnswer(question.id, opt)}
           >
             {opt}
-          </button>
+          </StyledButton>
         ))}
-      </div>
+      </View>
 
-      <div className="flex flex-row justify-between w-full mt-8">
+      <View className="flex flex-row justify-between w-full mt-8">
         <StyledButton title={t('previous')} onClick={handlePrev} disabled={currentQ === 0} />
         <StyledButton 
-          title={currentQ === questions.length - 1 ? t('finishExam') : t('next')} 
+          title={currentQ === questions.length - 1 ? t('finishGame') : t('next')} 
           onClick={handleNext}
           className={currentQ === questions.length - 1 ? 'bg-green-500 hover:bg-green-600' : 'bg-cyan-200 hover:bg-cyan-300'}
         />
-      </div>
-    </div>
+      </View>
+    </View>
   );
 };
