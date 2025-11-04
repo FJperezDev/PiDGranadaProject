@@ -1,5 +1,5 @@
 import {useLanguage} from "../context/LanguageContext";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { mockApi } from '../services/api';
 import { StyledTextInput } from '../components/StyledTextInput';
 import { StyledButton } from '../components/StyledButton';
@@ -12,6 +12,11 @@ export function HomeScreen() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [page, setPage] = useState({ name: 'Home' });
+
+  useEffect(() => {
+    setPage({ name: 'Home' });
+  }, []);
 
   const handleJoinGroup = async () => {
     if (isLoading) return;
@@ -21,6 +26,7 @@ export function HomeScreen() {
     try {
       const response = await mockApi.validateSubjectCode(code);
       if (response.exists) {
+        setPage({ name: 'No Home' });
         navigation.navigate('Subject', { subjectData: response.subject });
       } else {
         setError(t('invalidCode'));

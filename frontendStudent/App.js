@@ -9,24 +9,36 @@ import { GameResultScreen } from './screens/GameResultScreen';
 import { ExamSetupScreen } from './screens/ExamSetupScreen';
 import { ExamScreen } from './screens/ExamScreen';
 import { ExamResultScreen } from './screens/ExamResultScreen';
+import { CustomHeader } from './components/CustomHeader';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <NavigationContainer>
-        <Stack.Navigator initialRouteName="Home">
-          <Stack.Screen name="Home" component={HomeScreen} />
-          <Stack.Screen name="Subject" component={SubjectScreen} />
-          <Stack.Screen name="TopicDetail" component={TopicDetailScreen} />
-          <Stack.Screen name="Game" component={GameScreen} />
-          <Stack.Screen name="GameResult" component={GameResultScreen} />
-          <Stack.Screen name="ExamSetup" component={ExamSetupScreen} />
-          <Stack.Screen name="Exam" component={ExamScreen} />
-          <Stack.Screen name="ExamResult" component={ExamResultScreen} /> 
-        </Stack.Navigator>
-      </NavigationContainer>
-    </LanguageProvider>
+    <SafeAreaProvider>
+      <LanguageProvider>
+        <NavigationContainer>
+          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+            <Stack.Navigator
+              initialRouteName="Home"
+              screenOptions={{
+                header: () => <CustomHeader />,
+              }}
+            >
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="Subject" component={SubjectScreen} />
+              <Stack.Screen name="TopicDetail" component={TopicDetailScreen} />
+              <Stack.Screen name="Game" component={GameScreen} />
+              <Stack.Screen name="GameResult" component={GameResultScreen} />
+              <Stack.Screen name="ExamSetup" component={ExamSetupScreen} />
+              <Stack.Screen name="Exam" component={ExamScreen} />
+              <Stack.Screen name="ExamResult" component={ExamResultScreen} /> 
+            </Stack.Navigator>
+          </SafeAreaView>
+        </NavigationContainer>
+      </LanguageProvider>
+    </SafeAreaProvider>
+      
   );
 }
