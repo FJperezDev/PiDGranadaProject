@@ -2,7 +2,7 @@ export const mockApi = {
   validateSubjectCode: (code) => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        if (code.toUpperCase() === 'ORG-101') {
+        if (code === 'ORG-101') {
           resolve({
             exists: true,
             subject: {
@@ -14,7 +14,9 @@ export const mockApi = {
                 { id: 't3', name: 'Tema 3: Cultura', description: 'La cultura empresarial y su impacto.' },
               ],
             },
+            
           });
+          console.log("code: ", code)
         } else {
           resolve({ exists: false });
         }

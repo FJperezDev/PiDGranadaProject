@@ -1,4 +1,4 @@
-const STRINGS = {
+export const STRINGS = {
   en: {
     appName: 'Student_iOrg',
     language: 'Language',

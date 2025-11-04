@@ -2,7 +2,7 @@ import {useLanguage} from "../context/LanguageContext";
 import { useState } from 'react';
 import { mockApi } from '../services/api';
 
-export const GamScreen = ({ setPage }) => {
+export const GameScreen = ({ setPage }) => {
   const { t } = useLanguage();
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});

@@ -1,16 +1,18 @@
 import { createContext, useContext, useState } from 'react';
 import { STRINGS } from '../constants/strings';
 
+const LanguageContext = createContext();
+
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (!context) {
     throw new Error('useLanguage debe ser usado dentro de un LanguageProvider');
   }
-  return context;}
-
-const LanguageContext = createContext();
+  return context;
+}
 
 export const LanguageProvider = ({ children }) => {
+
   const [language, setLanguage] = useState('es'); // 'es' como default
 
   const toggleLanguage = (lang) => {
@@ -19,7 +21,7 @@ export const LanguageProvider = ({ children }) => {
 
   // Función 't' para traducción
   const t = (key) => {
-    return STRINGS[language][key] || key;
+    return STRINGS[language]?.[key] || key;
   };
 
   const value = {
