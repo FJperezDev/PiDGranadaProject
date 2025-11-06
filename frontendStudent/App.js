@@ -23,9 +23,9 @@ export default function App() {
           <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']} backgroundColor={COLORS.primary}>
             <Stack.Navigator
               initialRouteName="Home"
-              screenOptions={{
-                header: () => <CustomHeader />,
-              }}
+              screenOptions={({ route }) => ({
+                header: () => <CustomHeader routeName={route.name} />,
+              })}
             >
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="Subject" component={SubjectScreen} />

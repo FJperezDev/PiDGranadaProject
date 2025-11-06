@@ -16,13 +16,14 @@ class TopicViewSet(BaseContentViewSet):
 
     @action(detail=False, methods=['get'], url_path='by-title')
     def by_title(self, request):
-        """GET /topics/by-title/?title=<topic_title>"""
-        title = request.query_params.get('title')
+        """GET /topics/by-title/?topic_title=<topic_title>"""
+        title = request.query_params.get('topic_title')
         if not title:
             return Response({'detail': 'Missing title parameter'}, status=status.HTTP_400_BAD_REQUEST)
-
+        
         # Buscar el topic por título
         topic = selectors.get_topic_by_title(title)
+        
         if not topic:
             return Response({'detail': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
 

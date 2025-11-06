@@ -35,6 +35,7 @@ export const STRINGS = {
     loading: 'Loading...',
     loadingGame: 'Loading game...',
     generatingExam: 'Generating exam...',
+    pleaseSelectAnswer: 'Please select an answer before proceeding.',
   },
   es: {
     appName: 'Student_iOrg',
@@ -72,5 +73,6 @@ export const STRINGS = {
     loading: 'Cargando...',
     loadingGame: 'Cargando juego...',
     generatingExam: 'Generando examen...',
+    pleaseSelectAnswer: 'Por favor selecciona una respuesta antes de continuar.',
   },
 };

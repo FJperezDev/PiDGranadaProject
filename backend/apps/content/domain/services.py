@@ -108,7 +108,6 @@ def update_epigraph(epigraph: Epigraph, teacher: CustomTeacher, name_es: str = N
     """Actualiza un epígrafe con los nuevos datos proporcionados."""
     old_epigraph = Epigraph.objects.get(pk=epigraph.pk)
     old_epigraph.pk = None
-    print(epigraph.pk)
     if order_id is not None and epigraph.order_id != order_id:
         if Epigraph.objects.filter(topic=epigraph.topic, order_id=order_id).exclude(pk=epigraph.pk).exists():
             raise ValidationError("Ya existe un epígrafe con ese orden en este tema.")

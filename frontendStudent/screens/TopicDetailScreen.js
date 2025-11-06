@@ -1,23 +1,45 @@
-import {useLanguage} from "../context/LanguageContext";
-import { useState } from 'react';
-import { mockApi } from '../services/api';
-import { useEffect } from "react";
+import { useLanguage } from "../context/LanguageContext";
+import { useState, useEffect, useRef } from "react";
+import { mockApi } from "../services/api";
 import { ContentModal } from "../components/ContentModal";
 import { StyledButton } from "../components/StyledButton";
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { COLORS } from "../constants/colors";
 
 export const TopicDetailScreen = ({ setPage, route }) => {
-  const { t } = useLanguage();
-  const { topic } = route.params;
+  const { t, language } = useLanguage();
   const [details, setDetails] = useState({ concepts: [], epigraphs: [] });
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalContent, setModalContent] = useState({ title: '', content: '' });
+  const [modalContent, setModalContent] = useState({ title: "", content: "" });
+
+  const { topic } = route.params;
+  const didMountRef = useRef(false);
+
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    const fetchData = async () => {
+      try {
+        console.log(topic);
+        const response = await mockApi.getTopicDetails(topic.name);
+        console.log(response);
+        setDetails(response);
+      } catch (error) {
+        console.error("Error actualizando los datos de la asignatura: ", error);
+      }
+    };
+
+    fetchData();
+  }, [language]);
 
   useEffect(() => {
     const fetchDetails = async () => {
-      const data = await mockApi.getTopicDetails(topic.title);
+      const data = await mockApi.getTopicDetails(topic.name, t("languageCode"));
       setDetails(data);
       setIsLoading(false);
     };
@@ -25,32 +47,32 @@ export const TopicDetailScreen = ({ setPage, route }) => {
   }, [topic.id]);
 
   const showContent = (item) => {
-    setModalContent({ title: item.name, content: item.content });
+    setModalContent({ title: item.name, content: item.description });
     setModalVisible(true);
   };
 
-  const renderItem = (item, type) => (
-    <StyledButton
-      className="bg-white p-5 rounded-lg mb-4 w-full text-left shadow border border-cyan-50 transition hover:shadow-lg"
-      key={item.id}
-      onClick={() => showContent(item)}
-    >
-      <Text className="text-lg font-semibold text-black">{item.name}</Text>
-      {type === 'heading' && <Text className="text-sm text-gray-700 mt-1">{item.description}</Text>}
+  const renderItem = (item) => (
+    <StyledButton style={styles.button} key={item.id} onPress={() => showContent(item)}>
+      <Text style={styles.itemTitle}>{item.name}</Text>
+      <Text style={styles.itemSubtitle}>{item.summary}</Text>
     </StyledButton>
   );
 
   if (isLoading) {
-    return <View className="flex-1 flex items-center justify-center"><Text>{t('loading')}</Text></View>;
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>{t("loading")}</Text>
+      </View>
+    );
   }
 
   return (
-    <View className="flex-1 w-full max-w-3xl mx-auto p-5 overflow-y-auto">
-      <Text className="text-xl font-bold mt-6 mb-3 text-black">{t('concepts')}</Text>
-      {details.concepts.map(item => renderItem(item, 'concept'))}
-      
-      <Text className="text-xl font-bold mt-6 mb-3 text-black">{t('headings')}</Text>
-      {details.epigraphs.map(item => renderItem(item, 'heading'))}
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.sectionTitle}>{t("concepts")}</Text>
+      {details.concepts.map(renderItem)}
+
+      <Text style={styles.sectionTitle}>{t("headings")}</Text>
+      {details.epigraphs.map(renderItem)}
 
       <ContentModal
         visible={modalVisible}
@@ -58,6 +80,55 @@ export const TopicDetailScreen = ({ setPage, route }) => {
         title={modalContent.title}
         content={modalContent.content}
       />
-    </View>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  button: {
+    backgroundColor: COLORS.secondary || "#fff",
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primary || "#e0f7fa",
+    shadowColor: COLORS.black || "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+  },
+  container: {
+    flexGrow: 1,
+    width: "100%",
+    maxWidth: 800,
+    alignSelf: "center",
+    padding: 20,
+    backgroundColor: COLORS.background || "#fff",
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.background || "#fff",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: COLORS.text || "#000",
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: COLORS.black || "#000",
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  itemTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.black || "#000",
+  },
+  itemSubtitle: {
+    fontSize: 14,
+    color: COLORS.secondary || "#444",
+    marginTop: 4,
+  },
+});

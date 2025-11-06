@@ -3,6 +3,17 @@ import { STRINGS } from '../constants/strings';
 
 const LanguageContext = createContext();
 
+let currentLanguage = 'es';
+
+export const getLanguage = () => currentLanguage;
+export const switchLanguage = () => {
+  if (currentLanguage === 'es') {
+    currentLanguage = 'en';
+  } else {
+    currentLanguage = 'es';
+  }
+};
+
 export const useLanguage = () => {
   const context = useContext(LanguageContext);
   if (!context) {
@@ -16,6 +27,7 @@ export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState('es'); // 'es' como default
 
   const toggleLanguage = (lang) => {
+    switchLanguage();
     setLanguage(lang);
   };
 

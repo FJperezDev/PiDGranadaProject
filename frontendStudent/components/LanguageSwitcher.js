@@ -26,7 +26,7 @@ export const LanguageSwitcher = () => {
       </View>
       
       <View style={{ flex: 1, alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end', width: '100%'}}>
-        <Text className="text-black font-bold ml-2 text-sm">{language === 'es' ? 'EN' : 'ES'}</Text>
+        <Text className="text-black font-bold ml-2 text-sm">{language === 'es' ? 'ES' : 'EN'}</Text>
       </View>
       
     </TouchableOpacity>

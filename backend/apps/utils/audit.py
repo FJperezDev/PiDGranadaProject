@@ -162,7 +162,6 @@ def makeChangesConcept(user, old_object, new_object):
 
 def makeChangesEpigraph(user, old_object, new_object):
     from apps.content.api.models import TeacherMakeChangeEpigraph
-    print (old_object, new_object, user)
     TeacherMakeChangeEpigraph.objects.create(
         old_object=old_object,
         new_object=new_object,

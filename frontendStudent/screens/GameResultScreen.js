@@ -1,46 +1,108 @@
-import { Image } from "react-native";
+import { Image, View, Text, StyleSheet } from "react-native";
+import { useState } from "react";
 import { StyledButton } from "../components/StyledButton";
-import {useLanguage} from "../context/LanguageContext";
-import { useState } from 'react';
-import { View, Text } from "react-native";
+import { useLanguage } from "../context/LanguageContext";
 
-export const GameResultScreen = ({ setPage }) => {
+export const GameResultScreen = ( ) => {
   const { t } = useLanguage();
   const [imageVisible, setImageVisible] = useState(false);
   const [nameVisible, setNameVisible] = useState(false);
 
   return (
-    <View className="flex-1 flex flex-col items-center justify-center p-5">
-      <Text className="text-2xl font-bold text-black mb-8">{t('gameResultTitle')}</Text>
-      
+    <View style={styles.container}>
+      <Text style={styles.title}>{t("gameResultTitle")}</Text>
+
       {/* Imagen Oculta */}
-      <StyledButton 
-        onClick={() => setImageVisible(true)}
-        className="w-64 h-64 md:w-80 md:h-80 flex items-center justify-center rounded-lg shadow-md"
-      >
+      <StyledButton onPress={() => setImageVisible(true)} style={styles.imageButton}>
         {imageVisible ? (
           <Image
-            src="https://placehold.co/300x300/E0F7FA/000000?text=Organization+Chart"
-            alt="Organization Chart"
-            className="w-full h-full object-cover rounded-lg"
+            source={{
+              uri: "https://placehold.co/300x300/E0F7FA/000000?text=Organization+Chart",
+            }}
+            style={styles.image}
+            resizeMode="cover"
           />
         ) : (
-          <View className="w-full h-full bg-slate-300 rounded-lg flex items-center justify-center">
-            <Text className="text-lg">{t('tapToReveal')}</Text>
+          <View style={styles.imagePlaceholder}>
+            <Text style={styles.placeholderText}>{t("tapToReveal")}</Text>
           </View>
         )}
       </StyledButton>
 
       {/* Nombre Oculto */}
-      <StyledButton onClick={() => setNameVisible(true)} className="mt-8">
+      <StyledButton onPress={() => setNameVisible(true)} style={styles.nameButton}>
         {nameVisible ? (
-          <Text className="text-3xl font-bold">Estructura Matricial</Text>
+          <Text style={styles.revealedText}>Estructura Matricial</Text>
         ) : (
-          <View className="bg-slate-300 rounded-lg flex items-center justify-center py-4 px-8">
-            <Text className="text-lg">{t('tapToReveal')}</Text>
+          <View style={styles.namePlaceholder}>
+            <Text style={styles.placeholderText}>{t("tapToReveal")}</Text>
           </View>
         )}
       </StyledButton>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    backgroundColor: "#ffffff",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#000000",
+    marginBottom: 32,
+  },
+  imageButton: {
+    width: 256, // equivalente a w-64
+    height: 256, // equivalente a h-64
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 4,
+    elevation: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 12,
+  },
+  imagePlaceholder: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#cbd5e1", // slate-300
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  placeholderText: {
+    fontSize: 18,
+    color: "#000",
+  },
+  nameButton: {
+    marginTop: 32, // mt-8
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  revealedText: {
+    fontSize: 28, // text-3xl
+    fontWeight: "bold",
+    color: "#000",
+  },
+  namePlaceholder: {
+    backgroundColor: "#cbd5e1", // slate-300
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16, // py-4
+    paddingHorizontal: 32, // px-8
+  },
+});

@@ -1,3 +1,6 @@
+import { View, Text } from 'react-native';
+import { StyledButton } from './StyledButton';
+
 export const AlertModal = ({ visible, onClose, title, message }) => {
   if (!visible) return null;
 

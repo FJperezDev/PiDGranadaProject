@@ -5,11 +5,9 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
 
-export const CustomHeader = () => {
+export const CustomHeader = ({routeName}) => {
   const { t } = useLanguage();
   const navigation = useNavigation();
-  const route = useRoute();
-  const routeName = route.name;
 
   const handleGoBack = () => {
     if (navigation.canGoBack()) {
@@ -19,23 +17,27 @@ export const CustomHeader = () => {
     }
   };
 
+  const hideBack = routeName === 'Exam';
+  const goHome = routeName === 'ExamResult';
   const isHome = routeName === 'Home';
 
   return (
     <View style={styles.container}>
       {/* Left Section */}
       <View style={styles.leftSection}>
-        <TouchableOpacity
-          onPress={handleGoBack}
-          activeOpacity={0.7}
-          style={styles.iconButton}
-        >
-          {isHome ? (
-            <BookMarked size={28} color={COLORS.black} />
-          ) : (
-            <ChevronLeft size={28} color={COLORS.black} />
-          )}
-        </TouchableOpacity>
+        {!hideBack && (
+          <TouchableOpacity
+            onPress={goHome ? () => navigation.navigate('ExamSetup') : handleGoBack}
+            activeOpacity={0.7}
+            style={styles.iconButton}
+          >
+            {isHome ? (
+              <BookMarked size={28} color={COLORS.black} />
+            ) : (
+              <ChevronLeft size={28} color={COLORS.black} />
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Center Section */}

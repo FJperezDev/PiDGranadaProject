@@ -77,7 +77,6 @@ def create_student_group(subject: Subject, name_es: str, name_en: str, teacher: 
         raise ValidationError("Ya existe un grupo de estudiantes con ese nombre para esta asignatura, año y semestre.")
     
     groupCode=generate_groupCode()
-    print(groupCode)
     group = StudentGroup.objects.create(
         subject=subject,
         name_es=name_es,

@@ -144,7 +144,6 @@ class ExamViewSet(BaseContentViewSet):
         questions_and_answers = data.get('questions_and_answers', [])
         questions_and_answers_dict = {}
         for qa in questions_and_answers:
-            print(questions_and_answers[qa])
             question = selectors.get_question_by_id(qa)
             answer = selectors.get_answer_by_id(questions_and_answers[qa])
             questions_and_answers_dict[question] = answer

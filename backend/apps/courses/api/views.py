@@ -241,18 +241,15 @@ class StudentGroupViewSet(BaseContentViewSet):
                 for relation in topics_relations
             ]
 
-            print("Formatted Topics: ", formatted_topics)
-
             # Crear la respuesta final
             response_data = {
                 "exists": True,
                 "subject": {
-                    "id": f"{code.lower()}",
+                    "id": f"{code}",
                     "name": subject.name_es or subject.name_en,
                     "topics": formatted_topics
                 }
             }
-            print("Response data: ", response_data)
 
             return Response(response_data, status=status.HTTP_200_OK)
 

@@ -1,13 +1,13 @@
-import {useLanguage} from "../context/LanguageContext";
-import { useState } from 'react';
-import { mockApi } from '../services/api';
+import { useLanguage } from "../context/LanguageContext";
+import { useState, useEffect, useMemo } from "react";
+import { mockApi } from "../services/api";
+import { mockApi as oldMockApi } from "../services/oldApi";
 import { StyledButton } from "../components/StyledButton";
-import { useEffect } from "react";
-import { Text, View } from "react-native";
-import { useMemo } from "react";
-import { useNavigation } from '@react-navigation/native';
+import { Text, View, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { COLORS } from "../constants/colors";
 
-export const ExamScreen = ({ route, setAlert }) => {
+export const ExamScreen = ({ route }) => {
   const { t } = useLanguage();
   const navigation = useNavigation();
   const { topics, nQuestions } = route.params;
@@ -15,53 +15,59 @@ export const ExamScreen = ({ route, setAlert }) => {
   const [answers, setAnswers] = useState({});
   const [currentQ, setCurrentQ] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  
   const [timeLeft, setTimeLeft] = useState(nQuestions * 90);
 
   // Cargar preguntas
   useEffect(() => {
-    mockApi.generateExam(topics, nQuestions).then(data => {
-      console.log("data: ", data)
+    oldMockApi.generateExam(topics, nQuestions).then((data) => {
+      console.log("EXAM DATA:", data);
       setQuestions(data);
+      setIsLoading(false);
+    }).catch((error) => {
+      console.error("Error generating exam:", error);
       setIsLoading(false);
     });
   }, [topics, nQuestions]);
 
-  const handleFinish = useMemo(() => () => {
-    // Calcular resultados
-    let score = 0;
-    const recommendations = [];
-    questions.forEach(q => {
-      if (answers[q.id] === q.correctAnswer) {
-        score++;
-      } else {
-        recommendations.push(q.recommendation);
-      }
-    });
+  const handleFinish = useMemo(
+    () => () => {
+      let score = 0;
+      const recommendations = [];
+      questions.forEach((q) => {
+        if (answers[q.id] === q.correctAnswer) {
+          score++;
+        } else {
+          recommendations.push(q.recommendation);
+        }
+      });
 
-    navigation.navigate('ExamResult', { score, total: questions.length, recommendations });
-    setAlert(prev => ({ ...prev, allowBack: true }));
-  }, [questions, answers]);
+      navigation.navigate("ExamResult", {
+        score,
+        total: questions.length,
+        recommendations,
+      });
+    },
+    [questions, answers]
+  );
 
-
-  // Timer
+  // Temporizador
   useEffect(() => {
     if (isLoading) return;
-    
+
     if (timeLeft <= 0) {
       handleFinish();
       return;
     }
 
     const timer = setInterval(() => {
-      setTimeLeft(prev => prev - 1);
+      setTimeLeft((prev) => prev - 1);
     }, 1000);
 
     return () => clearInterval(timer);
   }, [timeLeft, isLoading, handleFinish]);
-  
+
   const handleSelectAnswer = (questionId, answer) => {
-    setAnswers(prev => ({ ...prev, [questionId]: answer }));
+    setAnswers((prev) => ({ ...prev, [questionId]: answer }));
   };
 
   const handleNext = () => {
@@ -76,61 +82,158 @@ export const ExamScreen = ({ route, setAlert }) => {
     }
   };
 
-
-  if (isLoading) return <View className="flex-1 flex items-center justify-center"><Text>{t('generatingExam')}</Text></View>;
+  if (isLoading || !questions.length) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>{t("generatingExam")}</Text>
+      </View>
+    );
+  }
 
   const question = questions[currentQ];
-  const selectedAnswer = answers[question.id];
-  
-  // Informa al componente `App` que no se puede volver atrás
-  useEffect(() => {
-    setAlert(prev => ({ ...prev, allowBack: false }));
-    return () => setAlert(prev => ({ ...prev, allowBack: true }));
-  }, [setAlert]);
+  if (!question) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>{t("loadingQuestion")}</Text>
+      </View>
+    );
+  }
 
+  const selectedAnswer = answers[question.id];
 
   return (
-    <View className="flex-1 flex flex-col items-center justify-center p-5 w-full max-w-2xl mx-auto">
-      <View className="w-full flex justify-between items-center absolute top-28 md:top-24 px-5">
-        <Text className="text-slate-500">{`${currentQ + 1} / ${questions.length}`}</Text>
-        <Text className="text-red-700 font-bold text-lg">
-          {`${t('timeRemaining')}: ${Math.floor(timeLeft / 60)}:${('0' + (timeLeft % 60)).slice(-2)}`}
+    <View style={styles.container}>
+      {/* Barra superior */}
+      <View style={styles.header}>
+        <Text style={styles.progressText}>{`${currentQ + 1} / ${questions.length}`}</Text>
+        <Text style={styles.timerText}>
+          {`${t("timeRemaining")}: ${Math.floor(timeLeft / 60)}:${(
+            "0" + (timeLeft % 60)
+          ).slice(-2)}`}
         </Text>
       </View>
-      
-      <Text className="text-2xl font-medium text-center my-10">{question.text}</Text>
-      
-      <View className="w-full">
-        {question.options.map(opt => (
-          <StyledButton
-            key={opt}
-            className={`w-full p-4 mb-4 rounded-lg border-2 text-lg text-center
-              ${selectedAnswer === opt 
-                ? 'bg-cyan-100 border-cyan-300' 
-                : 'bg-white border-slate-300 hover:bg-slate-100'}`}
-            onClick={() => handleSelectAnswer(question.id, opt)}
-          >
-            {opt}
-          </StyledButton>
-        ))}
+
+      {/* Pregunta */}
+      <Text style={styles.questionText}>{question.text}</Text>
+
+      {/* Opciones */}
+      <View style={styles.optionsContainer}>
+        {question.options.map((opt) => {
+          const isSelected = selectedAnswer === opt;
+          return (
+            <StyledButton
+              key={opt}
+              onPress={() => handleSelectAnswer(question.id, opt)}
+              style={[
+                styles.optionButton,
+                isSelected ? styles.optionSelected : styles.optionDefault,
+              ]}
+            >
+              <Text style={{ textAlign: "center", fontSize: 16 }}>{opt}</Text>
+            </StyledButton>
+          );
+        })}
       </View>
 
-      <View className="flex flex-row justify-between w-full mt-8">
-        <StyledButton title={t('previous')} onClick={handlePrev} disabled={currentQ === 0} />
+      {/* Navegación */}
+      <View style={styles.navContainer}>
+        <StyledButton
+          title={t("previous")}
+          onPress={handlePrev}
+          disabled={currentQ === 0}
+        />
         {currentQ === questions.length - 1 ? (
-          <StyledButton 
-            title={t('finishExam')} 
-            onClick={handleFinish} 
-            className="bg-green-500 hover:bg-green-600" 
+          <StyledButton
+            title={t("finishExam")}
+            onPress={handleFinish}
+            style={styles.finishButton}
           />
         ) : (
-          <StyledButton 
-            title={t('next')} 
-            onClick={handleNext} 
-            className="bg-cyan-200 hover:bg-cyan-300"
+          <StyledButton
+            title={t("next")}
+            onPress={handleNext}
+            style={styles.nextButton}
           />
         )}
       </View>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    width: "100%",
+    maxWidth: 700,
+    alignSelf: "center",
+    backgroundColor: COLORS.background || "#fff",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    color: COLORS.text || "#333",
+  },
+  header: {
+    position: "absolute",
+    top: 80,
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  progressText: {
+    color: "#64748b", // slate-500
+  },
+  timerText: {
+    color: "#b91c1c", // red-700
+    fontWeight: "bold",
+    fontSize: 18,
+  },
+  questionText: {
+    fontSize: 22,
+    fontWeight: "500",
+    textAlign: "center",
+    marginVertical: 40,
+    color: COLORS.black || "#000",
+  },
+  optionsContainer: {
+    width: "100%",
+  },
+  optionButton: {
+    width: "100%",
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderRadius: 8,
+    textAlign: "center",
+    fontSize: 16,
+  },
+  optionDefault: {
+    backgroundColor: "#fff",
+    borderColor: "#cbd5e1", // slate-300
+  },
+  optionSelected: {
+    backgroundColor: "#cffafe", // cyan-100
+    borderColor: "#a5f3fc", // cyan-300
+  },
+  navContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: 32,
+  },
+  nextButton: {
+    backgroundColor: "#a5f3fc", // cyan-200
+  },
+  finishButton: {
+    backgroundColor: "#22c55e", // green-500
+  },
+});

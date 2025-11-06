@@ -51,8 +51,6 @@ export const mockApi = {
     });
   },
   generateExam: (topics, numQuestions) => {
-    console.log("topics: ", topics)
-    console.log("numQuestions: ", numQuestions)
     const topicIds = topics.map(topic => topic.id);
     return new Promise((resolve) => {
       resolve(
