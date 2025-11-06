@@ -1,11 +1,11 @@
-import {useLanguage} from '../context/LanguageContext';
+import { useLanguage } from '../context/LanguageContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ChevronLeft, BookMarked } from 'lucide-react-native';
-import { StyledButton } from './StyledButton';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { COLORS } from '../constants/colors';
 
-export const CustomHeader = ({ onGoBack }) => {
+export const CustomHeader = () => {
   const { t } = useLanguage();
   const navigation = useNavigation();
   const route = useRoute();
@@ -19,46 +19,83 @@ export const CustomHeader = ({ onGoBack }) => {
     }
   };
 
-  return (
+  const isHome = routeName === 'Home';
 
-    <View
-      style={{
-        width: '100%',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: '#ecfeff', // cyan-50
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#cbd5e1', // slate-300
-        shadowColor: '#000',
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-      }}
-    >
+  return (
+    <View style={styles.container}>
       {/* Left Section */}
-      <View style={{ flex: 1, alignItems: 'flex-start' }}>
-        <StyledButton onPress={handleGoBack}>
-          {routeName === 'Home' ? (
-            <BookMarked size={32} color="black" />
+      <View style={styles.leftSection}>
+        <TouchableOpacity
+          onPress={handleGoBack}
+          activeOpacity={0.7}
+          style={styles.iconButton}
+        >
+          {isHome ? (
+            <BookMarked size={28} color={COLORS.black} />
           ) : (
-            <ChevronLeft size={32} color="black" />
+            <ChevronLeft size={28} color={COLORS.black} />
           )}
-        </StyledButton>
+        </TouchableOpacity>
       </View>
 
       {/* Center Section */}
-      <View style={{ flex: 2, alignItems: 'center' }}>
-        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#000' }}>
-          {t('appName')}
-        </Text>
+      <View style={styles.centerSection}>
+        <Text style={styles.title}>{t('appName')}</Text>
       </View>
 
       {/* Right Section */}
-      <View style={{ flex: 1, alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end' }}>
-        <Text style={{ marginRight: 8 }}>🌍</Text>
+      <View style={styles.rightSection}>
         <LanguageSwitcher />
       </View>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.primary, // tu color cyan-50
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.secondary,
+    shadowColor: COLORS.black,
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  leftSection: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  centerSection: {
+    flex: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rightSection: {
+    flex: 1,
+    alignItems: 'flex-end',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  iconButton: {
+    backgroundColor: COLORS.white,
+    borderColor: COLORS.secondary,
+    borderWidth: 1,
+    borderRadius: 999,
+    padding: 6,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+});

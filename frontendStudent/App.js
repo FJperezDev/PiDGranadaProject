@@ -11,6 +11,7 @@ import { ExamScreen } from './screens/ExamScreen';
 import { ExamResultScreen } from './screens/ExamResultScreen';
 import { CustomHeader } from './components/CustomHeader';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { COLORS } from './constants/colors';
 
 const Stack = createNativeStackNavigator();
 
@@ -19,7 +20,7 @@ export default function App() {
     <SafeAreaProvider>
       <LanguageProvider>
         <NavigationContainer>
-          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']} backgroundColor={COLORS.primary}>
             <Stack.Navigator
               initialRouteName="Home"
               screenOptions={{

@@ -9,7 +9,7 @@ from .serializers import SubjectSerializer, StudentGroupSerializer, TeacherMakeC
 from apps.courses.domain import services, selectors
 from apps.content.domain import selectors as content_selectors
 from apps.courses.domain import selectors as courses_selectors
-from apps.content.api.serializers import TopicSerializer
+from apps.content.api.serializers import TopicSerializer, ShortTopicSerializer
 from apps.utils.permissions import BaseContentViewSet
 from apps.utils.audit import makeChanges
 from apps.utils.permissions import IsTeacher
@@ -201,6 +201,66 @@ class StudentGroupViewSet(BaseContentViewSet):
         if group.teacher != request.user:
             return Response({'detail': 'You do not have permission to perform this action.'}, status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
+    
+    @action(detail=False, methods=['get'], url_path='subject', url_name='subject')
+    def subject(self, request):
+        subjects = selectors.get_subject_by_code(request.query_params.get('code'))
+        if not subjects:
+            return Response({'detail': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = SubjectSerializer(subjects, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'], url_path='validate', url_name='validate')
+    def validate(self, request):
+        try:
+            code = request.query_params.get('code')
+            if not code:
+                return Response({'detail': 'Missing code'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Buscar el grupo
+            group = selectors.get_student_group_by_code(code)
+            if not group:
+                return Response({'exists': False, 'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Buscar la asignatura asociada
+            subject = selectors.get_subject_by_id(group.subject.id)
+            if not subject:
+                return Response({'exists': False, 'detail': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Obtener los temas de la asignatura
+            topics_relations = selectors.get_topics_relation_by_subject(subject)
+
+            # Formatear los temas con los campos que quiere el frontend
+            topic_serializer = TopicSerializer(context={'request': request})
+            formatted_topics = [
+                {
+                    "id": relation.topic.id,
+                    "name": topic_serializer.get_title(relation.topic),
+                    "description": topic_serializer.get_description(relation.topic),
+                }
+                for relation in topics_relations
+            ]
+
+            print("Formatted Topics: ", formatted_topics)
+
+            # Crear la respuesta final
+            response_data = {
+                "exists": True,
+                "subject": {
+                    "id": f"{code.lower()}",
+                    "name": subject.name_es or subject.name_en,
+                    "topics": formatted_topics
+                }
+            }
+            print("Response data: ", response_data)
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({'exists': False, 'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     
     @action(detail=False, methods=['get'], url_path='my-groups', url_name='my-groups')
     def my_groups(self, request):

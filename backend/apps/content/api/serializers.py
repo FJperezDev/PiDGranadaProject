@@ -116,23 +116,33 @@ class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     
 class ShortTopicSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     title = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
 
     class Meta:
         model = Topic
         fields = [
             'title',      
-            'title_es', 'title_en',     
+            'title_es', 'title_en',  
+            'description',
+            'description_es', 'description_en',    
         ]
         extra_kwargs = {
             'title_es': {'write_only': True, 'required': True},
             'title_en': {'write_only': True, 'required': True},
+            'description_es': {'write_only': True, 'required': False},
+            'description_en': {'write_only': True, 'required': False},
         }
 
     def get_title(self, obj):
         lang = self.get_lang()
         return getattr(obj, f'title_{lang}', None)
+    
+    def get_description(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'description_{lang}', None)
 
 # Topic serializer with dynamic language support
+
 class TopicSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     
     title = serializers.SerializerMethodField(read_only=True)

@@ -14,6 +14,33 @@ class TopicViewSet(BaseContentViewSet):
     def get_queryset(self):
         return selectors.get_all_topics()
 
+    @action(detail=False, methods=['get'], url_path='by-title')
+    def by_title(self, request):
+        """GET /topics/by-title/?title=<topic_title>"""
+        title = request.query_params.get('title')
+        if not title:
+            return Response({'detail': 'Missing title parameter'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Buscar el topic por título
+        topic = selectors.get_topic_by_title(title)
+        if not topic:
+            return Response({'detail': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Obtener conceptos y epígrafes asociados
+        concepts = selectors.get_concepts_by_topic(topic.id)
+        epigraphs = selectors.get_epigraphs_by_topic(topic.id)
+
+        concepts_serializer = ConceptSerializer(concepts, many=True, context={'request': request})
+        epigraphs_serializer = EpigraphSerializer(epigraphs, many=True, context={'request': request})
+
+        # Formato deseado
+        response_data = {
+            "concepts": concepts_serializer.data,
+            "epigraphs": epigraphs_serializer.data
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
     def update(self, request, *args, **kwargs):
         topic = selectors.get_topic_by_id(kwargs['pk'])
         topic = services.update_topic(topic, teacher=request.user, **request.data)

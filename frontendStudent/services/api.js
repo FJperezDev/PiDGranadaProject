@@ -1,69 +1,47 @@
+import { apiClient } from './apiClient';
+
 export const mockApi = {
-  validateSubjectCode: (code) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        if (code === 'ORG-101') {
-          resolve({
-            exists: true,
-            subject: {
-              id: 'org-101',
-              name: 'Organización de Empresas',
-              topics: [
-                { id: 't1', name: 'Tema 1: Introducción', description: 'Conceptos básicos de la organización.' },
-                { id: 't2', name: 'Tema 2: Estructuras', description: 'Tipos de estructuras organizativas.' },
-                { id: 't3', name: 'Tema 3: Cultura', description: 'La cultura empresarial y su impacto.' },
-              ],
-            },
-            
-          });
-        } else {
-          resolve({ exists: false });
-        }
-      }, 500);
-    });
+  validateSubjectCode: async (code) => {
+    try {
+      const response = await apiClient.get('/studentgroups/validate/', { params: { code } });
+      console.log('Respuesta del servidor:', JSON.stringify(response.data, null, 2));
+      return response.data;
+    } catch (error) {
+      console.error('Error validando el código de asignatura:', error);
+      throw error;
+    }
   },
-  getTopicDetails: (topicId) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          concepts: [
-            { id: 'c1', name: 'Concepto A', content: 'Contenido completo del Concepto A...' },
-            { id: 'c2', name: 'Concepto B', content: 'Contenido completo del Concepto B...' },
-          ],
-          headings: [
-            { id: 'h1', name: 'Epígrafe 1.1', description: 'Descripción del epígrafe 1.1', content: 'Contenido completo y detallado del Epígrafe 1.1...' },
-            { id: 'h2', name: 'Epígrafe 1.2', description: 'Descripción del epígrafe 1.2', content: 'Contenido completo y detallado del Epígrafe 1.2...' },
-          ],
-        });
-      }, 300);
-    });
+
+  getTopicDetails: async (title) => {
+    try {
+      const response = await apiClient.get(`/topics/by-title/`, { params: { title } });
+      return response.data;
+    } catch (error) {
+      console.error('Error obteniendo detalles del tema:', error);
+      throw error;
+    }
   },
-  getGameQuestions: () => {
-    return new Promise((resolve) => {
-      resolve(
-        Array.from({ length: 15 }, (_, i) => ({
-          id: `gq${i + 1}`,
-          text: `Pregunta del juego número ${i + 1}?`,
-          options: ['Opción A', 'Opción B', 'Opción C'],
-          correctAnswer: 'Opción A',
-        }))
-      );
-    });
+
+  getGameQuestions: async () => {
+    try {
+      const response = await apiClient.get('/game/questions');
+      return response.data;
+    } catch (error) {
+      console.error('Error obteniendo preguntas del juego:', error);
+      throw error;
+    }
   },
-  generateExam: (topics, numQuestions) => {
-    console.log("topics: ", topics)
-    console.log("numQuestions: ", numQuestions)
-    const topicIds = topics.map(topic => topic.id);
-    return new Promise((resolve) => {
-      resolve(
-        Array.from({ length: numQuestions }, (_, i) => ({
-          id: `eq${i + 1}`,
-          text: `Pregunta de examen ${i + 1} (de Temas: ${topicIds.join(', ')})?`,
-          options: ['Verdadero', 'Falso', 'Quizás'],
-          correctAnswer: 'Verdadero',
-          recommendation: 'Repasa el concepto de la pregunta X si fallaste.'
-        }))
-      );
-    });
+
+  generateExam: async (topics, numQuestions) => {
+    try {
+      const response = await apiClient.post('/exam/generate', {
+        topics,
+        numQuestions,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error generando examen:', error);
+      throw error;
+    }
   },
 };

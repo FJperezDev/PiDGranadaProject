@@ -1,4 +1,4 @@
-const COLORS = {
+export const COLORS = {
   primary: '#E0F7FA',       // Azul claro (bg-cyan-50)
   secondary: '#B0BEC5',     // Gris acuoso (bg-slate-300)
   background: '#F0F4F8',   // Fondo muy claro (bg-slate-50)

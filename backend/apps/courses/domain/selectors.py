@@ -7,6 +7,12 @@ def get_all_subjects():
 def get_subject_by_id(subject_id: int) -> Subject:
     return Subject.objects.prefetch_related('topics').get(id=subject_id)
 
+def get_subject_by_code(subject_code: str) -> Subject:
+    return Subject.objects.prefetch_related('topics').get(groupCode=subject_code)
+
+def get_topics_relation_by_subject(subject: Subject):
+    return SubjectIsAboutTopic.objects.filter(subject=subject).order_by('order_id')
+
 def get_topics_by_subject(subject_id):
     return (
         Topic.objects

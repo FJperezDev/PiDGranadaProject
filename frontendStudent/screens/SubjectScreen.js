@@ -40,7 +40,7 @@ export const SubjectScreen = ({ route }) => {
   return (
     <View style={{ flex: 1, width: '100%', maxWidth: 800, alignSelf: 'center', padding: 20 }}>
       <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000', textAlign: 'center', marginVertical: 20 }}>
-        {subjectData.name}
+        {subjectData.title}
       </Text>
 
       <FlatList

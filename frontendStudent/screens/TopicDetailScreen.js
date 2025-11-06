@@ -9,7 +9,7 @@ import { View, Text } from 'react-native';
 export const TopicDetailScreen = ({ setPage, route }) => {
   const { t } = useLanguage();
   const { topic } = route.params;
-  const [details, setDetails] = useState({ concepts: [], headings: [] });
+  const [details, setDetails] = useState({ concepts: [], epigraphs: [] });
   const [isLoading, setIsLoading] = useState(true);
   
   const [modalVisible, setModalVisible] = useState(false);
@@ -17,7 +17,7 @@ export const TopicDetailScreen = ({ setPage, route }) => {
 
   useEffect(() => {
     const fetchDetails = async () => {
-      const data = await mockApi.getTopicDetails(topic.id);
+      const data = await mockApi.getTopicDetails(topic.title);
       setDetails(data);
       setIsLoading(false);
     };
@@ -50,7 +50,7 @@ export const TopicDetailScreen = ({ setPage, route }) => {
       {details.concepts.map(item => renderItem(item, 'concept'))}
       
       <Text className="text-xl font-bold mt-6 mb-3 text-black">{t('headings')}</Text>
-      {details.headings.map(item => renderItem(item, 'heading'))}
+      {details.epigraphs.map(item => renderItem(item, 'heading'))}
 
       <ContentModal
         visible={modalVisible}

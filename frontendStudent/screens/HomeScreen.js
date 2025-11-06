@@ -25,7 +25,7 @@ export function HomeScreen() {
 
     try {
       const response = await mockApi.validateSubjectCode(code);
-      if (response.exists) {
+      if (response) {
         setPage({ name: 'No Home' });
         navigation.navigate('Subject', { subjectData: response.subject });
       } else {
