@@ -68,7 +68,7 @@ Concept.add_to_class(
 class TopicIsAboutConcept(models.Model):
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE)
     concept = models.ForeignKey(Concept, on_delete=models.CASCADE)
-    order_id = models.IntegerField(unique=True)
+    order_id = models.IntegerField()
 
     class Meta:
         unique_together = ('topic', 'concept', 'order_id')

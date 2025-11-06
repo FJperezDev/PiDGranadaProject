@@ -11,6 +11,7 @@ import {ExamScreen} from './screens/ExamScreen';
 import {ExamResultScreen} from './screens/ExamResultScreen';
 import {CustomHeader} from './components/CustomHeader';
 import {AlertModal} from './components/AlertModal';
+import { View } from 'react-native';
 
 export default function App() {
   // page: { name: 'Home', params: {} }
@@ -92,7 +93,7 @@ export default function App() {
   return (
     <LanguageProvider>
       {/* Contenedor principal de la app */}
-      <div className="flex flex-col h-screen w-full bg-slate-50 font-sans">
+      <View className="flex flex-col h-screen w-full bg-slate-50 font-sans">
         <CustomHeader page={page} onGoBack={handleGoBack} />
         
         {/* Contenido de la página */}
@@ -106,7 +107,7 @@ export default function App() {
           message={alertInfo.message}
           onClose={closeAlert}
         />
-      </div>
+      </View>
     </LanguageProvider>
   );
 }

@@ -132,6 +132,20 @@ class TopicViewSet(BaseContentViewSet):
         topic = selectors.get_topic_by_id(topic_id=pk)
         data = request.data
         concept_name = data.get('concept_name')
+        if not concept_name:
+            name_es = data.get('name_es')
+            name_en = data.get('name_en')
+            description_es = data.get('description_es')
+            description_en = data.get('description_en')
+            concept = services.create_concept(
+                name_es=name_es,
+                name_en=name_en,
+                description_es=description_es,
+                description_en=description_en,
+                teacher=request.user
+            )
+            concept_name = concept.name_es or concept.name_en
+
         concept = selectors.get_concept_by_name(name=concept_name)
         if not concept:
             return Response({'detail': 'Concept not found'}, status=status.HTTP_404_NOT_FOUND)
