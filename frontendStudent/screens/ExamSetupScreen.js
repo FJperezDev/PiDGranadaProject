@@ -91,7 +91,6 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
           value={numQuestions}
           onChange={setNumQuestions}
           type="number"
-          style={styles.input}
         />
       </View>
 

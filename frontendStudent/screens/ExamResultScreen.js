@@ -5,8 +5,6 @@ import { StyledButton } from "../components/StyledButton";
 export const ExamResultScreen = ({ route, navigation }) => {
   const { t } = useLanguage();
   const { code, score, total, recommendations } = route.params;
-  console.log(route.params)
-  console.log(code)
   return (
     <View style={{ flex: 1, alignItems: 'center', width: '100%', maxWidth: 800, alignSelf: 'center', padding: 20 }}>
       <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#000', marginTop: 40 }}>{t('results')}</Text>

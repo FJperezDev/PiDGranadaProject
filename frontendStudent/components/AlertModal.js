@@ -1,20 +1,61 @@
-import { View, Text } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Modal } from 'react-native';
 import { StyledButton } from './StyledButton';
 
 export const AlertModal = ({ visible, onClose, title, message }) => {
   if (!visible) return null;
 
   return (
-    <View className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <View className="bg-white w-full max-w-md rounded-lg shadow-xl flex flex-col p-6">
-        <Text className="text-xl font-bold mb-4">{title}</Text>
-        <Text className="text-base mb-6">{message}</Text>
+    <View style={styles.overlay}>
+      <View style={styles.modal}>
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.message}>{message}</Text>
         <StyledButton
           title="OK"
           onPress={onClose}
-          className="self-end bg-cyan-200"
+          style={styles.button}
         />
       </View>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 16,
+  },
+  modal: {
+    backgroundColor: '#fff',
+    width: '100%',
+    maxWidth: 400, // equivalente a max-w-md
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+    padding: 24,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  message: {
+    fontSize: 16,
+    marginBottom: 24,
+  },
+  button: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#a5f3fc', // cyan-200
+  },
+});

@@ -18,16 +18,23 @@ export const CustomHeader = ({routeName}) => {
   };
 
   const hideBack = routeName === 'Exam' || routeName === 'ExamResult';
-  const goHome = routeName === 'Subject';
+  const logout = routeName === 'Subject';
   const isHome = routeName === 'Home';
 
   return (
     <View style={styles.container}>
       {/* Left Section */}
       <View style={styles.leftSection}>
-        {!hideBack && (
+        {!hideBack && isHome ? (
           <TouchableOpacity
-            onPress={() => (goHome ? navigation.navigate('Home') : handleGoBack)}
+            activeOpacity={0.7}
+            style={styles.iconButton}
+          >
+            <BookMarked size={28} color={COLORS.black} />
+          </TouchableOpacity>
+        ): !hideBack && (
+          <TouchableOpacity
+            onPress={() => (logout ? navigation.navigate('Home') : handleGoBack())}
             activeOpacity={0.7}
             style={styles.iconButton}
           >
