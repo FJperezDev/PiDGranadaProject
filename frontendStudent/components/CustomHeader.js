@@ -17,8 +17,8 @@ export const CustomHeader = ({routeName}) => {
     }
   };
 
-  const hideBack = routeName === 'Exam';
-  const goHome = routeName === 'ExamResult';
+  const hideBack = routeName === 'Exam' || routeName === 'ExamResult';
+  const goHome = routeName === 'Subject';
   const isHome = routeName === 'Home';
 
   return (
@@ -27,7 +27,7 @@ export const CustomHeader = ({routeName}) => {
       <View style={styles.leftSection}>
         {!hideBack && (
           <TouchableOpacity
-            onPress={goHome ? () => navigation.navigate('ExamSetup') : handleGoBack}
+            onPress={() => (goHome ? navigation.navigate('Home') : handleGoBack)}
             activeOpacity={0.7}
             style={styles.iconButton}
           >

@@ -1,11 +1,12 @@
-import { View, Text, ScrollView } from "react-native";
+import { View, Text, ScrollView, StyleSheet } from "react-native";
 import {useLanguage} from "../context/LanguageContext";
 import { StyledButton } from "../components/StyledButton";
 
 export const ExamResultScreen = ({ route, navigation }) => {
   const { t } = useLanguage();
-  const { score, total, recommendations } = route.params;
-
+  const { code, score, total, recommendations } = route.params;
+  console.log(route.params)
+  console.log(code)
   return (
     <View style={{ flex: 1, alignItems: 'center', width: '100%', maxWidth: 800, alignSelf: 'center', padding: 20 }}>
       <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#000', marginTop: 40 }}>{t('results')}</Text>
@@ -26,7 +27,22 @@ export const ExamResultScreen = ({ route, navigation }) => {
           <Text style={{ fontSize: 16, fontStyle: 'italic' }}>¡Felicidades! No hay recomendaciones.</Text>
         )}
       </ScrollView>
+
+      <StyledButton title={t('endRevision')} onPress={() => navigation.navigate('Subject', { code: code })} style={styles.button} />
+
     </View>
     
   );
 };
+
+const styles = StyleSheet.create({
+  button: {
+    backgroundColor: '#a5f3fc',
+    padding: 16,
+    borderRadius: 10,
+    marginTop: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+  },
+})

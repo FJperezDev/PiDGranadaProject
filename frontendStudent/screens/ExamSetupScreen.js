@@ -1,15 +1,30 @@
 import { Text, View, StyleSheet } from "react-native";
 import { StyledButton } from "../components/StyledButton";
 import { useLanguage } from "../context/LanguageContext";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyledTextInput } from "../components/StyledTextInput";
 import { CheckSquare, Square } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
+import { mockApi } from "../services/api";
 
-export const ExamSetupScreen = ({ route, onGoBack, setAlert }) => {
-  const { t } = useLanguage();
-  const { topics } = route.params;
+export const ExamSetupScreen = ({ route, setAlert }) => {
+  const { t, language } = useLanguage();
+  const [ topics, setTopics ] = useState(route.params.topics);
   const navigation = useNavigation();
+  const { code } = route.params;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await mockApi.validateSubjectCode(code);
+        setTopics(response.subject.topics);
+      } catch (error) {
+        console.error("Error actualizando los datos de la asignatura: ", error);
+      }
+    };
+
+    fetchData();
+  }, [language]);
 
   const [selectedTopics, setSelectedTopics] = useState(
     topics.reduce((acc, topic) => ({ ...acc, [topic.id]: false }), {})
@@ -40,8 +55,13 @@ export const ExamSetupScreen = ({ route, onGoBack, setAlert }) => {
     navigation.navigate("Exam", {
       topics: chosenTopics,
       nQuestions,
+      code: code,
     });
   };
+
+  if(!topics) return (
+    <View style={styles.container}></View>
+  )
 
   return (
     <View style={styles.container}>
@@ -77,7 +97,7 @@ export const ExamSetupScreen = ({ route, onGoBack, setAlert }) => {
 
       {/* Footer con botones */}
       <View style={styles.footer}>
-        <StyledButton title={t("back")} onPress={onGoBack} />
+        <View></View>
         <StyledButton
           title={t("generateExam")}
           onPress={handleGenerate}

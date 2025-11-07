@@ -25,9 +25,7 @@ export const TopicDetailScreen = ({ setPage, route }) => {
 
     const fetchData = async () => {
       try {
-        console.log(topic);
         const response = await mockApi.getTopicDetails(topic.name);
-        console.log(response);
         setDetails(response);
       } catch (error) {
         console.error("Error actualizando los datos de la asignatura: ", error);

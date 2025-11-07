@@ -3,24 +3,19 @@ import { useNavigation } from '@react-navigation/native';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { StyledButton } from "../components/StyledButton";
 import { Hexagon, Clipboard } from 'lucide-react-native';
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { mockApi } from "../services/api";
 
 export const SubjectScreen = ({ route }) => {
   const navigation = useNavigation();
   const { t, language } = useLanguage();
-  const [subjectData, setSubjectData] =  useState(route.params.subjectData);
-  const didMountRef = useRef(false);
+  const [subjectData, setSubjectData] =  useState();
+  const { code } = route.params;
 
   useEffect(() => {
-    if(!didMountRef.current){
-      didMountRef.current = true;
-      return;
-    }
-
     const fetchData = async () => {
       try {
-        const response = await mockApi.validateSubjectCode(subjectData.id);
+        const response = await mockApi.validateSubjectCode(code);
         setSubjectData(response.subject);
       } catch (error) {
         console.error("Error actualizando los datos de la asignatura: ", error);
@@ -58,6 +53,14 @@ export const SubjectScreen = ({ route }) => {
     </TouchableOpacity>
   );
 
+  if (!subjectData) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Cargando asignatura...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, width: '100%', maxWidth: 800, alignSelf: 'center', padding: 20 }}>
       <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000', textAlign: 'center', marginVertical: 20 }}>
@@ -74,7 +77,7 @@ export const SubjectScreen = ({ route }) => {
       {/* Botones inferiores */}
       <View style={styles.container}>
         <StyledButton title={t('hexagonGame')} icon={<Hexagon size={20} />} onPress={() => navigation.navigate('Game')} style={styles.leftButton} />
-        <StyledButton title={t('exam')} icon={<Clipboard size={20} />} onPress={() => navigation.navigate('ExamSetup', { topics: subjectData.topics, nQuestions: 10 })} style={styles.rightButton} />
+        <StyledButton title={t('exam')} icon={<Clipboard size={20} />} onPress={() => navigation.navigate('ExamSetup', { topics: subjectData.topics, nQuestions: 10, code: code })} style={styles.rightButton} />
       </View>
     </View>
   );

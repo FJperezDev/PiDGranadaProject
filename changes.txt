@@ -1,0 +1,16 @@
+EndPoints For Studentgroups:
+
+/studentgroups/topics/?code=XXX-XXX
+
+    exists: true,
+    subject: {
+        id: 'org-101',
+        name: 'Organización de Empresas',
+        topics: [
+            { id: 't1', name: 'Tema 1: Introducción', description: 'Conceptos básicos de la organización.' },
+            { id: 't2', name: 'Tema 2: Estructuras', description: 'Tipos de estructuras organizativas.' },
+            { id: 't3', name: 'Tema 3: Cultura', description: 'La cultura empresarial y su impacto.' },
+        ],
+    },
+
+/studentgroups

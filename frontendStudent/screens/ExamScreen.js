@@ -10,7 +10,7 @@ import { COLORS } from "../constants/colors";
 export const ExamScreen = ({ route }) => {
   const { t } = useLanguage();
   const navigation = useNavigation();
-  const { topics, nQuestions } = route.params;
+  const { code, topics, nQuestions } = route.params;
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [currentQ, setCurrentQ] = useState(0);
@@ -20,7 +20,6 @@ export const ExamScreen = ({ route }) => {
   // Cargar preguntas
   useEffect(() => {
     oldMockApi.generateExam(topics, nQuestions).then((data) => {
-      console.log("EXAM DATA:", data);
       setQuestions(data);
       setIsLoading(false);
     }).catch((error) => {
@@ -42,6 +41,7 @@ export const ExamScreen = ({ route }) => {
       });
 
       navigation.navigate("ExamResult", {
+        code: code,
         score,
         total: questions.length,
         recommendations,

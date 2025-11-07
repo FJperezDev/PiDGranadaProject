@@ -28,7 +28,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-default-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = 'RENDER' not in os.environ
 
-ALLOWED_HOSTS = ['api.franjpg.com', 'localhost', '127.0.0.1', '192.168.1.131', '172.25.28.130']
+ALLOWED_HOSTS = ['api.franjpg.com', 'localhost', '127.0.0.1', '192.168.1.131', '172.25.28.130', '192.168.0.16']
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME') 
 if RENDER_EXTERNAL_HOSTNAME:

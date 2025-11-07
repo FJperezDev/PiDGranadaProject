@@ -43,4 +43,15 @@ export const mockApi = {
       throw error;
     }
   },
+
+  getTopicsByCode: async (code) => {
+    try {
+      const response = await apiClient.get('/studentgroups/topics/', { params: { code } });
+      return response.data;
+    } catch (error) {
+      console.error('Error obteniendo temas por código:', error);
+      throw error;
+    }
+  },
+
 };

@@ -20,13 +20,9 @@ export function HomeScreen() {
     setError('');
     
     try {
-      const response = await mockApi.validateSubjectCode(code);
-      if (response) {
-        navigation.navigate('Subject', { subjectData: response.subject });
-      } else {
-        setError(t('invalidCode'));
-      }
-    } catch (err) {
+      navigation.navigate('Subject', { code });
+    }
+    catch (err) {
       setError(t('errorConnection'));
     } finally {
       setIsLoading(false);
