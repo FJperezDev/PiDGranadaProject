@@ -36,6 +36,7 @@ def create_question(teacher: Teacher, type: str, statement_es: str = None, state
 
     if topics_titles:
         for title in topics_titles:
+            print(title)
             topic = content_selectors.get_topic_by_title(title)
             QuestionBelongsToTopic.objects.create(question=question, topic=topic)
     
@@ -148,8 +149,10 @@ def evaluate_question(student_group: StudentGroup, question: Question, answer: A
 
 def create_exam(topics: set[Topic], num_questions: int) -> list[Question]:
     exam_questions = []
+    
     for topic in topics:
         question = evaluation_selectors.get_random_question_from_topic(topic)
+        print(question)
         if question and question not in exam_questions:
             exam_questions.append(question)
     if len(exam_questions) >= num_questions:

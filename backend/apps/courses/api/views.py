@@ -11,7 +11,7 @@ from apps.content.domain import selectors as content_selectors
 from apps.courses.domain import selectors as courses_selectors
 from apps.evaluation.domain import selectors as evaluation_selectors
 from apps.evaluation.domain import services as evaluation_services
-from apps.evaluation.api.serializers import ShortAnswerSerializer, ShortQuestionSerializer
+from apps.evaluation.api.serializers import ShortQuestionSerializer
 from apps.content.api.serializers import TopicSerializer, ShortTopicSerializer, ShortConceptSerializer, ShortEpigraphSerializer
 from apps.utils.permissions import BaseContentViewSet
 from apps.utils.audit import makeChanges
@@ -210,7 +210,6 @@ class StudentGroupViewSet(BaseContentViewSet):
     @action(detail=False, methods=['get'], url_path='exists', url_name='exists')
     def exists(self, request):
         code = request.query_params.get('code')
-        print(code)
         student_group = courses_selectors.get_student_group_by_code(code)
         return Response({'exists': bool(student_group is not None)})
 
@@ -219,7 +218,6 @@ class StudentGroupViewSet(BaseContentViewSet):
     def subject(self, request):
         code = request.query_params.get('code')
         subject = courses_selectors.get_subject_by_code(code)
-        print(subject)
         if not subject:
             return Response({'detail': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -244,7 +242,6 @@ class StudentGroupViewSet(BaseContentViewSet):
     @action(detail=False, methods=['get'], url_path='topic', url_name='topic')
     def topic(self, request):
         topic = content_selectors.get_topic_by_title(request.query_params.get('title'))
-        print(topic)
         if not topic:
             return Response({'detail': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
         
@@ -261,20 +258,24 @@ class StudentGroupViewSet(BaseContentViewSet):
     def exam(self, request):
         topics_str = request.query_params.get('topics')
         nQuestions = request.query_params.get('nQuestions')
+        print(nQuestions)
         code = request.query_params.get('code')
-        print(topics_str, nQuestions, code)
-
         if not topics_str:
             return Response({'detail': 'No topics provided'}, status=status.HTTP_400_BAD_REQUEST)
         
         topic_titles = topics_str.split(',')
+        topic_titles = [title.strip() for title in topic_titles]
         topics = [content_selectors.get_topic_by_title(title) for title in topic_titles]
         topics = [topic for topic in topics if topic] # Filter out any None topics
 
         if not topics:
             return Response({'detail': 'No valid topics found'}, status=status.HTTP_404_NOT_FOUND)
         
-        questions = evaluation_services.create_exam(user=request.user, topics=set(topics), num_questions=int(nQuestions))
+        questions = evaluation_services.create_exam(topics=set(topics), num_questions=int(nQuestions))
         serializerQuestions = ShortQuestionSerializer(questions, many=True, context={'request': request})
-        print(serializerQuestions.data)
         return Response(serializerQuestions.data)
+
+    @action(detail=False, methods=['get'], url_path='question-translate', url_name='question-translate')    
+    def question(self, request):
+        return Response(ShortQuestionSerializer(evaluation_selectors.get_question_by_id(request.query_params.get('questionId')), context={'request': request}).data)
+        

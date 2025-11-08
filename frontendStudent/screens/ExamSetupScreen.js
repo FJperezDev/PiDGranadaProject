@@ -9,27 +9,34 @@ import { mockApi } from "../services/api";
 
 export const ExamSetupScreen = ({ route, setAlert }) => {
   const { t, language } = useLanguage();
-  const [ topics, setTopics ] = useState(route.params.topics);
+  const [ topics, setTopics ] = useState([]);
+  const [selectedTopics, setSelectedTopics] = useState({});
+  const [numQuestions, setNumQuestions] = useState(10);
   const navigation = useNavigation();
   const { code } = route.params;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await mockApi.validateSubjectCode(code);
-        setTopics(response.subject.topics);
+        const response = await mockApi.getTopics(code);
+        const transformedTopics = response.map(topic => ({
+            ...topic,
+            id: topic.order_id 
+        }));
+        setTopics(transformedTopics);
+
+        const initialSelected = transformedTopics.reduce(
+          (acc, topic) => ({ ...acc, [topic.id]: false }),
+          {}
+        );
+        setSelectedTopics(initialSelected);
       } catch (error) {
         console.error("Error actualizando los datos de la asignatura: ", error);
       }
     };
 
     fetchData();
-  }, [language]);
-
-  const [selectedTopics, setSelectedTopics] = useState(
-    topics.reduce((acc, topic) => ({ ...acc, [topic.id]: false }), {})
-  );
-  const [numQuestions, setNumQuestions] = useState("10");
+  }, [language, code]);
 
   const toggleTopic = (topicId) => {
     setSelectedTopics((prev) => ({ ...prev, [topicId]: !prev[topicId] }));
@@ -50,7 +57,7 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
     }
 
     // Filtrar los topics seleccionados
-    const chosenTopics = topics.filter((t) => selected.includes(t.id));
+    const chosenTopics = topics.filter((t) => selected.includes(String(t.id)));
 
     navigation.navigate("Exam", {
       topics: chosenTopics,
@@ -59,7 +66,7 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
     });
   };
 
-  if(!topics) return (
+  if(!topics.length) return (
     <View style={styles.container}></View>
   )
 

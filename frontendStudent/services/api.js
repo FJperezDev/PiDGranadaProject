@@ -51,18 +51,35 @@ export const mockApi = {
     }
   },
 
-  generateExam: async (topics, numQuestions) => {
+  generateExam: async (topics, nQuestions) => {
+    let topicTitles = "";
+    if (topics && topics.length > 0) {
+      topicTitles = topics.map(topic => topic.name).join(', ');
+    }
     try {
-      const response = await apiClient.post('/exam/generate', {
-        topics,
-        numQuestions,
-      });
+      const response = await apiClient.get('/studentgroups/exam/?topics=' + topicTitles + '&nQuestions=' + nQuestions);
       return response.data;
     } catch (error) {
       console.error('Error generando examen:', error);
       throw error;
     }
   },
+
+  getQuestion: async (id) => {
+    try {
+      const response = await apiClient.get('/studentgroups/question-translate/', {
+        params: {
+          questionId: id,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error obteniendo pregunta:', error);
+      throw error;
+    }
+  },
+
+
 
   getTopicsByCode: async (code) => {
     try {

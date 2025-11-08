@@ -1,5 +1,5 @@
 import { useLanguage } from "../context/LanguageContext";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { mockApi } from "../services/api";
 import { mockApi as oldMockApi } from "../services/oldApi";
 import { StyledButton } from "../components/StyledButton";
@@ -8,7 +8,7 @@ import { useNavigation } from "@react-navigation/native";
 import { COLORS } from "../constants/colors";
 
 export const ExamScreen = ({ route }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigation = useNavigation();
   const { code, topics, nQuestions } = route.params;
   const [questions, setQuestions] = useState([]);
@@ -16,10 +16,12 @@ export const ExamScreen = ({ route }) => {
   const [currentQ, setCurrentQ] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState(nQuestions * 90);
+  const isInitialMount = useRef(true);
 
   // Cargar preguntas
   useEffect(() => {
-    oldMockApi.generateExam(topics, nQuestions).then((data) => {
+    setIsLoading(true);
+    mockApi.generateExam(topics, nQuestions).then((data) => {
       setQuestions(data);
       setIsLoading(false);
     }).catch((error) => {
@@ -28,16 +30,46 @@ export const ExamScreen = ({ route }) => {
     });
   }, [topics, nQuestions]);
 
+  // Traducir preguntas cuando cambia el idioma
+  useEffect(() => {
+    // Evitamos que se ejecute en la carga inicial del componente
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (questions.length === 0) return;
+
+    const translateQuestions = async () => {
+      setIsLoading(true);
+      const translationPromises = questions.map(q => mockApi.getQuestion(q.id));
+      const translatedQuestions = await Promise.all(translationPromises);
+      setQuestions(translatedQuestions);
+      setIsLoading(false);
+    };
+
+    translateQuestions();
+  }, [language]);
+
   const handleFinish = useMemo(
     () => () => {
       let score = 0;
       const recommendations = [];
       questions.forEach((q) => {
         if (answers[q.id] === q.correctAnswer) {
-          score++;
-        } else {
-          recommendations.push(q.recommendation);
-        }
+          const selectedAnswerId = answers[q.id];
+          let isAnswerCorrect = false;
+          if(selectedAnswerId !== undefined){
+            const answerObj = q.answers.find((answer) => answer.id === selectedAnswerId);
+            if (answerObj && answerObj.correct) {
+              isAnswerCorrect = true;
+            }
+          }
+          if (isAnswerCorrect){
+            score++;
+          } else {
+            recommendations.push(q.statement);
+          }
+        } 
       });
 
       navigation.navigate("ExamResult", {
@@ -114,22 +146,22 @@ export const ExamScreen = ({ route }) => {
       </View>
 
       {/* Pregunta */}
-      <Text style={styles.questionText}>{question.text}</Text>
+      <Text style={styles.questionText}>{question.statement}</Text>
 
       {/* Opciones */}
       <View style={styles.optionsContainer}>
-        {question.options.map((opt) => {
-          const isSelected = selectedAnswer === opt;
+        {question.answers.map((opt) => {
+          const isSelected = selectedAnswer === opt.id;
           return (
             <StyledButton
-              key={opt}
-              onPress={() => handleSelectAnswer(question.id, opt)}
+              key={opt.id}
+              onPress={() => handleSelectAnswer(question.id, opt.id)}
               style={[
                 styles.optionButton,
                 isSelected ? styles.optionSelected : styles.optionDefault,
               ]}
             >
-              <Text style={{ textAlign: "center", fontSize: 16 }}>{opt}</Text>
+              <Text style={{ textAlign: "center", fontSize: 16 }}>{opt.text}</Text>
             </StyledButton>
           );
         })}

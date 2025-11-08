@@ -12,7 +12,13 @@ def get_topic_by_id(topic_id: int) -> Topic:
 
 def get_topic_by_title(title: str):
     """Devuelve un topic específico por su título en cualquier idioma."""
-    return Topic.objects.filter(title_es=title).first() or Topic.objects.filter(title_en=title).first()
+    title.strip()
+    topic = Topic.objects.filter(title_es=title).first()
+    if not topic:
+        topic = Topic.objects.filter(title_en=title).first()
+    if not topic:
+        return None
+    return topic
 
 def get_topics_by_subject(subject_id: int):
     return Topic.objects.filter(subjects__subject_id=subject_id).order_by('subjects__order_id')

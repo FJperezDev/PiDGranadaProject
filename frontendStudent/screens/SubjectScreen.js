@@ -30,7 +30,6 @@ export const SubjectScreen = ({ route }) => {
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
-      key={item.id}
       style={{
         backgroundColor: 'white',
         padding: 16,
@@ -73,7 +72,7 @@ export const SubjectScreen = ({ route }) => {
       <FlatList
         data={topicsData}
         renderItem={renderItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.order_id}
         showsVerticalScrollIndicator={false}
       />
 

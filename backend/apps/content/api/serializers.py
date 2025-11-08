@@ -75,7 +75,6 @@ class ShortConceptSerializer(LanguageSerializerMixin, serializers.ModelSerialize
 
     def get_name(self, obj):
         lang = self.get_lang()
-        print(lang)
         return getattr(obj, f'name_{lang}', None)
     
     def get_description(self, obj):

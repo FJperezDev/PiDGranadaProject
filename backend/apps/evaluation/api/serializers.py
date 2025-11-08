@@ -37,13 +37,13 @@ class ShortQuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializ
 
     class Meta:
         model = Question
-        fields = ['id', 'type', 'statement']
+        fields = ['id', 'type', 'statement', 'answers']
 
     def get_statement(self, obj):
         lang = self.context.get('lang', 'es')
         return getattr(obj, f'statement_{lang}', None)
 
-class QuestionSerializer(serializers.ModelSerializer):
+class QuestionSerializer(LanguageSerializerMixin,serializers.ModelSerializer):
     answers = AnswerSerializer(many=True, read_only=True)
     topics = serializers.SerializerMethodField()
     concepts = serializers.SerializerMethodField()

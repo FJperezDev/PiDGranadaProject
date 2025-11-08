@@ -24,7 +24,7 @@ class QuestionViewSet(BaseContentViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        topics_titles = data.get('topics', [])
+        topics_titles = data.get('topics_titles', [])
         concepts_names = data.get('concepts', [])
         answers = data.get('answers', [])
         question = services.create_question(
