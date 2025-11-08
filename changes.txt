@@ -14,9 +14,9 @@ EndPoints for the Students:
 /studentgroups/topics/?code=XXX-XXX
 
     topics: [
-        { id: 't1', name: 'Tema 1: Introducción', description: 'Conceptos básicos de la organización.' },
-        { id: 't2', name: 'Tema 2: Estructuras', description: 'Tipos de estructuras organizativas.' },
-        { id: 't3', name: 'Tema 3: Cultura', description: 'La cultura empresarial y su impacto.' },
+        { order_id: 't1', name: 'Tema 1: Introducción', description: 'Conceptos básicos de la organización.' },
+        { order_id: 't2', name: 'Tema 2: Estructuras', description: 'Tipos de estructuras organizativas.' },
+        { order_id: 't3', name: 'Tema 3: Cultura', description: 'La cultura empresarial y su impacto.' },
     ],
 
 /studentgroups/topic/?code=XXX-XXX&topic=t1

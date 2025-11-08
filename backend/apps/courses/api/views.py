@@ -5,17 +5,20 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Subject, StudentGroup, TeacherMakeChangeStudentGroup
-from .serializers import SubjectSerializer, StudentGroupSerializer, TeacherMakeChangeStudentGroupSerializer
-from apps.courses.domain import services, selectors
+from .serializers import SubjectSerializer, StudentGroupSerializer, ShortSubjectSerializer, TeacherMakeChangeStudentGroupSerializer
+from apps.courses.domain import services
 from apps.content.domain import selectors as content_selectors
 from apps.courses.domain import selectors as courses_selectors
-from apps.content.api.serializers import TopicSerializer, ShortTopicSerializer
+from apps.evaluation.domain import selectors as evaluation_selectors
+from apps.evaluation.domain import services as evaluation_services
+from apps.evaluation.api.serializers import ShortAnswerSerializer, ShortQuestionSerializer
+from apps.content.api.serializers import TopicSerializer, ShortTopicSerializer, ShortConceptSerializer, ShortEpigraphSerializer
 from apps.utils.permissions import BaseContentViewSet
 from apps.utils.audit import makeChanges
 from apps.utils.permissions import IsTeacher
 
 class SubjectViewSet(BaseContentViewSet):
-    queryset = selectors.get_all_subjects()
+    queryset = courses_selectors.get_all_subjects()
     serializer_class = SubjectSerializer
     permission_classes = [permissions.AllowAny] # Allow any access for now
 
@@ -37,7 +40,7 @@ class SubjectViewSet(BaseContentViewSet):
     def update(self, request, *args, **kwargs):
         
         subject = services.update_subject(
-            subject=selectors.get_subject_by_id(kwargs['pk']),
+            subject=courses_selectors.get_subject_by_id(kwargs['pk']),
             name_es=request.data.get('name_es'),
             name_en=request.data.get('name_en'),
             description_es=request.data.get('description_es'),
@@ -47,13 +50,13 @@ class SubjectViewSet(BaseContentViewSet):
         return Response(self.get_serializer(subject).data, status=status.HTTP_200_OK)
     
     def delete(self, request, *args, **kwargs):
-        return services.delete_subject(selectors.get_subject_by_id(kwargs['pk']), teacher=request.user)
+        return services.delete_subject(courses_selectors.get_subject_by_id(kwargs['pk']), teacher=request.user)
 
     @action(detail=True, methods=['get'], )
     def topics(self, request, pk=None):
         """GET /subject/<id>/topics/"""
         queryset = (
-            selectors.get_topics_by_subject(subject_id=pk)
+            courses_selectors.get_topics_by_subject(subject_id=pk)
         )
         serializer = TopicSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
@@ -61,7 +64,7 @@ class SubjectViewSet(BaseContentViewSet):
     @topics.mapping.post
     def link_topic(self, request, pk=None):
         """POST /subjects/<id>/topics/ — links a topic to the subject"""
-        subject = selectors.get_subject_by_id(subject_id=pk)
+        subject = courses_selectors.get_subject_by_id(subject_id=pk)
         data = request.data
         topic_name = data.get('topic_name')
         topic = content_selectors.get_topic_by_title(title=topic_name)
@@ -88,7 +91,7 @@ class SubjectViewSet(BaseContentViewSet):
     @topics.mapping.delete
     def unlink_topic(self, request, pk=None):
         """DELETE /subjects/<id>/topics/ — asocia un topic a la subject"""
-        subject = selectors.get_subject_by_id(subject_id=pk)
+        subject = courses_selectors.get_subject_by_id(subject_id=pk)
         data = request.data
         topic_name = data.get('topic_name')
         topic = content_selectors.get_topic_by_title(title=topic_name)
@@ -113,7 +116,7 @@ class SubjectViewSet(BaseContentViewSet):
     @topics.mapping.put
     def change_topic_order(self, request, pk=None):
         """PUT /subjects/<id>/topics/ — asocia un topic a la subject"""
-        subject = selectors.get_subject_by_id(subject_id=pk)
+        subject = courses_selectors.get_subject_by_id(subject_id=pk)
         data = request.data
         topicA = content_selectors.get_topic_by_title(title=data.get('topicA'))
         topicB = content_selectors.get_topic_by_title(title=data.get('topicB'))
@@ -135,16 +138,16 @@ class SubjectViewSet(BaseContentViewSet):
         """GET /subjects/<id>/groups/ — obtiene los grupos asociados a la asignatura
            POST /subjects/<id>/groups/ — crea un grupo asociado a la asignatura"""
         if request.method == 'GET':
-            subject = selectors.get_subject_by_id(subject_id=pk)
+            subject = courses_selectors.get_subject_by_id(subject_id=pk)
             if not subject:
                 return Response({'detail': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
 
-            groups = selectors.get_all_student_groups()
+            groups = courses_selectors.get_all_student_groups()
             serializer = StudentGroupSerializer(groups, many=True, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         elif request.method == 'POST':
-            subject = selectors.get_subject_by_id(subject_id=pk)
+            subject = courses_selectors.get_subject_by_id(subject_id=pk)
             if not subject:
                 return Response({'detail': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
             group = services.create_student_group(
@@ -157,7 +160,7 @@ class SubjectViewSet(BaseContentViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
         elif request.method == 'DELETE':
-            subject = selectors.get_subject_by_id(subject_id=pk)
+            subject = courses_selectors.get_subject_by_id(subject_id=pk)
             services.delete_student_groups_by_subject(subject)
             return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -166,7 +169,7 @@ class SubjectViewSet(BaseContentViewSet):
         """GET /subjects/<id>/groups/<id>/ — obtiene un grupo específico.
            PUT /subjects/<id>/groups/<id>/ — actualiza un grupo asociado a la asignatura
            DELETE /subjects/<id>/groups/<id>/ — elimina un grupo."""
-        group = selectors.get_student_group_by_id(group_id=group_pk)
+        group = courses_selectors.get_student_group_by_id(group_id=group_pk)
         if not group or group.subject.id != int(pk):
             return Response({'detail': 'Group not found in this subject'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -182,13 +185,12 @@ class SubjectViewSet(BaseContentViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
 class StudentGroupViewSet(BaseContentViewSet):
-    queryset = selectors.get_all_student_groups()
+    queryset = courses_selectors.get_all_student_groups()
     serializer_class = StudentGroupSerializer
 
     def get_queryset(self):
         # Only allow teachers to see their own groups
-        if self.request.user.is_authenticated:
-            return selectors.get_all_student_groups()
+        return courses_selectors.get_all_student_groups()
 
     def update(self, request, *args, **kwargs):
         group = self.get_object()
@@ -201,66 +203,78 @@ class StudentGroupViewSet(BaseContentViewSet):
         if group.teacher != request.user:
             return Response({'detail': 'You do not have permission to perform this action.'}, status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
-    
+
+    ################################################################################################################################                                            Student Application ################################################################################################################################
+
+    # /studentgroups/exists/?code=XXX-XXX
+    @action(detail=False, methods=['get'], url_path='exists', url_name='exists')
+    def exists(self, request):
+        code = request.query_params.get('code')
+        print(code)
+        student_group = courses_selectors.get_student_group_by_code(code)
+        return Response({'exists': bool(student_group is not None)})
+
+    #/studentgroups/subject/?code=XXX-XXX
     @action(detail=False, methods=['get'], url_path='subject', url_name='subject')
     def subject(self, request):
-        subjects = selectors.get_subject_by_code(request.query_params.get('code'))
-        if not subjects:
+        code = request.query_params.get('code')
+        subject = courses_selectors.get_subject_by_code(code)
+        print(subject)
+        if not subject:
             return Response({'detail': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
-        serializer = SubjectSerializer(subjects, many=True)
-        return Response(serializer.data)
+
+        subject_data = ShortSubjectSerializer(subject, context={'request': request}).data
+        subject_data['code'] = code
+
+        return Response({'subject': subject_data})
+
+
+    #/studentgroups/topics/?code=XXX-XXX
+    @action(detail=False, methods=['get'], url_path='topics', url_name='topics')
+    def topics(self, request):
+        subject = courses_selectors.get_subject_by_code(request.query_params.get('code')) 
+        trs = courses_selectors.get_topics_relation_by_subject(subject)
+        for tr in trs:
+            tr.topic.order_id = tr.order_id
+            tr.topic.save()
+        topics = courses_selectors.get_topics_related(trs)
+        return Response(ShortTopicSerializer(topics, many=True, context={'request': request}).data)
     
-    @action(detail=False, methods=['get'], url_path='validate', url_name='validate')
-    def validate(self, request):
-        try:
-            code = request.query_params.get('code')
-            if not code:
-                return Response({'detail': 'Missing code'}, status=status.HTTP_400_BAD_REQUEST)
+    #/studentgroups/topic/topic=t1
+    @action(detail=False, methods=['get'], url_path='topic', url_name='topic')
+    def topic(self, request):
+        topic = content_selectors.get_topic_by_title(request.query_params.get('title'))
+        print(topic)
+        if not topic:
+            return Response({'detail': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        concepts = content_selectors.get_concepts_by_topic(topic.id)
+        epigraphs = content_selectors.get_epigraphs_by_topic(topic.id)
 
-            # Buscar el grupo
-            group = selectors.get_student_group_by_code(code)
-            if not group:
-                return Response({'exists': False, 'detail': 'Group not found'}, status=status.HTTP_404_NOT_FOUND)
-
-            # Buscar la asignatura asociada
-            subject = selectors.get_subject_by_id(group.subject.id)
-            if not subject:
-                return Response({'exists': False, 'detail': 'Subject not found'}, status=status.HTTP_404_NOT_FOUND)
-
-            # Obtener los temas de la asignatura
-            topics_relations = selectors.get_topics_relation_by_subject(subject)
-
-            # Formatear los temas con los campos que quiere el frontend
-            topic_serializer = TopicSerializer(context={'request': request})
-            formatted_topics = [
-                {
-                    "id": relation.topic.id,
-                    "name": topic_serializer.get_title(relation.topic),
-                    "description": topic_serializer.get_description(relation.topic),
-                }
-                for relation in topics_relations
-            ]
-
-            # Crear la respuesta final
-            response_data = {
-                "exists": True,
-                "subject": {
-                    "id": f"{code}",
-                    "name": subject.name_es or subject.name_en,
-                    "topics": formatted_topics
-                }
-            }
-
-            return Response(response_data, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return Response({'exists': False, 'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
+        return Response({
+            'concepts': ShortConceptSerializer(concepts, many=True, context={'request': request}).data,
+            'epigraphs': ShortEpigraphSerializer(epigraphs, many=True, context={'request': request}).data
+        })
     
-    @action(detail=False, methods=['get'], url_path='my-groups', url_name='my-groups')
-    def my_groups(self, request):
-        groups = selectors.get_all_student_groups().filter(teacher=request.user)
-        serializer = StudentGroupSerializer(groups, many=True)
-        return Response(serializer.data)
+    #/studentgroups/exam/?topics=x,x,x,?nQuestions=x?code=XXX-XXX
+    @action(detail=False, methods=['get'], url_path='exam', url_name='exam')    
+    def exam(self, request):
+        topics_str = request.query_params.get('topics')
+        nQuestions = request.query_params.get('nQuestions')
+        code = request.query_params.get('code')
+        print(topics_str, nQuestions, code)
+
+        if not topics_str:
+            return Response({'detail': 'No topics provided'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        topic_titles = topics_str.split(',')
+        topics = [content_selectors.get_topic_by_title(title) for title in topic_titles]
+        topics = [topic for topic in topics if topic] # Filter out any None topics
+
+        if not topics:
+            return Response({'detail': 'No valid topics found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        questions = evaluation_services.create_exam(user=request.user, topics=set(topics), num_questions=int(nQuestions))
+        serializerQuestions = ShortQuestionSerializer(questions, many=True, context={'request': request})
+        print(serializerQuestions.data)
+        return Response(serializerQuestions.data)

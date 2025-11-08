@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.utils.mixins import LanguageSerializerMixin
 from .models import (
     Question, Answer,
     # TeacherMakeChangeQuestion, TeacherMakeChangeAnswer,
@@ -7,11 +8,38 @@ from .models import (
 )
 from ...content.api.serializers import ShortTopicSerializer, ShortConceptSerializer
 
-class AnswerSerializer(serializers.ModelSerializer):
+class AnswerSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Answer
-        fields = ['id', 'text_es', 'text_en', 'is_correct', 'question']
+        fields = ['id', 'text', 'text_es', 'text_en', 'is_correct', 'question']
         read_only_fields = ['id', 'question']
+        
+    def get_text(self, obj):
+        lang = self.context.get('lang', 'es')
+        return getattr(obj, f'text_{lang}', None)
+
+class ShortAnswerSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
+    text = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Answer
+        fields = ['id', 'text', 'is_correct']
+
+    def get_text(self, obj):
+        lang = self.context.get('lang', 'es')
+        return getattr(obj, f'text_{lang}', None)
+
+class ShortQuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
+    statement = serializers.SerializerMethodField()
+    answers = ShortAnswerSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Question
+        fields = ['id', 'type', 'statement']
+
+    def get_statement(self, obj):
+        lang = self.context.get('lang', 'es')
+        return getattr(obj, f'statement_{lang}', None)
 
 class QuestionSerializer(serializers.ModelSerializer):
     answers = AnswerSerializer(many=True, read_only=True)

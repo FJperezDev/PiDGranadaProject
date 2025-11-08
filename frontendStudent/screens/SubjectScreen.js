@@ -10,13 +10,16 @@ export const SubjectScreen = ({ route }) => {
   const navigation = useNavigation();
   const { t, language } = useLanguage();
   const [subjectData, setSubjectData] =  useState();
+  const [topicsData, setTopicsData] = useState();
   const { code } = route.params;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await mockApi.validateSubjectCode(code);
+        let response = await mockApi.getSubject(code);
         setSubjectData(response.subject);
+        response = await mockApi.getTopics(code);
+        setTopicsData(response);
       } catch (error) {
         console.error("Error actualizando los datos de la asignatura: ", error);
       }
@@ -53,7 +56,7 @@ export const SubjectScreen = ({ route }) => {
     </TouchableOpacity>
   );
 
-  if (!subjectData) {
+  if (!subjectData || !topicsData) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Text>Cargando asignatura...</Text>
@@ -64,20 +67,20 @@ export const SubjectScreen = ({ route }) => {
   return (
     <View style={{ flex: 1, width: '100%', maxWidth: 800, alignSelf: 'center', padding: 20 }}>
       <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000', textAlign: 'center', marginVertical: 20 }}>
-        {subjectData.title}
+        {subjectData.name}
       </Text>
 
       <FlatList
-        data={subjectData.topics}
-        extraData={subjectData}
+        data={topicsData}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
       />
+
       {/* Botones inferiores */}
       <View style={styles.container}>
         <StyledButton title={t('hexagonGame')} icon={<Hexagon size={20} />} onPress={() => navigation.navigate('Game')} style={styles.leftButton} />
-        <StyledButton title={t('exam')} icon={<Clipboard size={20} />} onPress={() => navigation.navigate('ExamSetup', { topics: subjectData.topics, nQuestions: 10, code: code })} style={styles.rightButton} />
+        <StyledButton title={t('exam')} icon={<Clipboard size={20} />} onPress={() => navigation.navigate('ExamSetup', { topics: topicsData, nQuestions: 10, code: code })} style={styles.rightButton} />
       </View>
     </View>
   );

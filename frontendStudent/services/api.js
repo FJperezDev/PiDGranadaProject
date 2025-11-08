@@ -1,9 +1,9 @@
 import { apiClient } from './apiClient';
 
 export const mockApi = {
-  validateSubjectCode: async (code) => {
+  validateStudentGroupCode: async (code) => {
     try {
-      const response = await apiClient.get('/studentgroups/validate/', { params: { code } });
+      const response = await apiClient.get('/studentgroups/exists/', { params: { code } });
       return response.data;
     } catch (error) {
       console.error('Error validando el código de asignatura:', error);
@@ -11,9 +11,29 @@ export const mockApi = {
     }
   },
 
-  getTopicDetails: async (topic_title) => {
+  getSubject: async (code) => {
     try {
-      const response = await apiClient.get(`/topics/by-title/`, { params: { topic_title } });
+      const response = await apiClient.get('/studentgroups/subject/', {params: { code } });
+      return response.data;
+    } catch (error) {
+      console.error('Error obteniendo la asignatura:', error);
+      throw error;
+    }
+  },
+
+  getTopics: async (code) => {
+    try {
+      const response = await apiClient.get('/studentgroups/topics/', { params: { code } });
+      return response.data;
+    } catch (error) {
+      console.error('Error obteniendo los temas:', error);
+      throw error;
+    }
+  },
+
+  getTopicDetails: async (title) => {
+    try {
+      const response = await apiClient.get(`/studentgroups/topic/`, { params: { title } });
       return response.data;
     } catch (error) {
       console.error('Error obteniendo detalles del tema:', error);

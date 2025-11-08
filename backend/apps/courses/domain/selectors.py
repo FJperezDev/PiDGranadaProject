@@ -7,11 +7,14 @@ def get_all_subjects():
 def get_subject_by_id(subject_id: int) -> Subject:
     return Subject.objects.prefetch_related('topics').get(id=subject_id)
 
-def get_subject_by_code(subject_code: str) -> Subject:
-    return Subject.objects.prefetch_related('topics').get(groupCode=subject_code)
-
 def get_topics_relation_by_subject(subject: Subject):
     return SubjectIsAboutTopic.objects.filter(subject=subject).order_by('order_id')
+
+def get_topics_related(trs):
+    topics = []
+    for tr in trs:
+        topics.append(tr.topic)
+    return topics
 
 def get_topics_by_subject(subject_id):
     return (
@@ -30,7 +33,17 @@ def get_student_group_by_id(group_id: int) -> StudentGroup:
     return StudentGroup.objects.get(id=group_id)
 
 def get_student_group_by_code(group_code: str) -> StudentGroup:
-    return StudentGroup.objects.get(groupCode=group_code)
+    try:
+        return StudentGroup.objects.get(groupCode=group_code)
+    except StudentGroup.DoesNotExist:
+        return None
+
+def get_subject_by_code(code: str) -> Subject:
+    sg = get_student_group_by_code(code)
+    if sg:
+        return sg.subject
+    else:
+        return None
 
 def get_all_student_groups():
     return StudentGroup.objects.filter(old=False).all()

@@ -20,7 +20,7 @@ export function HomeScreen() {
     setError('');
     
     try {
-      const response = await mockApi.validateSubjectCode(code);
+      const response = await mockApi.validateStudentGroupCode(code);
       if (response.exists) {
         navigation.navigate('Subject', { code });
       } else {

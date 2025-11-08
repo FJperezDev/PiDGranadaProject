@@ -4,6 +4,17 @@ from apps.utils.mixins import LanguageSerializerMixin
 from apps.content.api.serializers import TopicSerializer
 from apps.customauth.serializers import CustomTeacherSerializer as TeacherSerializer
 
+class ShortSubjectSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Subject
+        fields = ['name']  # solo los campos que quieres mostrar
+
+    def get_name(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'name_{lang}', None)
+
 class SubjectSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
