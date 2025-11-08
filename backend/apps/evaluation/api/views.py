@@ -26,8 +26,9 @@ class QuestionViewSet(BaseContentViewSet):
         data = request.data
         topics_titles = data.get('topics', [])
         concepts_names = data.get('concepts', [])
+        answers = data.get('answers', [])
         question = services.create_question(
-            user=request.user,
+            teacher=request.user,
             type=data.get('type'),
             is_true=data.get('is_true'),
             statement_es=data.get('statement_es'),
@@ -35,7 +36,8 @@ class QuestionViewSet(BaseContentViewSet):
             approved=data.get('approved', False),
             generated=data.get('generated', False),
             topics_titles=topics_titles,
-            concepts_names=concepts_names
+            concepts_names=concepts_names,
+            answers=answers
         )
         serializer = self.get_serializer(question)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -46,7 +48,7 @@ class QuestionViewSet(BaseContentViewSet):
         topics_titles = data.get('topics', [])
         concept_names = data.get('concepts', [])
         question = services.update_question(
-            user=request.user,
+            teacher=request.user,
             question=question,
             type=data.get('type'),
             statement_es=data.get('statement_es'),
@@ -61,7 +63,7 @@ class QuestionViewSet(BaseContentViewSet):
 
     def destroy(self, request, *args, **kwargs):
         question = self.get_object()
-        services.delete_question(user=request.user, question=question)
+        services.delete_question(teacher=request.user, question=question)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['get'], url_path='last-modified', url_name='last-modified')
@@ -88,6 +90,7 @@ class QuestionViewSet(BaseContentViewSet):
         question = selectors.get_question_by_id(pk)
         data = request.data
         answer = services.create_answer(
+            teacher=request.user,
             question=question,
             text_es=data.get('text_es'),
             text_en=data.get('text_en'),
@@ -133,7 +136,7 @@ class ExamViewSet(BaseContentViewSet):
         for topic_title in topics_titles:
             topics.append(content_selectors.get_topic_by_title(title=topic_title))
 
-        exam_questions = services.create_exam(user=request.user, topics=set(topics), num_questions=num_questions)
+        exam_questions = services.create_exam(topics=set(topics), num_questions=num_questions)
         serializer = self.get_serializer(exam_questions, many=True)
         return Response(serializer.data)
 

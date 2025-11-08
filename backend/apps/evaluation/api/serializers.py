@@ -9,6 +9,8 @@ from .models import (
 from ...content.api.serializers import ShortTopicSerializer, ShortConceptSerializer
 
 class AnswerSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
+    text = serializers.SerializerMethodField()
+
     class Meta:
         model = Answer
         fields = ['id', 'text', 'text_es', 'text_en', 'is_correct', 'question']

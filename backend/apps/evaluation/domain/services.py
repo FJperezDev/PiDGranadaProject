@@ -11,7 +11,7 @@ from apps.customauth.models import CustomTeacher as Teacher
 # --- Question Services ---
 def create_question(teacher: Teacher, type: str, statement_es: str = None, statement_en: str = None,
                     approved: bool = False, generated: bool = False, topics_titles: set[str] = None, 
-                    concepts_names: set[str] = None, is_true = None) -> Question:
+                    concepts_names: set[str] = None, is_true = None, answers: list[Answer] = None) -> Question:
     """Crea una nueva pregunta con validaciones básicas."""
 
     if not statement_es or not statement_en:
@@ -23,6 +23,9 @@ def create_question(teacher: Teacher, type: str, statement_es: str = None, state
         approved=approved,
         generated=generated,
     )
+    if answers:
+        for answer in answers:
+            create_answer(teacher, question, text_es=answer.text_es, text_en=answer.text_en, is_correct=answer.is_correct)
     if type is not None:
         if type == 'true_false':
             if is_true is not None:
@@ -143,7 +146,7 @@ def evaluate_question(student_group: StudentGroup, question: Question, answer: A
     qeg.save()
     return is_correct
 
-def create_exam(user, topics: set[Topic], num_questions: int) -> list[Question]:
+def create_exam(topics: set[Topic], num_questions: int) -> list[Question]:
     exam_questions = []
     for topic in topics:
         question = evaluation_selectors.get_random_question_from_topic(topic)
