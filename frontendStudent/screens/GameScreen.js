@@ -3,34 +3,30 @@ import { Text, View, StyleSheet } from "react-native";
 import { useNavigation } from '@react-navigation/native';
 import { useLanguage } from "../context/LanguageContext";
 import { StyledButton } from "../components/StyledButton";
-import { mockApi as oldMockApi } from '../services/oldApi';
+import { GAME_QUESTIONS } from "../constants/game";
 
 export const GameScreen = () => {
   const navigation = useNavigation();
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
 
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [currentQ, setCurrentQ] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [warning, setWarning] = useState(""); // ⚠️ aviso de respuesta no seleccionada
+  const [warning, setWarning] = useState("");
 
   useEffect(() => {
-    oldMockApi.getGameQuestions().then(data => {
-      setQuestions(data);
-      setIsLoading(false);
-    });
-  }, []);
+    // Cargar las preguntas según el idioma actual
+    setQuestions(GAME_QUESTIONS[language] || GAME_QUESTIONS["es"]);
+  }, [language]);
 
-  const handleSelectAnswer = (questionId, answer) => {
-    setAnswers(prev => ({ ...prev, [questionId]: answer }));
-    setWarning(""); // limpiar aviso al responder
+  const handleSelectAnswer = (questionId, answerCode) => {
+    setAnswers(prev => ({ ...prev, [questionId]: answerCode }));
+    setWarning("");
   };
 
   const handleNext = () => {
     const question = questions[currentQ];
-    if (!answers[question.id]) {
-      // mostrar aviso si no hay respuesta
+    if (answers[question.id] === undefined) {
       setWarning(t('pleaseSelectAnswer') || "Por favor, selecciona una respuesta antes de continuar.");
       setTimeout(() => setWarning(""), 2000);
       return;
@@ -39,26 +35,36 @@ export const GameScreen = () => {
     if (currentQ < questions.length - 1) {
       setCurrentQ(currentQ + 1);
     } else {
-      navigation.navigate('GameResult');
+      // ✅ Cuando termina el test, calculamos la frecuencia de cada código
+      const codeCounts = [0, 0, 0, 0, 0, 0]; // índices 0–5
+
+      Object.values(answers).forEach(code => {
+        if (code >= 0 && code <= 5) {
+          codeCounts[code] += 1;
+        }
+      });
+
+      // Navegar al resultado con el array de frecuencias y las respuestas completas
+      navigation.navigate("GameResult", {
+        codeCounts
+      });
     }
   };
 
   const handlePrev = () => {
-    if (currentQ > 0) {
-      setCurrentQ(currentQ - 1);
-    }
+    if (currentQ > 0) setCurrentQ(currentQ - 1);
   };
 
-  if (isLoading) {
+  if (questions.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>{t('loadingGame')}</Text>
+        <Text>{t("loadingGame")}</Text>
       </View>
     );
   }
 
   const question = questions[currentQ];
-  const selectedAnswer = answers[question.id];
+  const selectedCode = answers[question.id];
 
   return (
     <View style={styles.container}>
@@ -69,18 +75,20 @@ export const GameScreen = () => {
       <Text style={styles.questionText}>{question.text}</Text>
 
       <View style={styles.optionsContainer}>
-        {question.options.map(opt => {
-          const isSelected = selectedAnswer === opt;
+        {question.options.map((opt, index) => {
+          const isSelected = selectedCode === opt.code;
           return (
             <StyledButton
-              key={opt}
+              key={`${question.id}-opt-${index}`}
               style={[
                 styles.optionButton,
                 isSelected ? styles.optionSelected : styles.optionUnselected
               ]}
-              onPress={() => handleSelectAnswer(question.id, opt)}
+              onPress={() => handleSelectAnswer(question.id, opt.code)}
             >
-              <Text style={{ textAlign: "center", fontSize: 16 }}>{opt}</Text>
+              <Text style={{ textAlign: "center", fontSize: 16 }}>
+                {opt.text}
+              </Text>
             </StyledButton>
           );
         })}
@@ -90,12 +98,12 @@ export const GameScreen = () => {
 
       <View style={styles.actionsContainer}>
         <StyledButton
-          title={t('previous')}
+          title={t("previous")}
           onPress={handlePrev}
           disabled={currentQ === 0}
         />
         <StyledButton
-          title={currentQ === questions.length - 1 ? t('finishGame') : t('next')}
+          title={currentQ === questions.length - 1 ? t("finishGame") : t("next")}
           onPress={handleNext}
           style={[
             styles.nextButton,
@@ -110,61 +118,61 @@ export const GameScreen = () => {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   container: {
     flex: 1,
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 20,
-    width: '100%',
+    width: "100%",
     maxWidth: 600,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   counterText: {
-    position: 'absolute',
+    position: "absolute",
     top: 100,
     right: 20,
-    color: '#64748b',
+    color: "#64748b",
   },
   questionText: {
     fontSize: 22,
-    fontWeight: '500',
-    textAlign: 'center',
+    fontWeight: "500",
+    textAlign: "center",
     marginVertical: 40,
   },
   optionsContainer: {
-    width: '100%',
+    width: "100%",
   },
   optionButton: {
-    width: '100%',
+    width: "100%",
     padding: 16,
     marginBottom: 16,
     borderRadius: 8,
     borderWidth: 2,
     fontSize: 18,
-    textAlign: 'center',
+    textAlign: "center",
   },
   optionSelected: {
-    backgroundColor: '#cffafe',
-    borderColor: '#67e8f9',
+    backgroundColor: "#cffafe",
+    borderColor: "#67e8f9",
   },
   optionUnselected: {
-    backgroundColor: '#ffffff',
-    borderColor: '#cbd5e1',
+    backgroundColor: "#ffffff",
+    borderColor: "#cbd5e1",
   },
   warningText: {
-    color: '#dc2626', // rojo
+    color: "#dc2626",
     marginTop: 10,
     marginBottom: -10,
     fontSize: 16,
   },
   actionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
     marginTop: 32,
   },
   nextButton: {
@@ -173,9 +181,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   nextButtonDefault: {
-    backgroundColor: '#a5f3fc',
+    backgroundColor: "#a5f3fc",
   },
   finishButton: {
-    backgroundColor: '#22c55e',
+    backgroundColor: "#22c55e",
   },
 });

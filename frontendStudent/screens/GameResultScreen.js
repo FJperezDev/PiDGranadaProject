@@ -2,11 +2,23 @@ import { Image, View, Text, StyleSheet } from "react-native";
 import { useState } from "react";
 import { StyledButton } from "../components/StyledButton";
 import { useLanguage } from "../context/LanguageContext";
+import { GAME_SOLUTION } from "../constants/game";
+import { useMemo } from "react";
 
-export const GameResultScreen = ( ) => {
-  const { t } = useLanguage();
+export const GameResultScreen = ({ route }) => {
+  const { t, language } = useLanguage();
   const [imageVisible, setImageVisible] = useState(false);
   const [nameVisible, setNameVisible] = useState(false);
+  const { codeCounts } = route.params;
+
+  const topThreeCodes = useMemo(() => {
+    if (!Array.isArray(codeCounts)) return [];
+    // Creamos un array de pares [índice, valor] => [code, count]
+    const sorted = codeCounts
+      .map((count, code) => ({ code, count }))
+      .sort((a, b) => b.count - a.count); // ordenar descendente
+    return sorted.slice(0, 3).map(item => item.code);
+  }, [codeCounts]);
 
   return (
     <View style={styles.container}>
@@ -17,7 +29,7 @@ export const GameResultScreen = ( ) => {
         {imageVisible ? (
           <Image
             source={{
-              uri: "https://placehold.co/300x300/E0F7FA/000000?text=Organization+Chart",
+              uri: GAME_SOLUTION[language][topThreeCodes[0]]?.urlImage || GAME_SOLUTION[language][0]?.urlImage,
             }}
             style={styles.image}
             resizeMode="cover"
@@ -32,7 +44,8 @@ export const GameResultScreen = ( ) => {
       {/* Nombre Oculto */}
       <StyledButton onPress={() => setNameVisible(true)} style={styles.nameButton}>
         {nameVisible ? (
-          <Text style={styles.revealedText}>Estructura Matricial</Text>
+          <Text style={styles.revealedText}>{GAME_SOLUTION[language][topThreeCodes.join('')]?.text || t("noResult")}
+          </Text>
         ) : (
           <View style={styles.namePlaceholder}>
             <Text style={styles.placeholderText}>{t("tapToReveal")}</Text>

@@ -1,3 +1,5 @@
+import { GAME_QUESTIONS } from "../constants/game";
+
 export const mockApi = {
   validateSubjectCode: (code) => {
     return new Promise((resolve) => {
@@ -38,15 +40,10 @@ export const mockApi = {
       }, 300);
     });
   },
-  getGameQuestions: () => {
+  getGameQuestions: (lang) => {
     return new Promise((resolve) => {
       resolve(
-        Array.from({ length: 15 }, (_, i) => ({
-          id: `gq${i + 1}`,
-          text: `Pregunta del juego número ${i + 1}?`,
-          options: ['Opción A', 'Opción B', 'Opción C'],
-          correctAnswer: 'Opción A',
-        }))
+        GAME_QUESTIONS[lang]
       );
     });
   },
