@@ -2,7 +2,9 @@ import React, { useContext } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthContext } from '../components';
 import AuthNavigator from './AuthNavigator';
-import { UserHomeScreen, AdminHomeScreen, UnauthorizedScreen } from '../screens';
+import UserHomeScreen from '../screens/UserHomeScreen'
+import AdminHomeScreen from '../screens/AdminHomeScreen'
+import UnauthorizedScreen from '../screens/UnauthorizedScreen'
 import { CustomHeader } from '../components/CustomHeader';
 
 const Stack = createNativeStackNavigator();
@@ -15,10 +17,7 @@ export default function AppNavigator() {
         header: () => <CustomHeader routeName={route.name} />,
     })}>
 
-      {isAdmin ? (
-        <Stack.Screen name="Home" component={AdminHomeScreen} />
-      ) : 
-      isAuthenticated ? (
+      {isAuthenticated ? (
         <>
           <Stack.Screen name="Home" component={UserHomeScreen} />
         </>

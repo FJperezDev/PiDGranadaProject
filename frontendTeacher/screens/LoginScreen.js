@@ -90,19 +90,20 @@ const styles = StyleSheet.create({
     paddingVertical: height * 0.05,
   },
   card: {
-    width: '90%',
-    maxWidth: 400,
     backgroundColor: COLORS.white,
     borderRadius: 16,
-    paddingVertical: 30,
-    paddingHorizontal: 24,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
-    alignItems: 'center',
+    padding: 20,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 3px 6px rgba(0,0,0,0.15)' }
+      : {
+          shadowColor: COLORS.black,
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.15,
+          shadowRadius: 6,
+          elevation: 4,
+        }),
   },
+
   title: {
     fontSize: 26,
     fontWeight: 'bold',

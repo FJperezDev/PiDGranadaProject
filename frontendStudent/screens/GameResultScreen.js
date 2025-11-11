@@ -18,7 +18,6 @@ export const GameResultScreen = ({ route }) => {
       .map((count, code) => ({ code, count }))
       .sort((a, b) => b.count - a.count); // ordenar descendente
 
-    console.log(sorted)
     let freq = [];
     if (sorted.length > 0) {
       freq.push(sorted[0].code);
@@ -29,14 +28,11 @@ export const GameResultScreen = ({ route }) => {
         freq.push(sorted[2].code);
     }
     
-    console.log(freq)
     let ret = "";
     if(freq.includes(6))
       ret = "6";
     else 
       ret = freq.join("");
-
-    console.log(ret)
 
     return ret;
   }, [codeCounts]);

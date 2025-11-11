@@ -4,8 +4,12 @@ import { ChevronLeft, BookMarked } from 'lucide-react-native';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
+import { useContext } from 'react';
+import { AuthContext } from './AuthContext';
+import { StyledButton } from '../components/StyledButton';
 
 export const CustomHeader = ({routeName}) => {
+  const { loggedUser, logout } = useContext(AuthContext);
   const { t } = useLanguage();
   const navigation = useNavigation();
 
@@ -17,24 +21,22 @@ export const CustomHeader = ({routeName}) => {
     }
   };
 
-  const hideBack = routeName === 'Login';
-  const logout = routeName === 'Subject';
-  const isHome = routeName === 'Home';
+  const inLogin = routeName === 'Login';
 
   return (
     <View style={styles.container}>
       {/* Left Section */}
       <View style={styles.leftSection}>
-        {!hideBack && isHome ? (
+        {!inLogin ? (
           <TouchableOpacity
             activeOpacity={0.7}
             style={styles.iconButton}
           >
             <BookMarked size={28} color={COLORS.black} />
           </TouchableOpacity>
-        ): !hideBack && (
+        ): !inLogin && (
           <TouchableOpacity
-            onPress={() => (logout ? navigation.navigate('Home') : handleGoBack())}
+            onPress={() => (inLogin ? navigation.navigate('Home') : handleGoBack())}
             activeOpacity={0.7}
             style={styles.iconButton}
           >
@@ -49,12 +51,15 @@ export const CustomHeader = ({routeName}) => {
 
       {/* Center Section */}
       <View style={styles.centerSection}>
-        <Text style={styles.title}>{t('appName')}</Text>
+        <Text style={styles.title}>{loggedUser.username ? loggedUser.username + "_iOrg" : t('appName')}</Text>
       </View>
 
       {/* Right Section */}
       <View style={styles.rightSection}>
-        <LanguageSwitcher />
+        {loggedUser.username ? <StyledButton
+                  title="OK"
+                  onPress={logout}
+                /> : <LanguageSwitcher />}
       </View>
     </View>
   );

@@ -45,7 +45,6 @@ export const GameScreen = () => {
       });
 
       // Navegar al resultado con el array de frecuencias y las respuestas completas
-      console.log(codeCounts)
       navigation.navigate("GameResult", {
         codeCounts
       });

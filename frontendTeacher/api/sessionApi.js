@@ -93,7 +93,6 @@ export const login = async (email, password) => {
 
     setAccessToken(access);
     await setRefreshToken(refresh);
-    console.log("Login succesful");
   } catch (error) {
     console.warn("Login error:", error.response?.data || error.message);
     throw error;
@@ -101,14 +100,12 @@ export const login = async (email, password) => {
 };
 
 export const logout = async () => {
-  console.log("Logout succesful");
   await deleteRefreshToken("refresh");
   setAccessToken(null);
   await instance.post("/logout/");
 };
 
 export const logoutAll = async () => {
-  console.log("Logout from all devices");
   await deleteRefreshToken("refresh");
   setAccessToken(null);
   await instance.post("/logout_all/");

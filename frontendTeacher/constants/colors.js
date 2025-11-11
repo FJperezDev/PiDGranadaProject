@@ -1,6 +1,6 @@
 export const COLORS = {
-  primary: '#b9eff6ff',       // Azul claro (bg-cyan-50)
-  secondary: '#84daffff',     // Gris acuoso (bg-slate-300)
+  primary: '#62cedcff',       // Azul claro (bg-cyan-50)
+  secondary: '#80bed8ff',     // Gris acuoso (bg-slate-300)
   background: '#F0F4F8',   // Fondo muy claro (bg-slate-50)
   text: '#000000',          // text-black
   white: '#FFFFFF',         // bg-white
