@@ -37,6 +37,7 @@ export const STRINGS = {
     generatingExam: 'Generating exam...',
     pleaseSelectAnswer: 'Please select an answer before proceeding.',
     endRevision: 'End Revision',
+    noRecommendations: 'Congratulations, there are no recommendations.',
   },
   es: {
     appName: 'Student_iOrg',
@@ -76,5 +77,6 @@ export const STRINGS = {
     generatingExam: 'Generando examen...',
     pleaseSelectAnswer: 'Por favor selecciona una respuesta antes de continuar.',
     endRevision: 'Terminar Revisión',
+    noRecommendations: '¡Felicidades! No hay recomendaciones.',
   },
 };

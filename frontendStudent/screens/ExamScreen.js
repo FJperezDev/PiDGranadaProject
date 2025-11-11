@@ -43,6 +43,7 @@ export const ExamScreen = ({ route }) => {
       setIsLoading(true);
       const translationPromises = questions.map(q => mockApi.getQuestion(q.id));
       const translatedQuestions = await Promise.all(translationPromises);
+      console.log(translatedQuestions)
       setQuestions(translatedQuestions);
       setIsLoading(false);
     };

@@ -26,8 +26,7 @@ class Question(models.Model):
     old = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.statement_es or f"Question #{self.pk}"
-
+        return self.statement_es or self.statement_en
 
 class TeacherMakeChangeQuestion(models.Model):
     old_object = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)

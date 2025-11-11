@@ -22,7 +22,7 @@ export const ExamResultScreen = ({ route, navigation }) => {
             ))}
           </View>
         ) : (
-          <Text style={{ fontSize: 16, fontStyle: 'italic' }}>¡Felicidades! No hay recomendaciones.</Text>
+          <Text style={{ fontSize: 16, fontStyle: 'italic' }}>{t('noRecommendations')}</Text>
         )}
       </ScrollView>
 

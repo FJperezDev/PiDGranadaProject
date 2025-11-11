@@ -11,7 +11,7 @@ from .models import (
     QuestionEvaluationGroup
 )
 from .serializers import (
-    QuestionSerializer, AnswerSerializer,
+    QuestionSerializer, AnswerSerializer, ShortQuestionSerializer,
     QuestionBelongsToTopicSerializer, QuestionRelatedToConceptSerializer,
     QuestionEvaluationGroupSerializer
 )
@@ -20,7 +20,7 @@ from apps.utils.permissions import BaseContentViewSet
 
 class QuestionViewSet(BaseContentViewSet):
     queryset = selectors.get_all_questions()
-    serializer_class = QuestionSerializer
+    serializer_class = ShortQuestionSerializer
 
     def create(self, request, *args, **kwargs):
         data = request.data

@@ -17,7 +17,7 @@ class AnswerSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
         read_only_fields = ['id', 'question']
         
     def get_text(self, obj):
-        lang = self.context.get('lang', 'es')
+        lang = self.get_lang()
         return getattr(obj, f'text_{lang}', None)
 
 class ShortAnswerSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
@@ -28,37 +28,45 @@ class ShortAnswerSerializer(LanguageSerializerMixin, serializers.ModelSerializer
         fields = ['id', 'text', 'is_correct']
 
     def get_text(self, obj):
-        lang = self.context.get('lang', 'es')
+        lang = self.get_lang()
         return getattr(obj, f'text_{lang}', None)
 
 class ShortQuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     statement = serializers.SerializerMethodField()
     answers = ShortAnswerSerializer(many=True, read_only=True)
+    recommendation = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
-        fields = ['id', 'type', 'statement', 'answers']
+        fields = ['id', 'type', 'statement', 'answers', 'recommendation']
 
     def get_statement(self, obj):
-        lang = self.context.get('lang', 'es')
+        lang = self.get_lang()
         return getattr(obj, f'statement_{lang}', None)
+    
+    def get_recommendation(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'recommendation_{lang}', None)
 
 class QuestionSerializer(LanguageSerializerMixin,serializers.ModelSerializer):
     answers = AnswerSerializer(many=True, read_only=True)
     topics = serializers.SerializerMethodField()
     concepts = serializers.SerializerMethodField()
     statement = serializers.SerializerMethodField()
+    recommendation = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
         fields = [
             'id', 'type', 'statement', 'statement_es', 'statement_en', 'approved', 'generated',
-            'answers', 'topics', 'concepts'
+            'answers', 'topics', 'concepts', 'recommendation', 'recommendation_es', 'recommendation_en'
         ]
         read_only_fields = ['id', 'answers']
         extra_kwargs = {
             'statement_es': {'write_only': True, 'required': True},
             'statement_en': {'write_only': True, 'required': True},
+            'recommendation_es': {'write_only': True, 'required': False},
+            'recommendation_en': {'write_only': True, 'required': False},
         }
     def get_topics(self, obj):
         queryset = [qt.topic for qt in obj.topics.all()]  # a través de QuestionBelongsToTopic
@@ -69,8 +77,12 @@ class QuestionSerializer(LanguageSerializerMixin,serializers.ModelSerializer):
         return ShortConceptSerializer(queryset, many=True, context=self.context).data
 
     def get_statement(self, obj):
-        lang = self.context.get('lang', 'es')
+        lang = self.get_lang()
         return getattr(obj, f'statement_{lang}', None)
+    
+    def get_recommendation(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'recommendation_{lang}', None)
 
 # class TeacherMakeChangeQuestionSerializer(serializers.ModelSerializer):
 #     class Meta:
