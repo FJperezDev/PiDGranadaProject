@@ -19,6 +19,8 @@ class Question(models.Model):
     type = models.CharField(max_length=50, choices=QUESTION_TYPES)
     statement_es = models.TextField(blank=True, null=True)
     statement_en = models.TextField(blank=True, null=True)
+    recommendation_es = models.TextField(blank=True, null=True)
+    recommendation_en = models.TextField(blank=True, null=True)
     approved = models.BooleanField(default=False)
     generated = models.BooleanField(default=False)
     old = models.BooleanField(default=False)

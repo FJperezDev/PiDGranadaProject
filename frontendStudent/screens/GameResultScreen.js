@@ -13,23 +13,43 @@ export const GameResultScreen = ({ route }) => {
 
   const topThreeCodes = useMemo(() => {
     if (!Array.isArray(codeCounts)) return [];
-    // Creamos un array de pares [índice, valor] => [code, count]
+
     const sorted = codeCounts
       .map((count, code) => ({ code, count }))
       .sort((a, b) => b.count - a.count); // ordenar descendente
-    return sorted.slice(0, 3).map(item => item.code);
+
+    console.log(sorted)
+    let freq = [];
+    if (sorted.length > 0) {
+      freq.push(sorted[0].code);
+      if (sorted[1].count > 0) {
+        freq.push(sorted[1].code);
+      }
+      if(sorted[2].count > 0)
+        freq.push(sorted[2].code);
+    }
+    
+    console.log(freq)
+    let ret = "";
+    if(freq.includes(6))
+      ret = "6";
+    else 
+      ret = freq.join("");
+
+    console.log(ret)
+
+    return ret;
   }, [codeCounts]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{t("gameResultTitle")}</Text>
 
-      {/* Imagen Oculta */}
       <StyledButton onPress={() => setImageVisible(true)} style={styles.imageButton}>
         {imageVisible ? (
           <Image
             source={{
-              uri: GAME_SOLUTION[language][topThreeCodes[0]]?.urlImage || GAME_SOLUTION[language][0]?.urlImage,
+              uri: GAME_SOLUTION[language][topThreeCodes]?.urlImage || GAME_SOLUTION[language][0]?.urlImage,
             }}
             style={styles.image}
             resizeMode="cover"
@@ -44,7 +64,7 @@ export const GameResultScreen = ({ route }) => {
       {/* Nombre Oculto */}
       <StyledButton onPress={() => setNameVisible(true)} style={styles.nameButton}>
         {nameVisible ? (
-          <Text style={styles.revealedText}>{GAME_SOLUTION[language][topThreeCodes.join('')]?.text || t("noResult")}
+          <Text style={styles.revealedText}>{GAME_SOLUTION[language][topThreeCodes]?.text || t("noResult")}
           </Text>
         ) : (
           <View style={styles.namePlaceholder}>
@@ -106,6 +126,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   revealedText: {
+    alignContent: "center",
+    textAlign: "center",
     fontSize: 28, // text-3xl
     fontWeight: "bold",
     color: "#000",

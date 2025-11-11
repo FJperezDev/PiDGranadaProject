@@ -11,7 +11,8 @@ from apps.customauth.models import CustomTeacher as Teacher
 # --- Question Services ---
 def create_question(teacher: Teacher, type: str, statement_es: str = None, statement_en: str = None,
                     approved: bool = False, generated: bool = False, topics_titles: set[str] = None, 
-                    concepts_names: set[str] = None, is_true = None, answers: list[Answer] = None) -> Question:
+                    concepts_names: set[str] = None, is_true = None, answers: list[Answer] = None,
+                    recommendation_es: str = None, recommendation_en: str = None) -> Question:
     """Crea una nueva pregunta con validaciones básicas."""
 
     if not statement_es or not statement_en:
@@ -20,6 +21,8 @@ def create_question(teacher: Teacher, type: str, statement_es: str = None, state
         type=type,
         statement_es=statement_es,
         statement_en=statement_en,
+        recommendation_es=recommendation_es,
+        recommendation_en=recommendation_en,
         approved=approved,
         generated=generated,
     )

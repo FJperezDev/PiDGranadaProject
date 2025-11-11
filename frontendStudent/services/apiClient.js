@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getLanguage } from '../context/LanguageContext';
 
 export const apiClient = axios.create({
-  baseURL: 'http://10.123.231.52:8000', // o la IP de tu PC si estás en emulador o dispositivo real
+  baseURL: 'http://172.17.108.110:8000', // o la IP de tu PC si estás en emulador o dispositivo real
   headers: {
     'Content-Type': 'application/json',
   },

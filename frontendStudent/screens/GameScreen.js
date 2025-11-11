@@ -36,15 +36,16 @@ export const GameScreen = () => {
       setCurrentQ(currentQ + 1);
     } else {
       // ✅ Cuando termina el test, calculamos la frecuencia de cada código
-      const codeCounts = [0, 0, 0, 0, 0, 0]; // índices 0–5
+      const codeCounts = [0, 0, 0, 0, 0, 0, 0]; // índices 0–5
 
       Object.values(answers).forEach(code => {
-        if (code >= 0 && code <= 5) {
+        if (code >= 0 && code <= 6) {
           codeCounts[code] += 1;
         }
       });
 
       // Navegar al resultado con el array de frecuencias y las respuestas completas
+      console.log(codeCounts)
       navigation.navigate("GameResult", {
         codeCounts
       });
