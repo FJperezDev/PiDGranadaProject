@@ -53,14 +53,16 @@ export const ExamScreen = ({ route }) => {
   const handleFinish = useMemo(
     () => () => {
       let score = 0;
+      
       const recommendations = [];
       questions.forEach((q) => {
-        if (answers[q.id] === q.correctAnswer) {
+        if (answers[q.id]) {
           const selectedAnswerId = answers[q.id];
           let isAnswerCorrect = false;
           if(selectedAnswerId !== undefined){
             const answerObj = q.answers.find((answer) => answer.id === selectedAnswerId);
-            if (answerObj && answerObj.correct) {
+            
+            if (answerObj && answerObj.is_correct) {
               isAnswerCorrect = true;
             }
           }

@@ -582,7 +582,7 @@ export const GAME_SOLUTION = {
     "541": { text: "Organización Misional que evoluciona hacia una Burocracia Profesional y/o Burocracia Maquinal", urlImage: "http://www.ugr.es/local/calbacet/app/541.png" },
     "542": { text: "Organización Misional que evoluciona hacia una Burocracia Profesional y/o Forma Divisional", urlImage: "http://www.ugr.es/local/calbacet/app/542.png" },
     "543": { text: "Organización Misional que evoluciona hacia una Burocracia Profesional y/o Adhocracia", urlImage: "http://www.ugr.es/local/calbacet/app/543.png" },
-    "6": { text: "En la mayoría de las preguntas has seleccionado la opción 'No lo sé'. Vas por mal camino, deberías estudiar algo", urlImage: "http://www.ugr.es/local/calbacet/app/6.png" }
+    "6": { text: "En la mayoría de las preguntas has seleccionado la opción 'No lo sé'. Vas por mal camino, deberías estudiar algo", urlImage: "https://drive.google.com/file/d/1Eww1oz9wW_yBkQG8uHkWk0c-4oWKEZuR/view" }
   },
   en: {
     "0": { text: "Simple Structure", urlImage: "http://www.ugr.es/local/calbacet/app/0.png" },
