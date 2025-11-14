@@ -12,29 +12,22 @@ export const GameResultScreen = ({ route }) => {
   const { codeCounts } = route.params;
 
   const topThreeCodes = useMemo(() => {
-    if (!Array.isArray(codeCounts)) return [];
+    if (!Array.isArray(codeCounts)) return "";
 
     const sorted = codeCounts
       .map((count, code) => ({ code, count }))
-      .sort((a, b) => b.count - a.count); // ordenar descendente
+      .filter(x => x.count > 0)
+      .sort((a, b) => b.count - a.count);
 
-    let freq = [];
-    if (sorted.length > 0) {
-      freq.push(sorted[0].code);
-      if (sorted[1].count > 0) {
-        freq.push(sorted[1].code);
-      }
-      if(sorted[2].count > 0)
-        freq.push(sorted[2].code);
+    if (sorted.length === 0) return "";
+
+    // Regla especial: si aparece el 6 en los primeros 2 → devolver solo "6"
+    if (sorted[0]?.code === 6 || sorted[1]?.code === 6) {
+      return "6";
     }
-    
-    let ret = "";
-    if(freq.includes(6))
-      ret = "6";
-    else 
-      ret = freq.join("");
 
-    return ret;
+    const freq = sorted.slice(0, 3).map(x => x.code);
+    return freq.join("");
   }, [codeCounts]);
 
   return (
