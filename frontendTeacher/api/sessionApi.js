@@ -105,12 +105,6 @@ export const logout = async () => {
   await instance.post("/logout/");
 };
 
-export const logoutAll = async () => {
-  await deleteRefreshToken("refresh");
-  setAccessToken(null);
-  await instance.post("/logout_all/");
-};
-
 export const register = async (data) => {
   try {
     const res = await instance.post("/register/", data);

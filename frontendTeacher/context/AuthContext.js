@@ -1,46 +1,38 @@
 import React, { createContext, useEffect, useState } from 'react';
-import { login as authLogin, logout as authLogout, logoutAll as authLogoutAll, restoreSession, getLoggedUserInfo, getUsersList } from '../api';
+import { login as authLogin, logout as authLogout, restoreSession, getLoggedUserInfo } from '../api';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [loggedUser, setLoggedUser] = useState({});
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isSuper, setIsSuper] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [users, setUsers] = useState([]);
 
   const checkSession = async () => {
     const success = await restoreSession();
     setIsAuthenticated(success);
     setLoading(false);
+    if(loggedUser.is_super){
+      setIsSuper(true);
+    } else {
+      setIsSuper(false);
+    }
   };
 
   const login = async (email, password) => {
-    
     await authLogin(email, password);
-    setIsAuthenticated(true);
     setLoading(false);
-    
+    setIsAuthenticated(true);
+    await onRefresh();
   };
 
   const logout = async () => {
     await authLogout();
     setIsAuthenticated(false);
-    setIsAdmin(false);
-    setIsSuperAdmin(false);
     setLoggedUser({});
-  };
-
-  const logoutAll = async () => {
-    await authLogoutAll();
-    setIsAdmin(false);
-    setIsSuperAdmin(false);
-    setIsAuthenticated(false);
-    setLoggedUser({});
-    logout();
+    setIsSuper(false);
   };
 
   const onRefresh = async () => {
@@ -48,18 +40,12 @@ export const AuthProvider = ({ children }) => {
       setRefreshing(true);
       // User profile
       const profile = await getLoggedUserInfo();
-      const isAdminNow = profile['role'] !== 'user'
-      const isSuperAdminNow = profile['role'] === 'superadmin'
+      const isSuperNow = profile.is_super
       setLoggedUser(profile);
       setIsAuthenticated(true);
-      setIsAdmin(isAdminNow);
-      setIsSuperAdmin(isSuperAdminNow);
-      if(isAdminNow)
-        setUsers(await getUsersList());
-      else
-        setUsers([])
+      setIsSuper(isSuperNow);
     } catch (err) {
-      console.warn("Error refreshing users:", err);
+      console.warn("Error getting loggedUserInfo:", err);
     } finally {
       setRefreshing(false);
     }
@@ -70,7 +56,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ login, logout, logoutAll, isAuthenticated, isAdmin, isSuperAdmin, setLoggedUser, loggedUser, onRefresh, refreshing, users }}>
+    <AuthContext.Provider value={{ login, logout, isAuthenticated, setLoggedUser, loggedUser, onRefresh, refreshing, isSuper }}>
       {!loading && children}
     </AuthContext.Provider>
   );

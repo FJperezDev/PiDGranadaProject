@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { AuthProvider } from './components';
+import { AuthProvider } from './context/AuthContext';
 import { AppNavigator } from './navigation';
 import { ActivityIndicator, View } from 'react-native';
 import { CustomHeader } from './components/CustomHeader';

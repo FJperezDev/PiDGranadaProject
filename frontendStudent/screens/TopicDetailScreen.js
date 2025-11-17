@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { mockApi } from "../services/api";
 import { ContentModal } from "../components/ContentModal";
 import { StyledButton } from "../components/StyledButton";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Platform } from "react-native";
 import { COLORS } from "../constants/colors";
 
 export const TopicDetailScreen = ({ setPage, route }) => {
@@ -90,9 +90,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: COLORS.primary || "#e0f7fa",
-    shadowColor: COLORS.black || "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 1px 5px rgba(0,0,0,0.1)' }
+      : {
+          shadowColor: COLORS.black || "#000",
+          shadowOpacity: 0.1,
+          shadowRadius: 5,
+          elevation: 2,
+        }),
   },
   container: {
     flexGrow: 1,

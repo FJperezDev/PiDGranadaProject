@@ -10,8 +10,6 @@ export const getLoggedUserInfo = async () => {
     }
 }
 
-
-
 export const getUserInfo = async (userId) => {
     try{
         const uri = "/users/" + userId + "/";
@@ -62,12 +60,13 @@ export const getMyGroups = async () => {
  * Obtiene TODOS los grupos (solo para SuperTeacher).
  * @returns {Promise<Array>} Lista de todos los grupos.
  */
-export const getAllGroups = async () => {
+export const getOtherGroups = async () => {
+  console.log("Fetching all groups...");
   try {
-    const response = await instance.get('/studentgroups/');
+    const response = await instance.get('/studentgroups/others-groups/');
     return response.data;
   } catch (error) {
-    console.error("Error fetching all groups:", error.response?.data || error.message);
+    console.error("Error fetching others groups:", error.response?.data || error.message);
     throw error;
   }
 };

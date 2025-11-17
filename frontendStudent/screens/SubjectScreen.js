@@ -1,6 +1,6 @@
 import { useLanguage } from "../context/LanguageContext";
 import { useNavigation } from '@react-navigation/native';
-import { View, Text, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { StyledButton } from "../components/StyledButton";
 import { Hexagon, Clipboard } from 'lucide-react-native';
 import { useEffect, useState } from "react";
@@ -37,9 +37,14 @@ export const SubjectScreen = ({ route }) => {
         marginBottom: 12,
         borderWidth: 1,
         borderColor: '#e0f7fa',
-        shadowColor: '#000',
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
+        ...(Platform.OS === 'web'
+          ? { boxShadow: '0px 1px 5px rgba(0,0,0,0.1)' }
+          : {
+              shadowColor: '#000',
+              shadowOpacity: 0.1,
+              shadowRadius: 5,
+              elevation: 2,
+            }),
       }}
       
       onPress={() => {

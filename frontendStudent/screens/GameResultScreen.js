@@ -1,4 +1,4 @@
-import { Image, View, Text, StyleSheet } from "react-native";
+import { Image, View, Text, StyleSheet, Platform } from "react-native";
 import { useState } from "react";
 import { StyledButton } from "../components/StyledButton";
 import { useLanguage } from "../context/LanguageContext";
@@ -84,13 +84,17 @@ const styles = StyleSheet.create({
     width: 256, // equivalente a w-64
     height: 256, // equivalente a h-64
     borderRadius: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 4,
-    elevation: 4,
     alignItems: "center",
     justifyContent: "center",
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 3px 4px rgba(0,0,0,0.2)' }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.2,
+          shadowOffset: { width: 0, height: 3 },
+          shadowRadius: 4,
+          elevation: 4,
+        }),
   },
   image: {
     width: "100%",

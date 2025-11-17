@@ -10,7 +10,7 @@ import {
   ScrollView,
   Dimensions,
 } from 'react-native';
-import { AuthContext } from '../components';
+import { AuthContext } from '../context/AuthContext';
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -90,7 +90,7 @@ const { height, width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'center', 
   },
   outerContainer: {
     flex: 1,
@@ -144,11 +144,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     marginTop: 10,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 3px 6px rgba(0,0,0,0.15)' }
+      : {
+          shadowColor: COLORS.black,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 3,
+          elevation: 3,
+        }),
   },
   buttonText: {
     color: COLORS.white,

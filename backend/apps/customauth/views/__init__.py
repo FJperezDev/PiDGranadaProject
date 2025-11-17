@@ -4,5 +4,4 @@ from .authenticationView import (
     RegisterView,
     LoggedUserView,
     LoginView,
-    LogoutAllView,
 )

@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework import routers
-from .views import TeacherViewSet, RegisterView, LogoutView, LoggedUserView, LoginView, LogoutAllView
+from .views import TeacherViewSet, RegisterView, LogoutView, LoggedUserView, LoginView
 
 # from django.contrib.auth.views import LoginView, LogoutView
 
@@ -22,7 +22,6 @@ urlpatterns += [
 urlpatterns += [
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
-    path('logout_all/', LogoutAllView.as_view(), name='logout_all'),
 ]
 
 urlpatterns += [

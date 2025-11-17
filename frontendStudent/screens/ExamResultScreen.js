@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Platform } from "react-native";
 import {useLanguage} from "../context/LanguageContext";
 import { StyledButton } from "../components/StyledButton";
 
@@ -10,7 +10,15 @@ export const ExamResultScreen = ({ route, navigation }) => {
       <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#000', marginTop: 40 }}>{t('results')}</Text>
       <Text style={{ fontSize: 36, fontWeight: 'bold', marginVertical: 24 }}>{`${t('score')}: ${score} / ${total}`}</Text>
 
-      <ScrollView style={{ width: '100%', backgroundColor: 'white', padding: 24, borderRadius: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 5 }}>
+      <ScrollView style={[{ width: '100%', backgroundColor: 'white', padding: 24, borderRadius: 10 },
+        Platform.OS === 'web'
+          ? { boxShadow: '0px 1px 5px rgba(0,0,0,0.1)' }
+          : {
+              shadowColor: '#000',
+              shadowOpacity: 0.1,
+              shadowRadius: 5,
+              elevation: 3, // Para Android
+            }]}>
         <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: '#000' }}>{t('recommendations')}</Text>
         {recommendations.length > 0 ? (
           <View>
@@ -39,8 +47,13 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 10,
     marginTop: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 1px 5px rgba(0,0,0,0.1)' }
+      : {
+          shadowColor: '#000',
+          shadowOpacity: 0.1,
+          shadowRadius: 5,
+          elevation: 3,
+        }),
   },
 })

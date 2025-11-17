@@ -214,6 +214,15 @@ class StudentGroupViewSet(BaseContentViewSet):
         student_groups = courses_selectors.get_student_group_by_teacher(request.user)
         serializer = StudentGroupSerializer(student_groups, many=True, context={'request': request})
         return Response(serializer.data)
+    
+    # /studentgroups/others-groups/
+    @action(detail=False, methods=['get'], url_path='others-groups', url_name='others-groups', permission_classes=[IsTeacher])
+    def others_groups(self, request):
+        if not request.user.is_authenticated:
+            return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+        student_groups = courses_selectors.get_other_student_groups(request.user)
+        serializer = StudentGroupSerializer(student_groups, many=True, context={'request': request})
+        return Response(serializer.data)
 
     # /studentgroups/exists/?code=XXX-XXX
     @action(detail=False, methods=['get'], url_path='exists', url_name='exists')

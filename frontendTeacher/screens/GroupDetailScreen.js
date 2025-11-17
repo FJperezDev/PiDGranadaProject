@@ -1,15 +1,16 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, StyleSheet, Button, Alert, TouchableOpacity, Share } from 'react-native';
-import { deleteGroup } from '../api/api'; // Ajusta la ruta
+import { View, Text, StyleSheet, Button, Alert, TouchableOpacity, Share, Platform } from 'react-native';
+import { deleteGroup } from '../api/getRequest'; // Ajusta la ruta
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import { COLORS } from '../constants/colors';
-import { Clipboard } from 'react-native';
+import {Clipboard} from 'react-native';
 import { Copy, Trash2, BarChart } from 'lucide-react-native';
 
 export default function GroupDetailScreen({ route, navigation }) {
   const { group } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
 
+  console.log('GroupDetailScreen group param:', group);
   // La API no es clara sobre cómo se obtiene el access_code. 
   // Asumo que viene en el objeto 'group' de la lista.
   // Si no, se necesitaría otra llamada a la API aquí.
@@ -20,7 +21,7 @@ export default function GroupDetailScreen({ route, navigation }) {
     try {
       // El endpoint de borrado necesita (subjectId, groupId)
       // Asumo que el objeto 'group' de la lista tiene 'subject' (ID) y 'id' (ID)
-      await deleteGroup(group.subject, group.id);
+      await deleteGroup(group.subject.id, group.id);
       setModalVisible(false);
       Alert.alert('Éxito', 'Grupo eliminado correctamente.');
       navigation.goBack();
@@ -101,11 +102,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
+          elevation: 3,
+        }),
   },
   cardTitle: {
     fontSize: 18,

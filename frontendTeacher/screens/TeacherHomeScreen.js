@@ -1,19 +1,19 @@
 import React, { useContext, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions } from "react-native";
-import { AuthContext } from "../components";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Platform } from "react-native";
+import { AuthContext } from "../context/AuthContext";
+import { useLanguage } from '../context/LanguageContext';
 import { COLORS } from "../constants/colors";
 import { Users, FileQuestion, BookOpen, BarChart3, UserPlus, ClipboardList } from "lucide-react-native";
 
 export default function UserHomeScreen({ navigation }) {
-  const { loggedUser, onRefresh } = useContext(AuthContext);
+  const { isSuper, onRefresh } = useContext(AuthContext);
+  const { t } = useLanguage();
   const { width } = useWindowDimensions();
 
   useEffect(() => {
     onRefresh();
   }, []);
 
-  // True si el usuario es superadmin o similar
-  const isSuper = loggedUser?.is_super;
 
   // Botones del menú
   const menuItems = [
@@ -83,11 +83,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: 16,
     padding: 24,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 2px 4px rgba(0,0,0,0.1)' }
+      : {
+          shadowColor: COLORS.black,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 3,
+        }),
   },
   title: {
     fontSize: 26,
@@ -112,11 +116,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     margin: 6,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.08)' }
+      : {
+          shadowColor: COLORS.black,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.08,
+          shadowRadius: 3,
+          elevation: 2,
+        }),
   },
   menuText: {
     marginTop: 12,

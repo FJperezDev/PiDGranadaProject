@@ -1,17 +1,18 @@
 import React, { useState, useContext, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { AuthContext } from '../context/AuthContext'; // Ajusta la ruta
-import { getMyGroups, getAllGroups, getSubjects, createGroup } from '../api/getRequest'; // Ajusta la ruta
+import { AuthContext } from '../context/AuthContext'; 
+import { getMyGroups, getOtherGroups, getSubjects, createGroup } from '../api/getRequest'; 
 import CreateGroupModal from '../components/CreateGroupModal';
 import { PlusCircle } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
 
 export default function ManageGroupsScreen({ navigation }) {
   // const { t } = useContext(LanguageContext); // Asumo que tienes algo así
-  const { isSuperAdmin } = useContext(AuthContext);
+  const { loggedUser, isSuper } = useContext(AuthContext);
 
-  const [groups, setGroups] = useState([]);
+  const [myGroups, setMyGroups] = useState([]);
+  const [otherGroups, setOtherGroups] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -23,8 +24,13 @@ export default function ManageGroupsScreen({ navigation }) {
       const subjectsData = await getSubjects();
       setSubjects(subjectsData);
       
-      const groupsData = isSuperAdmin ? await getAllGroups() : await getMyGroups();
-      setGroups(groupsData);
+      const myGroupsData = await getMyGroups();
+      setMyGroups(myGroupsData);
+      
+      if (isSuper) {
+        const otherGroupsData = await getOtherGroups();
+        setOtherGroups(otherGroupsData);
+      }
     } catch (error) {
       Alert.alert('Error', 'No se pudieron cargar los datos.');
     } finally {
@@ -37,7 +43,7 @@ export default function ManageGroupsScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       fetchData();
-    }, [isSuperAdmin]) // Se vuelve a ejecutar si cambia el rol del usuario
+    }, [isSuper]) // Se vuelve a ejecutar si cambia el rol del usuario
   );
 
   const handleRefresh = () => {
@@ -88,7 +94,7 @@ export default function ManageGroupsScreen({ navigation }) {
       </View>
 
       <FlatList
-        data={groups}
+        data={myGroups}
         renderItem={renderGroup}
         keyExtractor={(item) => item.id.toString()}
         style={styles.list}
@@ -97,6 +103,22 @@ export default function ManageGroupsScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       />
+
+      {isSuper && (
+        <>
+          <Text style={styles.title}>Otros Grupos</Text>
+          <FlatList
+            data={otherGroups}
+            renderItem={renderGroup}
+            keyExtractor={(item) => item.id.toString()}
+            style={styles.list}
+            ListEmptyComponent={<Text style={styles.emptyText}>No hay otros grupos disponibles.</Text>}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            }
+          />
+        </>
+      )}
 
       {subjects.length > 0 && (
         <CreateGroupModal
@@ -140,11 +162,15 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 10,
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
+          elevation: 3,
+        }),
   },
   groupButtonText: {
     fontSize: 18,

@@ -1,5 +1,5 @@
 import { useLanguage } from '../context/LanguageContext';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Languages } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
 
@@ -41,11 +41,15 @@ const styles = StyleSheet.create({
     borderRadius: 999, // totalmente redondeado
     paddingVertical: 10,
     paddingHorizontal: 16,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2, // sombra para Android
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 1px 2px rgba(0,0,0,0.1)' }
+      : {
+          shadowColor: COLORS.black,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 2,
+          elevation: 2, // sombra para Android
+        }),
   },
   iconContainer: {
     flex: 1,

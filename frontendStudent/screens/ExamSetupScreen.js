@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet } from "react-native";
+import { Text, View, StyleSheet, Platform } from "react-native";
 import { StyledButton } from "../components/StyledButton";
 import { useLanguage } from "../context/LanguageContext";
 import { useEffect, useState } from "react";
@@ -141,9 +141,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     marginBottom: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.05)' }
+      : {
+          shadowColor: "#000",
+          shadowOpacity: 0.05,
+          shadowRadius: 3,
+          elevation: 1,
+        }),
   },
   topicText: {
     fontSize: 16,

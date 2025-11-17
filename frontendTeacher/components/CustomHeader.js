@@ -1,7 +1,7 @@
 import { useLanguage } from '../context/LanguageContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ChevronLeft, BookMarked } from 'lucide-react-native';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
 import { useContext } from 'react';
@@ -75,10 +75,14 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.secondary,
-    shadowColor: COLORS.black,
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 1px 2px rgba(0,0,0,0.05)' }
+      : {
+          shadowColor: COLORS.black,
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
+          elevation: 2,
+        }),
   },
   leftSection: {
     flex: 1,
@@ -106,10 +110,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 999,
     padding: 6,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 1px 2px rgba(0,0,0,0.15)' }
+      : {
+          shadowColor: COLORS.black,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.15,
+          shadowRadius: 2,
+          elevation: 2,
+        }),
   },
 });
