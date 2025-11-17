@@ -38,6 +38,9 @@ def get_student_group_by_code(group_code: str) -> StudentGroup:
     except StudentGroup.DoesNotExist:
         return None
 
+def get_student_group_by_teacher(teacher_user) -> list[StudentGroup]:
+    return StudentGroup.objects.filter(teacher=teacher_user, old=False).all()
+
 def get_subject_by_code(code: str) -> Subject:
     sg = get_student_group_by_code(code)
     if sg:

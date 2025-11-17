@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { getUserInfo, updateUserInfo } from "../api";
 import { Picker } from "@react-native-picker/picker";
-import { AuthContext } from "./AuthContext";
+import { AuthContext } from "../context/AuthContext";
 import { useContext } from "react";
 
 const UserInfo = ({ userData, onRefresh }) => {

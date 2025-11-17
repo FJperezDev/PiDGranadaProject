@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import UserInfo from "./UserInfo";
-import { AuthContext } from './AuthContext';
+import { AuthContext } from '../context/AuthContext';
 import { useContext } from "react";
 
 const UserList = ({ users, onRefresh }) => {
