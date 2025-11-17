@@ -19,6 +19,7 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { t } = useLanguage();
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     await login(email, password);
@@ -53,21 +54,29 @@ export default function LoginScreen({ navigation }) {
               keyboardType="email-address"
             />
 
-            <TextInput
-              style={styles.input}
-              placeholder={t('password')}
-              placeholderTextColor={COLORS.secondary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-            />
+            <View style={{ position: 'relative', width: '100%' }}>
+              <TextInput
+                style={styles.input}
+                secureTextEntry={!showPassword}
+                placeholder={t('password')}
+                placeholderTextColor={COLORS.secondary}
+                value={password}
+                onChangeText={setPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: 16, top: 18 }}
+              >
+                <Text>{showPassword ? '🙈' : '👁'}</Text>
+              </TouchableOpacity>
+            </View>
 
             <TouchableOpacity
               style={styles.button}
               onPress={handleLogin}
               activeOpacity={0.8}
             >
-              <Text style={styles.buttonText}>Entrar</Text>
+              <Text style={styles.buttonText}>{t('login')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -88,11 +97,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: height * 0.05,
+    width: '100%',
   },
   card: {
+    alignContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: COLORS.white,
     borderRadius: 16,
     padding: 20,
+    width: '80%',
+    maxWidth: 420,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 3px 6px rgba(0,0,0,0.15)' }
       : {
