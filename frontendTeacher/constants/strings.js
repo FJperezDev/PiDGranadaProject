@@ -12,6 +12,7 @@ export const STRINGS = {
     statistics: 'Statistics',
     inviteTeacher: 'Invite Teacher',
     logs: 'Logs',
+    panel: 'Teacher Panel',
   },
   es: {
     login: "Iniciar sesión",
@@ -26,5 +27,6 @@ export const STRINGS = {
     statistics: 'Estadísticas',
     inviteTeacher: 'Invitar Profesor',
     logs: 'Auditoría',
+    panel: 'Panel del Profesor',
   },
 };

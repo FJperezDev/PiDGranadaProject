@@ -17,14 +17,14 @@ export default function UserHomeScreen({ navigation }) {
 
   // Botones del menú
   const menuItems = [
-    { title: "Gestionar Grupos", icon: Users, onPress: () => navigation.navigate("ManageGroups") },
-    { title: "Gestionar Preguntas", icon: FileQuestion, onPress: () => navigation.navigate("ManageQuestions") },
-    { title: "Gestionar Contenido", icon: BookOpen, onPress: () => navigation.navigate("ManageContent") },
-    { title: "Estadísticas", icon: BarChart3, onPress: () => navigation.navigate("Statistics") },
+    { title: t('manageGroups'), icon: Users, onPress: () => navigation.navigate("ManageGroups") },
+    { title: t('manageQuestions'), icon: FileQuestion, onPress: () => navigation.navigate("ManageQuestions") },
+    { title: t('manageContent'), icon: BookOpen, onPress: () => navigation.navigate("ManageContent") },
+    { title: t('statistics'), icon: BarChart3, onPress: () => navigation.navigate("Statistics") },
     ...(isSuper
       ? [
-          { title: "Invitar Profesor", icon: UserPlus, onPress: () => navigation.navigate("InviteTeacher") },
-          { title: "Ver Logs (Auditoría)", icon: ClipboardList, onPress: () => navigation.navigate("Logs") },
+          { title: t('inviteTeacher'), icon: UserPlus, onPress: () => navigation.navigate("InviteTeacher") },
+          { title: t('logs'), icon: ClipboardList, onPress: () => navigation.navigate("Logs") },
         ]
       : []),
   ];
@@ -35,7 +35,7 @@ export default function UserHomeScreen({ navigation }) {
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={[styles.container, { maxWidth: width > 600 ? 800 : "100%" }]}>
-        <Text style={styles.title}>Panel del Profesor</Text>
+        <Text style={styles.title}>{t('panel')}</Text>
 
         <View
           style={[
