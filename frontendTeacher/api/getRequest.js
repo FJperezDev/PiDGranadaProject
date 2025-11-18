@@ -61,7 +61,6 @@ export const getMyGroups = async () => {
  * @returns {Promise<Array>} Lista de todos los grupos.
  */
 export const getOtherGroups = async () => {
-  console.log("Fetching all groups...");
   try {
     const response = await instance.get('/studentgroups/others-groups/');
     return response.data;

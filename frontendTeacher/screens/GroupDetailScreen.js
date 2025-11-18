@@ -10,7 +10,6 @@ export default function GroupDetailScreen({ route, navigation }) {
   const { group } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
 
-  console.log('GroupDetailScreen group param:', group);
   // La API no es clara sobre cómo se obtiene el access_code. 
   // Asumo que viene en el objeto 'group' de la lista.
   // Si no, se necesitaría otra llamada a la API aquí.
