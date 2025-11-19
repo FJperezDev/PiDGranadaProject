@@ -9,6 +9,7 @@ import { Copy, Trash2, BarChart } from 'lucide-react-native';
 export default function GroupDetailScreen({ route, navigation }) {
   const { group } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
+  
   // La API no es clara sobre cómo se obtiene el access_code. 
   // Asumo que viene en el objeto 'group' de la lista.
   // Si no, se necesitaría otra llamada a la API aquí.

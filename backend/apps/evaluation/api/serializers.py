@@ -9,21 +9,13 @@ from .models import (
 from ...content.api.serializers import ShortTopicSerializer, ShortConceptSerializer
 
 class AnswerSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
-    id = serializers.IntegerField(read_only=True)
-    text_es = serializers.SerializerMethodField()
-    text_en = serializers.SerializerMethodField()
     text = serializers.SerializerMethodField()
-    old = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Answer
-        fields = ['id', 'text_es', 'text_en', 'text', 'is_correct', 'question', 'old']
+        fields = ['id', 'text', 'text_es', 'text_en', 'is_correct', 'question']
         read_only_fields = ['id', 'question']
-
-    def get_text_es(self, obj):
-        return obj.text_es
-    def get_text_en(self, obj):
-        return obj.text_en
+        
     def get_text(self, obj):
         lang = self.get_lang()
         return getattr(obj, f'text_{lang}', None)
@@ -41,7 +33,7 @@ class ShortAnswerSerializer(LanguageSerializerMixin, serializers.ModelSerializer
 
 class ShortQuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     statement = serializers.SerializerMethodField()
-    answers = serializers.SerializerMethodField()
+    answers = ShortAnswerSerializer(many=True, read_only=True)
     recommendation = serializers.SerializerMethodField()
 
     class Meta:
@@ -55,26 +47,19 @@ class ShortQuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializ
     def get_recommendation(self, obj):
         lang = self.get_lang()
         return getattr(obj, f'recommendation_{lang}', None)
-    
-    def get_answers(self, obj):
-        queryset = obj.answers.filter(old=False)
-        return ShortAnswerSerializer(queryset, many=True, context=self.context).data
 
 class QuestionSerializer(LanguageSerializerMixin,serializers.ModelSerializer):
-    answers = serializers.SerializerMethodField()
+    answers = AnswerSerializer(many=True, read_only=True)
     topics = serializers.SerializerMethodField()
-    subjects = serializers.SerializerMethodField()
     concepts = serializers.SerializerMethodField()
     statement = serializers.SerializerMethodField()
-    statement_es = serializers.SerializerMethodField()
-    statement_en = serializers.SerializerMethodField()
     recommendation = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
         fields = [
             'id', 'type', 'statement', 'statement_es', 'statement_en', 'approved', 'generated',
-            'answers', 'topics', 'subjects', 'concepts', 'recommendation', 'recommendation_es', 'recommendation_en'
+            'answers', 'topics', 'concepts', 'recommendation', 'recommendation_es', 'recommendation_en'
         ]
         read_only_fields = ['id', 'answers']
         extra_kwargs = {
@@ -90,31 +75,14 @@ class QuestionSerializer(LanguageSerializerMixin,serializers.ModelSerializer):
     def get_concepts(self, obj):
         queryset = [qc.concept for qc in obj.concepts.all()]  # a través de QuestionRelatedToConcept
         return ShortConceptSerializer(queryset, many=True, context=self.context).data
-    
-    def get_recommendation(self, obj):
-        lang = self.get_lang()
-        return getattr(obj, f'recommendation_{lang}', None)
-    
-    def get_statement_es(self, obj):
-        return obj.statement_es
-    
-    def get_statement_en(self, obj):
-        return obj.statement_en
-    
+
     def get_statement(self, obj):
         lang = self.get_lang()
         return getattr(obj, f'statement_{lang}', None)
     
-    def get_subjects(self, obj):
-        subjects_set = set()
-        for qt in obj.topics.all():
-            subject = qt.topic.subjects
-            subjects_set.add(subject)
-        return ShortTopicSerializer(subjects_set, many=True, context=self.context).data
-    
-    def get_answers(self, obj):
-        queryset = obj.answers.filter(old=False)
-        return AnswerSerializer(queryset, many=True, context=self.context).data
+    def get_recommendation(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'recommendation_{lang}', None)
 
 # class TeacherMakeChangeQuestionSerializer(serializers.ModelSerializer):
 #     class Meta:

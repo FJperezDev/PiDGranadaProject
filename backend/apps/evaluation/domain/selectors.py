@@ -32,12 +32,11 @@ def get_questions_by_subject(subject: Subject):
 def get_questions_for_topic(topic: Topic):
     """Obtiene todas las preguntas asociadas a un topic dado."""
     return Question.objects.filter(
-        topics__topic=topic,
-        answers__old=False
-    ).filter(old=False).distinct()
+        topics__topic=topic
+    ).distinct()
 
 def get_random_question_from_topic(topic: Topic) -> Question:
-    return get_questions_for_topic(topic).filter(old=False).order_by('?').first()
+    return get_questions_for_topic(topic).order_by('?').first()
 
 def get_random_questions_from_topics(topics: list[Topic], num_questions: int) -> list[Question]:
     """Obtiene un conjunto de preguntas aleatorias de los topics dados."""
@@ -151,14 +150,14 @@ def get_ev_count_by_topic(topic_id: int) -> int:
 
 def get_answers_for_question(question: Question) -> list[Answer]:
     """Obtiene todas las respuestas asociadas a una pregunta dada."""
-    return list(question.answers.filter(old=False).all())
+    return list(question.answers.all())
 
 def get_answer_by_id(answer_id: int) -> Answer:
-    return Answer.objects.get(id=answer_id, old=False)
+    return Answer.objects.get(id=answer_id)
 
 def get_correct_answer_for_question(question: Question) -> list[Answer]:
     """Obtiene todas las respuestas correctas asociadas a una pregunta dada."""
-    return list(question.answers.filter(is_correct=True).filter(old=False).all())
+    return list(question.answers.filter(is_correct=True))
 
 def get_all_changes():
     from itertools import chain
