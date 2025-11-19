@@ -25,6 +25,7 @@ def update_topic(topic: Topic, teacher: CustomTeacher, title_es: str = None, tit
     """Actualiza un topic con los nuevos datos proporcionados."""
     old_topic = Topic.objects.get(pk=topic.pk)
     old_topic.pk = None
+    old_topic.old = True
     if title_es is not None:
         topic.title_es = title_es
     if title_en is not None:
@@ -68,6 +69,7 @@ def update_concept(concept: Concept, teacher: CustomTeacher, name_es: str = None
     """Actualiza un concepto con los nuevos datos proporcionados."""
     old_concept = Concept.objects.get(pk=concept.pk)
     old_concept.pk = None
+    old_concept.old = True
     if name_es is not None:
         concept.name_es = name_es
     if name_en is not None:
@@ -108,6 +110,7 @@ def update_epigraph(epigraph: Epigraph, teacher: CustomTeacher, name_es: str = N
     """Actualiza un epígrafe con los nuevos datos proporcionados."""
     old_epigraph = Epigraph.objects.get(pk=epigraph.pk)
     old_epigraph.pk = None
+    old_epigraph.old = True 
     if order_id is not None and epigraph.order_id != order_id:
         if Epigraph.objects.filter(topic=epigraph.topic, order_id=order_id).exclude(pk=epigraph.pk).exists():
             raise ValidationError("Ya existe un epígrafe con ese orden en este tema.")

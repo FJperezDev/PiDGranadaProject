@@ -30,6 +30,7 @@ def update_subject(subject: Subject, teacher: Teacher, name_es: str = None, name
     """Actualiza una asignatura con los nuevos datos proporcionados."""
     old_subject = Subject.objects.get(pk=subject.pk)
     old_subject.pk = None
+    old_subject.old = True
     if name_es is not None:
         subject.name_es = name_es
     if name_en is not None:
@@ -94,13 +95,18 @@ def create_student_group(subject: Subject, name_es: str, name_en: str, teacher: 
 
 def update_student_group(group: StudentGroup, teacher: Teacher, name_es: str = None, name_en: str = None):
     """Actualiza un grupo de estudiantes dado."""
+    old_group = StudentGroup.objects.get(pk=group.pk)
+    old_group.pk = None
+    old_group.old = True
+    old_group.save()
+
     if name_es is not None:
         group.name_es = name_es
     if name_en is not None:
         group.name_en = name_en
     group.save()
 
-    makeChanges(user=teacher, old_object=None, new_object=group)
+    makeChanges(user=teacher, old_object=old_group, new_object=group)
 
     return group
 

@@ -39,7 +39,6 @@ def create_question(teacher: Teacher, type: str, statement_es: str = None, state
 
     if topics_titles:
         for title in topics_titles:
-            print(title)
             topic = content_selectors.get_topic_by_title(title)
             QuestionBelongsToTopic.objects.create(question=question, topic=topic)
     
@@ -59,6 +58,7 @@ def update_question(teacher: Teacher, question: Question, type: str = None, stat
     """Actualiza una pregunta con los nuevos datos proporcionados."""
     old_question = Question.objects.get(pk=question.pk)
     old_question.pk = None 
+    old_question.old = True
     if type is not None:
         question.type = type
         if type == 'true_false':
@@ -116,6 +116,7 @@ def update_answer(teacher: Teacher, answer: Answer, text_es: str = None, text_en
     """Actualiza una respuesta con los nuevos datos proporcionados."""
     old_answer = Answer.objects.get(pk=answer.pk)
     old_answer.pk = None
+    old_answer.old = True
     if text_es is not None:
         answer.text_es = text_es
     if text_en is not None:
@@ -155,7 +156,6 @@ def create_exam(topics: set[Topic], num_questions: int) -> list[Question]:
     
     for topic in topics:
         question = evaluation_selectors.get_random_question_from_topic(topic)
-        print(question)
         if question and question not in exam_questions:
             exam_questions.append(question)
     if len(exam_questions) >= num_questions:

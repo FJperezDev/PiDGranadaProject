@@ -276,7 +276,6 @@ class StudentGroupViewSet(BaseContentViewSet):
     def exam(self, request):
         topics_str = request.query_params.get('topics')
         nQuestions = request.query_params.get('nQuestions')
-        print(nQuestions)
         code = request.query_params.get('code')
         if not topics_str:
             return Response({'detail': 'No topics provided'}, status=status.HTTP_400_BAD_REQUEST)

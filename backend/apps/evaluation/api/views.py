@@ -61,6 +61,13 @@ class QuestionViewSet(BaseContentViewSet):
         serializer = self.get_serializer(question)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'], url_path='long-questions', url_name='long-questions')
+    def get_all_long_questions(self, request, *args, **kwargs):
+        """Devuelve todas las preguntas en formato largo."""
+        queryset = self.get_queryset()
+        serializer = QuestionSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
     def destroy(self, request, *args, **kwargs):
         question = self.get_object()
         services.delete_question(teacher=request.user, question=question)
@@ -113,7 +120,7 @@ class QuestionViewSet(BaseContentViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         elif request.method == 'PUT':
-            answer = services.update_answer(answer, teacher=request.user, **request.data)
+            answer = services.update_answer(answer=answer, teacher=request.user, **request.data)
             serializer = AnswerSerializer(answer, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 
