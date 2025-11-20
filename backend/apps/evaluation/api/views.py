@@ -66,6 +66,13 @@ class QuestionViewSet(BaseContentViewSet):
         services.delete_question(teacher=request.user, question=question)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    @action(detail=False, methods=['get'], url_path='long-questions', url_name='long-questions')
+    def long_questions(self, request):
+        queryset = selectors.get_all_questions()
+        serializer = QuestionSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
+
     @action(detail=True, methods=['get'], url_path='last-modified', url_name='last-modified')
     def last_modified(self, request, pk=None):
         question = selectors.get_question_by_id(pk)

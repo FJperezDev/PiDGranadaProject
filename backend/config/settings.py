@@ -28,7 +28,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-default-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = 'RENDER' not in os.environ
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '172.25.28.130', '10.22.246.52', '172.17.111.191', '192.168.1.131']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '172.25.28.130', '10.22.246.52', '172.17.111.191', '192.168.1.131', '172.17.108.209']
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME') 
 if RENDER_EXTERNAL_HOSTNAME:

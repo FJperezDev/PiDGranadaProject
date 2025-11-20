@@ -32,7 +32,7 @@ def get_questions_by_subject(subject: Subject):
 def get_questions_for_topic(topic: Topic):
     """Obtiene todas las preguntas asociadas a un topic dado."""
     return Question.objects.filter(
-        topics__topic=topic
+        topics__topic=topic,
     ).distinct()
 
 def get_random_question_from_topic(topic: Topic) -> Question:

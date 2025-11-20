@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useContext } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { getQuestions, deleteQuestion } from '../api/getRequest';
 import { COLORS } from '../constants/colors';
-import { Edit, Trash2, FileSpreadsheet, Plus } from 'lucide-react-native'; // FileSpreadsheet para icono Excel
+import { Edit, Trash2, FileSpreadsheet, Plus } from 'lucide-react-native';
 import QuestionWizardModal from '../components/QuestionWizardModal';
 
 export default function ManageQuestionsScreen({ navigation }) {
@@ -57,6 +57,7 @@ export default function ManageQuestionsScreen({ navigation }) {
   };
 
   const handleEdit = (item) => {
+    console.log("Editando pregunta:", item);
     setEditingQuestion(item);
     setModalVisible(true);
   };
@@ -67,8 +68,6 @@ export default function ManageQuestionsScreen({ navigation }) {
   };
 
   const handleUploadExcel = () => {
-    // Como React Native puro no tiene input file nativo fácil sin librerías extra
-    // aquí iría la lógica con 'react-native-document-picker'
     Alert.alert(
         "Subir Excel", 
         "Funcionalidad para seleccionar archivo .xlsx y enviarlo al backend. (Requiere librería externa document-picker)"
@@ -84,6 +83,10 @@ export default function ManageQuestionsScreen({ navigation }) {
         // Mapeamos usando 'name' (según tu log JSON) o 'title' como fallback
         topicNames = item.topics.map(t => t.name || t.title).filter(Boolean);
     } 
+    // Fallback: item.topics_titles (si tu API lo envía plano)
+    else if (item.topics_titles && Array.isArray(item.topics_titles)) {
+        topicNames = item.topics_titles;
+    }
 
     // 2. Eliminar duplicados (Set) y asegurar que haya al menos "General"
     topicNames = [...new Set(topicNames)];
@@ -102,7 +105,7 @@ export default function ManageQuestionsScreen({ navigation }) {
             </View>
             {/* Usamos statement_es si existe (backend), o statement como fallback */}
             <Text style={styles.statement} numberOfLines={2}>
-                {item.statement_es || item.statement}
+                {item.statement}
             </Text>
         </View>
 
@@ -121,10 +124,8 @@ export default function ManageQuestionsScreen({ navigation }) {
     );
   };
 
-
   return (
     <View style={styles.container}>
-      {/* Header Personalizado para esta pantalla */}
       <View style={styles.topHeader}>
          <Text style={styles.screenTitle}>Preguntas</Text>
          <View style={styles.headerButtons}>
@@ -140,9 +141,8 @@ export default function ManageQuestionsScreen({ navigation }) {
          </View>
       </View>
 
-      {/* Cabecera de la Tabla (Opcional, visualmente útil) */}
       <View style={styles.tableHeader}>
-          <Text style={styles.tableHeadText}>Tema / Enunciado</Text>
+          <Text style={styles.tableHeadText}>Temas / Enunciado</Text>
           <Text style={styles.tableHeadText}>Acciones</Text>
       </View>
 
@@ -158,7 +158,6 @@ export default function ManageQuestionsScreen({ navigation }) {
         />
       )}
 
-      {/* Modal Wizard */}
       <QuestionWizardModal 
         visible={modalVisible} 
         onClose={() => setModalVisible(false)} 
@@ -192,14 +191,40 @@ const styles = StyleSheet.create({
 
   row: { 
       flexDirection: 'row', backgroundColor: 'white', padding: 15, marginHorizontal: 10, marginTop: 10, borderRadius: 8,
-      shadowColor: "#000", shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.1, elevation: 1, flexWrap: 'wrap'
+      // CORRECCIÓN: Usar Platform.select para evitar advertencias en Web
+      ...Platform.select({
+        ios: {
+            shadowColor: "#000", 
+            shadowOffset: {width: 0, height: 1}, 
+            shadowOpacity: 0.1,
+            shadowRadius: 1, // Corregido shadowRadius
+        },
+        android: {
+            elevation: 1,
+        },
+        web: {
+            boxShadow: '0px 1px 3px rgba(0,0,0,0.1)', // Sombra estándar para web
+        }
+      })
   },
   infoCol: { flex: 1, marginRight: 10 },
-  tagsRow: { flexDirection: 'row', marginBottom: 5, gap: 5 },
-  tagContainer: { backgroundColor: '#e3f2fd', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
-  tagText: { fontSize: 12, color: '#1565c0', fontWeight: '600' },
-  statement: { fontSize: 16, color: COLORS.text },
   
+  tagsRow: { 
+      flexDirection: 'row', 
+      marginBottom: 6, 
+      gap: 5, 
+      flexWrap: 'wrap' 
+  },
+  tagContainer: { 
+      backgroundColor: '#e3f2fd', 
+      paddingHorizontal: 8, 
+      paddingVertical: 3, 
+      borderRadius: 4,
+      marginBottom: 2 
+  },
+  tagText: { fontSize: 11, color: '#1565c0', fontWeight: '600' },
+  
+  statement: { fontSize: 16, color: COLORS.text },
   actionsCol: { flexDirection: 'row', alignItems: 'center', gap: 15 },
   iconBtn: { padding: 5 },
   empty: { textAlign: 'center', marginTop: 30, color: 'gray' }
