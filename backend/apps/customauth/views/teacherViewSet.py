@@ -32,6 +32,5 @@ class TeacherViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(email__icontains=email)
         if is_super:
             queryset = queryset.filter(is_super__icontains=is_super)
-        
             
         return queryset

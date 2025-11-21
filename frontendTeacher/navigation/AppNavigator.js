@@ -6,6 +6,8 @@ import UserHomeScreen from '../screens/TeacherHomeScreen'
 import ManageGroupsScreen from '../screens/ManageGroupsScreen'
 import GroupDetailScreen from '../screens/GroupDetailScreen'
 import ManageQuestionsScreen from '../screens/ManageQuestionsScreen'
+import ManageUsersScreen from '../screens/ManageUsersScreen'
+import ManageContentScreen from '../screens/ManageContentScreen'
 import UnauthorizedScreen from '../screens/UnauthorizedScreen'
 import { CustomHeader } from '../components/CustomHeader';
 import { useLanguage } from '../context/LanguageContext';
@@ -27,9 +29,9 @@ export default function AppNavigator() {
           <Stack.Screen name="ManageGroups" component={ManageGroupsScreen} options={{ title: t('manageGroups') }} />
           <Stack.Screen name="GroupDetail" component={GroupDetailScreen} options={({ route }) => ({ title: route.params.group.name_es || t('groupDetail') })}/>
           <Stack.Screen name="ManageQuestions" component={ManageQuestionsScreen} options={{ title: t('manageQuestions') }} />
-          <Stack.Screen name="ManageContent" component={UserHomeScreen} options={{ title: t('manageContent') }} />
+          <Stack.Screen name="ManageContent" component={ManageContentScreen} options={{ title: t('manageContent') }} />
           <Stack.Screen name="Statistics" component={UserHomeScreen} options={{ title: t('statistics') }} />
-          <Stack.Screen name="InviteTeacher" component={UserHomeScreen} options={{ title: t('inviteTeacher') }} />
+          <Stack.Screen name="InviteTeacher" component={ManageUsersScreen} options={{ title: t('inviteTeacher') }} />
           <Stack.Screen name="Logs" component={UserHomeScreen} options={{ title: t('logs') }} />
         </>
       ) : 

@@ -23,7 +23,7 @@ export default function ManageQuestionsScreen({ navigation }) {
     setLoading(true);
     try {
       const data = await getQuestions();
-      console.log("Fetched Questions:", JSON.stringify(data, null, 2));
+      console.log("Fetched Questions:", JSON.stringify(data, null, 2)); // Fix to get also subjects info at the backend
       setQuestions(data);
     } catch (error) {
       Alert.alert("Error", "No se pudieron cargar las preguntas.");
