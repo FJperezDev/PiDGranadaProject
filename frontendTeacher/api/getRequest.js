@@ -185,6 +185,16 @@ export const deleteAnswer = async (questionId, answerId) => {
     }
 };
 
+export const updateAnswer = async (questionId, answerId, data) => {
+    try {
+        const response = await instance.put(`/questions/${questionId}/answers/${answerId}/`, data);
+        return response.data;
+    } catch (error) {
+        console.error("Error updating answer:", error);
+        throw error;
+    }
+};
+
 // --- Auxiliar para obtener temas de una asignatura ---
 export const getTopicsBySubject = async (subjectId) => {
   try {

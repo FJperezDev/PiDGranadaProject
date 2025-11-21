@@ -12,7 +12,7 @@ def get_all_questions():
     return Question.objects.filter(old=False).all()
 
 def get_question_by_id(question_id: int) -> Question:
-    return Question.objects.get(id=question_id)
+    return Question.objects.filter(old=False).get(id=question_id)
 
 def get_question_by_topic(topic: Topic):
     """Obtiene todas las preguntas asociadas a un topic dado."""

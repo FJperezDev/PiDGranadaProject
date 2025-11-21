@@ -88,12 +88,12 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
   };
 
   const loadEditingData = async () => {
-    setStep(2); 
+    setStep(1); 
     setDeletedAnswerIds([]); 
     setStatementES(editingQuestion.statement_es);
     setStatementEN(editingQuestion.statement_en || '');
     setQuestionType(editingQuestion.type);
-    
+
     if (editingQuestion.topics && Array.isArray(editingQuestion.topics)) {
         const existingTopics = editingQuestion.topics.map(t => t.name || t.title).filter(Boolean);
         setSelectedTopicTitles(existingTopics);
@@ -102,7 +102,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
     }
 
     try {
-      const apiAnswers = await getAnswersByQuestion(editingQuestion.id);
+      const apiAnswers = (editingQuestion.answers);
       const formattedAnswers = apiAnswers.map(a => ({
           ...a,
           text_es: a.text_es || '',

@@ -120,7 +120,7 @@ class QuestionViewSet(BaseContentViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
         
         elif request.method == 'PUT':
-            answer = services.update_answer(answer, teacher=request.user, **request.data)
+            answer = services.update_answer(answer=answer, teacher=request.user, **request.data)
             serializer = AnswerSerializer(answer, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
 

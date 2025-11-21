@@ -30,6 +30,7 @@ def update_subject(subject: Subject, teacher: Teacher, name_es: str = None, name
     """Actualiza una asignatura con los nuevos datos proporcionados."""
     old_subject = Subject.objects.get(pk=subject.pk)
     old_subject.pk = None
+    old_subject.old = True
     if name_es is not None:
         subject.name_es = name_es
     if name_en is not None:

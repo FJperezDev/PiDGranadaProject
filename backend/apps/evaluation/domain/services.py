@@ -59,6 +59,7 @@ def update_question(teacher: Teacher, question: Question, type: str = None, stat
     """Actualiza una pregunta con los nuevos datos proporcionados."""
     old_question = Question.objects.get(pk=question.pk)
     old_question.pk = None 
+    old_question.old = True
     if type is not None:
         question.type = type
         if type == 'true_false':
@@ -116,6 +117,7 @@ def update_answer(teacher: Teacher, answer: Answer, text_es: str = None, text_en
     """Actualiza una respuesta con los nuevos datos proporcionados."""
     old_answer = Answer.objects.get(pk=answer.pk)
     old_answer.pk = None
+    old_answer.old = True
     if text_es is not None:
         answer.text_es = text_es
     if text_en is not None:
