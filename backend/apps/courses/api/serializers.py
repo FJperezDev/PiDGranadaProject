@@ -6,14 +6,19 @@ from apps.customauth.serializers import CustomTeacherSerializer as TeacherSerial
 
 class ShortSubjectSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
+    description = serializers.SerializerMethodField()
 
     class Meta:
         model = Subject
-        fields = ['name']  # solo los campos que quieres mostrar
+        fields = ['id', 'name', 'description']  # solo los campos que quieres mostrar
 
     def get_name(self, obj):
         lang = self.get_lang()
         return getattr(obj, f'name_{lang}', None)
+    
+    def get_description(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'description_{lang}', None)
 
 class SubjectSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField()

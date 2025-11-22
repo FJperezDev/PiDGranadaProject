@@ -89,7 +89,7 @@ def main():
         topic_title = xls["topics"].loc[xls["topics"]["topic_code"] == row["topic_code"], "title_es"].iloc[0]
         concept_name = xls["concepts"].loc[xls["concepts"]["concept_code"] == row["concept_code"], "name_es"].iloc[0]
         payload["topics_titles"] = [topic_title]
-        payload["concepts_names"] = [concept_name]
+        payload["concepts"] = [concept_name]
         payload.pop("topic_code")
         payload.pop("concept_code")
         r = requests.post(f"{BASE_URL}/questions/", headers=headers, json=payload)

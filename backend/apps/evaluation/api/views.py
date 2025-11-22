@@ -18,6 +18,10 @@ from .serializers import (
 from apps.evaluation.domain import selectors, services
 from apps.utils.permissions import BaseContentViewSet
 
+class QuestionRelatedToConceptViewSet(BaseContentViewSet):
+    queryset = QuestionRelatedToConcept.objects.all()
+    serializer_class = QuestionRelatedToConceptSerializer
+
 class QuestionViewSet(BaseContentViewSet):
     queryset = selectors.get_all_questions()
     serializer_class = ShortQuestionSerializer

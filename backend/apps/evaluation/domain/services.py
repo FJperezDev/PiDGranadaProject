@@ -47,6 +47,14 @@ def create_question(teacher: Teacher, type: str, statement_es: str = None, state
         for name in concepts_names:
             concept = content_selectors.get_concept_by_name(name)
             QuestionRelatedToConcept.objects.create(question=question, concept=concept)
+            try:
+                relationship = QuestionRelatedToConcept.objects.get(question=question, concept=concept)
+                print("La relación QuestionRelatedToConcept se ha creado correctamente.")
+                # Puedes acceder a los atributos de la relación si es necesario
+                print(f"Question ID: {relationship.question.id}, Concept ID: {relationship.concept.id}")
+            except QuestionRelatedToConcept.DoesNotExist:
+                print("La relación QuestionRelatedToConcept no se encontró.")
+    
 
     makeChanges(user=teacher, old_object=None, new_object=question)
 
@@ -157,7 +165,6 @@ def create_exam(topics: set[Topic], num_questions: int) -> list[Question]:
     
     for topic in topics:
         question = evaluation_selectors.get_random_question_from_topic(topic)
-        print(question)
         if question and question not in exam_questions:
             exam_questions.append(question)
     if len(exam_questions) >= num_questions:

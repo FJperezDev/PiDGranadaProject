@@ -6,7 +6,7 @@ from .models import (
     QuestionBelongsToTopic, QuestionRelatedToConcept,
     QuestionEvaluationGroup
 )
-from ...content.api.serializers import ShortTopicSerializer, ShortConceptSerializer
+from apps.content.api.serializers import ShortTopicSerializer, ShortConceptSerializer
 
 class AnswerSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     text = serializers.SerializerMethodField()
@@ -112,11 +112,23 @@ class QuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
         return getattr(obj, f'statement_{lang}', None)
     
     def get_subjects(self, obj):
+        from apps.courses.api.serializers import ShortSubjectSerializer
         subjects_set = set()
+        
+        # 1. Recorremos los temas (Topics) asociados a la pregunta
         for qt in obj.topics.all():
-            subject = qt.topic.subjects
-            subjects_set.add(subject)
-        return ShortTopicSerializer(subjects_set, many=True, context=self.context).data
+            # qt es 'QuestionBelongsToTopic', qt.topic es el 'Topic' real
+            topic = qt.topic
+            
+            # 2. Recorremos la relación inversa hacia los Subjects
+            # topic.subjects devuelve instancias de 'SubjectIsAboutTopic'
+            for subject_relation in topic.subjects.all():
+                # 3. Extraemos el Subject real de la relación y lo añadimos al set
+                subjects_set.add(subject_relation.subject)
+        
+        # 4. IMPORTANTE: Usamos ShortSubjectSerializer, NO ShortTopicSerializer
+        # Asegúrate de que ShortSubjectSerializer incluya 'description' si lo necesitas en el JSON
+        return ShortSubjectSerializer(subjects_set, many=True, context=self.context).data
     
 # class TeacherMakeChangeQuestionSerializer(serializers.ModelSerializer):
 #     class Meta:
