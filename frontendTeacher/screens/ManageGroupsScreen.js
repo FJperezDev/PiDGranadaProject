@@ -2,7 +2,7 @@ import React, { useState, useContext, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext'; 
-import { getMyGroups, getOtherGroups, getSubjects, createGroup } from '../api/getRequest'; 
+import { getMyGroups, getOtherGroups, getSubjects, createGroup } from '../api/coursesRequests'; 
 import CreateGroupModal from '../components/CreateGroupModal';
 import { PlusCircle } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
@@ -61,7 +61,7 @@ export default function ManageGroupsScreen({ navigation }) {
 
   const handleCreateGroup = async (subjectId, name) => {
     try {
-      await createGroup(subjectId, name);
+      await createGroup(subjectId, name_es=name, name_en=name);
       setModalVisible(false);
       Alert.alert('Éxito', 'Grupo creado correctamente.');
       fetchData(); // Recargar la lista de grupos

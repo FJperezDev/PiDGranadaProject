@@ -74,7 +74,6 @@ export default function ManageUsersScreen({ navigation }) {
     switch (role) {
       case 'ADMIN': return '#FF6B6B'; // Rojo suave
       case 'TEACHER': return '#4ECDC4'; // Turquesa
-      default: return '#b0b0b0'; // Gris para estudiantes
     }
   };
 

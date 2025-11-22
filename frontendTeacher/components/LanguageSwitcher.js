@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderColor: COLORS.secondary,
     borderWidth: 1.5,
-    borderRadius: 999, // totalmente redondeado
+    borderRadius: 999, 
     paddingVertical: 10,
     paddingHorizontal: 16,
     ...(Platform.OS === 'web'
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
           shadowOffset: { width: 0, height: 1 },
           shadowOpacity: 0.1,
           shadowRadius: 2,
-          elevation: 2, // sombra para Android
+          elevation: 2,
         }),
   },
   iconContainer: {

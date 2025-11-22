@@ -2,9 +2,9 @@ import React, { useState, useCallback, useContext, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, Platform, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
-import { getQuestions, deleteQuestion } from '../api/getRequest';
+import { getQuestions, deleteQuestion } from '../api/evaluationRequests';
 import { COLORS } from '../constants/colors';
-import { Edit, Trash2, FileSpreadsheet, Plus, Filter, X } from 'lucide-react-native';
+import { Edit, Trash2, FileSpreadsheet, Plus, Filter, X, Book } from 'lucide-react-native'; // Book icon para Subjects
 import QuestionWizardModal from '../components/QuestionWizardModal';
 
 export default function ManageQuestionsScreen({ navigation }) {
@@ -12,8 +12,9 @@ export default function ManageQuestionsScreen({ navigation }) {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Estado para el filtro
-  const [selectedTopics, setSelectedTopics] = useState([]); // Array de strings
+  // --- ESTADOS PARA FILTROS ---
+  const [selectedTopics, setSelectedTopics] = useState([]); // Strings
+  const [selectedSubjects, setSelectedSubjects] = useState([]); // Strings (NUEVO)
 
   // Control del Modal
   const [modalVisible, setModalVisible] = useState(false);
@@ -23,7 +24,6 @@ export default function ManageQuestionsScreen({ navigation }) {
     setLoading(true);
     try {
       const data = await getQuestions();
-      console.log("Fetched Questions:", JSON.stringify(data, null, 2)); // Fix to get also subjects info at the backend
       setQuestions(data);
     } catch (error) {
       Alert.alert("Error", "No se pudieron cargar las preguntas.");
@@ -38,9 +38,9 @@ export default function ManageQuestionsScreen({ navigation }) {
     }, [])
   );
 
-  // --- LÓGICA DE TEMAS ---
+  // --- HELPERS PARA EXTRAER DATOS ---
 
-  // 1. Función auxiliar para extraer temas de una pregunta (Reutilizada para render y filtro)
+  // 1. Extraer Temas (Topics)
   const getTopicsFromItem = (item) => {
     let topicNames = [];
     if (item.topics && Array.isArray(item.topics)) {
@@ -48,88 +48,90 @@ export default function ManageQuestionsScreen({ navigation }) {
     } else if (item.topics_titles && Array.isArray(item.topics_titles)) {
         topicNames = item.topics_titles;
     }
-    topicNames = [...new Set(topicNames)];
-    if (topicNames.length === 0) topicNames = ["General"];
-    return topicNames;
+    // Si está vacío, podríamos devolver "General" o dejarlo vacío
+    return [...new Set(topicNames)];
   };
 
-  // 2. Obtener lista de TODOS los temas únicos disponibles (useMemo para rendimiento)
+  // 2. Extraer Asignaturas (Subjects) -- NUEVO
+  const getSubjectsFromItem = (item) => {
+    let subjectNames = [];
+    if (item.subjects && Array.isArray(item.subjects)) {
+        subjectNames = item.subjects.map(s => s.name).filter(Boolean);
+    }
+    // Si tu backend no devuelve 'subjects' directamente, pero los temas tienen subject:
+    // if (item.topics) item.topics.forEach(t => if(t.subject) subjectNames.push(t.subject.name))
+    
+    return [...new Set(subjectNames)];
+  };
+
+  // --- LISTAS DE FILTROS ÚNICOS (useMemo) ---
+
   const allUniqueTopics = useMemo(() => {
-    const topics = new Set();
-    questions.forEach(q => {
-        const qTopics = getTopicsFromItem(q);
-        qTopics.forEach(t => topics.add(t));
-    });
-    return Array.from(topics).sort();
+    const set = new Set();
+    questions.forEach(q => getTopicsFromItem(q).forEach(t => set.add(t)));
+    return Array.from(set).sort();
   }, [questions]);
 
-  // 3. Filtrar las preguntas basado en la selección
+  const allUniqueSubjects = useMemo(() => {
+    const set = new Set();
+    questions.forEach(q => getSubjectsFromItem(q).forEach(s => set.add(s)));
+    return Array.from(set).sort();
+  }, [questions]);
+
+  // --- LÓGICA DE FILTRADO ---
   const filteredQuestions = useMemo(() => {
-    if (selectedTopics.length === 0) return questions;
-    
     return questions.filter(item => {
         const itemTopics = getTopicsFromItem(item);
-        // Si la pregunta tiene AL MENOS UNO de los temas seleccionados
-        return itemTopics.some(t => selectedTopics.includes(t));
+        const itemSubjects = getSubjectsFromItem(item);
+
+        // Filtro de Temas (OR logic: Si tiene alguno de los seleccionados)
+        const matchesTopic = selectedTopics.length === 0 || itemTopics.some(t => selectedTopics.includes(t));
+        
+        // Filtro de Asignaturas (OR logic: Si pertenece a alguna de las seleccionadas)
+        const matchesSubject = selectedSubjects.length === 0 || itemSubjects.some(s => selectedSubjects.includes(s));
+
+        // AND logic: Debe cumplir filtro de tema Y filtro de asignatura
+        return matchesTopic && matchesSubject;
     });
-  }, [questions, selectedTopics]);
+  }, [questions, selectedTopics, selectedSubjects]);
 
-  // 4. Manejar clic en un chip de filtro
+  // --- HANDLERS DE FILTROS ---
   const toggleTopicFilter = (topic) => {
-    if (selectedTopics.includes(topic)) {
-        setSelectedTopics(selectedTopics.filter(t => t !== topic));
-    } else {
-        setSelectedTopics([...selectedTopics, topic]);
-    }
+    setSelectedTopics(prev => prev.includes(topic) ? prev.filter(t => t !== topic) : [...prev, topic]);
   };
 
-  // --- HANDLERS EXISTENTES ---
+  const toggleSubjectFilter = (subject) => {
+    setSelectedSubjects(prev => prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]);
+  };
 
+  // ... (Handlers handleEdit, handleDelete, etc. IGUALES QUE ANTES) ...
   const handleDelete = (id) => {
-    Alert.alert(
-      "Eliminar Pregunta",
-      "¿Estás seguro? Esto borrará también las respuestas asociadas.",
-      [
+    Alert.alert("Eliminar Pregunta", "¿Estás seguro?", [
         { text: "Cancelar", style: "cancel" },
-        { 
-          text: "Eliminar", 
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteQuestion(id);
-              fetchQuestions();
-            } catch (e) {
-              Alert.alert("Error", "No se pudo eliminar.");
-            }
-          }
-        }
-      ]
-    );
+        { text: "Eliminar", style: "destructive", onPress: async () => { try { await deleteQuestion(id); fetchQuestions(); } catch (e) { Alert.alert("Error", "No se pudo eliminar."); } } }
+    ]);
   };
+  const handleEdit = (item) => { setEditingQuestion(item); setModalVisible(true); };
+  const handleCreate = () => { setEditingQuestion(null); setModalVisible(true); };
+  const handleUploadExcel = () => { Alert.alert("Subir Excel", "Funcionalidad pendiente."); };
 
-  const handleEdit = (item) => {
-    setEditingQuestion(item);
-    setModalVisible(true);
-  };
-
-  const handleCreate = () => {
-    setEditingQuestion(null);
-    setModalVisible(true);
-  };
-
-  const handleUploadExcel = () => {
-    Alert.alert("Subir Excel", "Funcionalidad para seleccionar archivo .xlsx");
-  };
 
   const renderItem = ({ item }) => {
     const topicNames = getTopicsFromItem(item);
+    const subjectNames = getSubjectsFromItem(item);
     
     return (
       <View style={styles.row}>
         <View style={styles.infoCol}>
+            {/* Renderizar Tags de Asignatura (Arriba o junto a temas) */}
             <View style={styles.tagsRow}>
+                 {subjectNames.map((name, index) => (
+                    <View key={`sub-${index}`} style={[styles.tagContainer, { backgroundColor: '#e8f5e9' }]}>
+                        <Text style={[styles.tagText, { color: '#2e7d32' }]}>{name}</Text>
+                    </View>
+                ))}
                 {topicNames.map((name, index) => (
-                    <View key={index} style={styles.tagContainer}>
+                    <View key={`top-${index}`} style={styles.tagContainer}>
                         <Text style={styles.tagText}>{name}</Text>
                     </View>
                 ))}
@@ -143,7 +145,6 @@ export default function ManageQuestionsScreen({ navigation }) {
             <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconBtn}>
                 <Edit size={22} color={COLORS.primary || 'blue'} />
             </TouchableOpacity>
-            
             {isSuper && (
                 <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.iconBtn}>
                     <Trash2 size={22} color={COLORS.danger || 'red'} />
@@ -164,7 +165,6 @@ export default function ManageQuestionsScreen({ navigation }) {
                  <FileSpreadsheet size={20} color="white" />
                  <Text style={styles.btnText}>Excel</Text>
              </TouchableOpacity>
-             
              <TouchableOpacity style={styles.addBtn} onPress={handleCreate}>
                  <Plus size={20} color="white" />
                  <Text style={styles.btnText}>Nueva</Text>
@@ -172,52 +172,62 @@ export default function ManageQuestionsScreen({ navigation }) {
          </View>
       </View>
 
-      {/* SECCIÓN DE FILTROS (CHIPS) */}
+      {/* --- FILTROS --- */}
       <View style={styles.filterContainer}>
-        <View style={styles.filterHeader}>
-            <Filter size={16} color="#666" />
-            <Text style={styles.filterLabel}>Filtrar por temas:</Text>
-            {selectedTopics.length > 0 && (
-                <TouchableOpacity onPress={() => setSelectedTopics([])}>
-                    <Text style={styles.clearFilterText}>Limpiar</Text>
-                </TouchableOpacity>
-            )}
-        </View>
         
-        <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={styles.chipsScroll}
-        >
-            {allUniqueTopics.map((topic, index) => {
-                const isActive = selectedTopics.includes(topic);
-                return (
-                    <TouchableOpacity 
-                        key={index} 
-                        onPress={() => toggleTopicFilter(topic)}
-                        style={[
-                            styles.chip, 
-                            isActive ? styles.chipActive : styles.chipInactive
-                        ]}
-                    >
-                        <Text style={[
-                            styles.chipText, 
-                            isActive ? styles.chipTextActive : styles.chipTextInactive
-                        ]}>
-                            {topic}
-                        </Text>
-                        {isActive && <X size={12} color="white" style={{marginLeft: 4}} />}
-                    </TouchableOpacity>
-                );
-            })}
-        </ScrollView>
+        {/* FILTRO ASIGNATURAS */}
+        <View style={styles.filterSection}>
+            <View style={styles.filterHeader}>
+                <Book size={14} color="#666" />
+                <Text style={styles.filterLabel}>Asignaturas:</Text>
+                {selectedSubjects.length > 0 && (
+                    <TouchableOpacity onPress={() => setSelectedSubjects([])}><Text style={styles.clearFilterText}>Limpiar</Text></TouchableOpacity>
+                )}
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+                {allUniqueSubjects.map((sub, index) => {
+                    const isActive = selectedSubjects.includes(sub);
+                    return (
+                        <TouchableOpacity key={index} onPress={() => toggleSubjectFilter(sub)} style={[styles.chip, isActive ? styles.chipActiveSub : styles.chipInactive]}>
+                            <Text style={[styles.chipText, isActive ? styles.chipTextActive : styles.chipTextInactive]}>{sub}</Text>
+                            {isActive && <X size={12} color="white" style={{marginLeft: 4}} />}
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
+        </View>
+
+        {/* SEPARADOR */}
+        <View style={{height: 1, backgroundColor: '#eee', marginVertical: 5}} />
+
+        {/* FILTRO TEMAS */}
+        <View style={styles.filterSection}>
+            <View style={styles.filterHeader}>
+                <Filter size={14} color="#666" />
+                <Text style={styles.filterLabel}>Temas:</Text>
+                {selectedTopics.length > 0 && (
+                    <TouchableOpacity onPress={() => setSelectedTopics([])}><Text style={styles.clearFilterText}>Limpiar</Text></TouchableOpacity>
+                )}
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsScroll}>
+                {allUniqueTopics.map((topic, index) => {
+                    const isActive = selectedTopics.includes(topic);
+                    return (
+                        <TouchableOpacity key={index} onPress={() => toggleTopicFilter(topic)} style={[styles.chip, isActive ? styles.chipActive : styles.chipInactive]}>
+                            <Text style={[styles.chipText, isActive ? styles.chipTextActive : styles.chipTextInactive]}>{topic}</Text>
+                            {isActive && <X size={12} color="white" style={{marginLeft: 4}} />}
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
+        </View>
+
       </View>
 
+      {/* LISTA Y RESTO */}
       <View style={styles.tableHeader}>
           <Text style={styles.tableHeadText}>
-            {selectedTopics.length > 0 
-                ? `Resultados (${filteredQuestions.length})` 
-                : `Listado completo (${questions.length})`}
+            {filteredQuestions.length} Resultados
           </Text>
       </View>
 
@@ -225,18 +235,11 @@ export default function ManageQuestionsScreen({ navigation }) {
         <ActivityIndicator size="large" style={{marginTop: 20}} />
       ) : (
         <FlatList
-          data={filteredQuestions} // USAMOS LA LISTA FILTRADA
+          data={filteredQuestions}
           renderItem={renderItem}
           keyExtractor={item => item.id.toString()}
           contentContainerStyle={{ paddingBottom: 20 }}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-                <Text style={styles.empty}>No se encontraron preguntas.</Text>
-                {selectedTopics.length > 0 && (
-                    <Text style={styles.emptySub}>Intenta desactivar algunos filtros.</Text>
-                )}
-            </View>
-          }
+          ListEmptyComponent={<View style={styles.emptyContainer}><Text style={styles.empty}>No hay resultados.</Text></View>}
         />
       )}
 
@@ -251,90 +254,43 @@ export default function ManageQuestionsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
+  // ... (Estilos anteriores) ...
   container: { flex: 1, backgroundColor: COLORS.background || '#f7f9fa' },
-  
-  // Header
-  topHeader: { 
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 
-    padding: 15, backgroundColor: 'white', elevation: 2, zIndex: 10
-  },
+  topHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, backgroundColor: 'white', elevation: 2, zIndex: 10 },
   screenTitle: { fontSize: 22, fontWeight: 'bold', color: COLORS.text },
   headerButtons: { flexDirection: 'row', gap: 10 },
-  excelBtn: { 
-    flexDirection: 'row', backgroundColor: '#217346', padding: 8, borderRadius: 6, alignItems: 'center', gap: 5 
-  },
-  addBtn: { 
-    flexDirection: 'row', backgroundColor: COLORS.primary || 'blue', padding: 8, borderRadius: 6, alignItems: 'center', gap: 5 
-  },
+  excelBtn: { flexDirection: 'row', backgroundColor: '#217346', padding: 8, borderRadius: 6, alignItems: 'center', gap: 5 },
+  addBtn: { flexDirection: 'row', backgroundColor: COLORS.primary || 'blue', padding: 8, borderRadius: 6, alignItems: 'center', gap: 5 },
   btnText: { color: 'white', fontWeight: '600', fontSize: 14 },
 
-  // ESTILOS DEL FILTRO (NUEVO)
-  filterContainer: {
-    backgroundColor: 'white',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  filterHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    marginBottom: 8,
-    gap: 6
-  },
-  filterLabel: { fontSize: 14, color: '#666', fontWeight: '600', flex: 1 },
-  clearFilterText: { fontSize: 12, color: COLORS.primary || 'blue', fontWeight: 'bold' },
+  // FILTROS ESTILOS ACTUALIZADOS
+  filterContainer: { backgroundColor: 'white', paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  filterSection: { marginVertical: 4 },
+  filterHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, marginBottom: 5, gap: 6 },
+  filterLabel: { fontSize: 13, color: '#666', fontWeight: '600', flex: 1 },
+  clearFilterText: { fontSize: 11, color: COLORS.primary || 'blue', fontWeight: 'bold' },
   chipsScroll: { paddingHorizontal: 15, gap: 8, paddingBottom: 5 },
   
-  // Estilo base del Chip
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  // Chip Inactivo (Outline)
-  chipInactive: {
-    backgroundColor: 'white',
-    borderColor: '#ddd',
-  },
-  // Chip Activo (Relleno)
-  chipActive: {
-    backgroundColor: COLORS.primary || 'blue',
-    borderColor: COLORS.primary || 'blue',
-  },
-  // Texto del Chip
-  chipText: { fontSize: 13, fontWeight: '500' },
+  chip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, flexDirection: 'row', alignItems: 'center' },
+  chipInactive: { backgroundColor: 'white', borderColor: '#ddd' },
+  chipActive: { backgroundColor: COLORS.primary || 'blue', borderColor: COLORS.primary || 'blue' },
+  chipActiveSub: { backgroundColor: '#4caf50', borderColor: '#4caf50' }, // Color distinto para Subjects
+
+  chipText: { fontSize: 12, fontWeight: '500' },
   chipTextInactive: { color: '#555' },
   chipTextActive: { color: 'white' },
 
-  // Tabla
-  tableHeader: {
-      flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#eceff1'
-  },
-  tableHeadText: { fontWeight: 'bold', color: '#546e7a' },
-
-  // Items
-  row: { 
-      flexDirection: 'row', backgroundColor: 'white', padding: 15, marginHorizontal: 10, marginTop: 10, borderRadius: 8,
-      ...Platform.select({
-        ios: { shadowColor: "#000", shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.1, shadowRadius: 1 },
-        android: { elevation: 1 },
-        web: { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }
-      })
-  },
+  // Tabla Items
+  tableHeader: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 8, backgroundColor: '#eceff1' },
+  tableHeadText: { fontWeight: 'bold', color: '#546e7a', fontSize: 12 },
+  row: { flexDirection: 'row', backgroundColor: 'white', padding: 15, marginHorizontal: 10, marginTop: 10, borderRadius: 8, ...Platform.select({ ios: { shadowColor: "#000", shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.1, shadowRadius: 1 }, android: { elevation: 1 }, web: { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' } }) },
   infoCol: { flex: 1, marginRight: 10 },
   tagsRow: { flexDirection: 'row', marginBottom: 6, gap: 5, flexWrap: 'wrap' },
   tagContainer: { backgroundColor: '#e3f2fd', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4, marginBottom: 2 },
-  tagText: { fontSize: 11, color: '#1565c0', fontWeight: '600' },
-  statement: { fontSize: 16, color: COLORS.text },
+  tagText: { fontSize: 10, color: '#1565c0', fontWeight: '600' },
+  statement: { fontSize: 15, color: COLORS.text },
   actionsCol: { flexDirection: 'row', alignItems: 'center', gap: 15 },
   iconBtn: { padding: 5 },
-  
-  // Empty states
   emptyContainer: { alignItems: 'center', marginTop: 40 },
   empty: { textAlign: 'center', color: 'gray', fontSize: 16 },
-  emptySub: { textAlign: 'center', color: '#999', fontSize: 14, marginTop: 5 }
 });

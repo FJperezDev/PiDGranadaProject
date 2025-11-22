@@ -6,7 +6,7 @@ import { COLORS } from '../constants/colors';
 export default function InviteUserModal({ visible, onClose, onSubmit }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('STUDENT'); // Valor por defecto
+  const [role, setRole] = useState('TEACHER');
   const [submitting, setSubmitting] = useState(false);
 
   const isValidEmail = (email) => {
@@ -27,12 +27,10 @@ export default function InviteUserModal({ visible, onClose, onSubmit }) {
     try {
       setSubmitting(true);
       await onSubmit({ name, email, role });
-      // Limpiar formulario tras éxito
       setName('');
       setEmail('');
-      setRole('STUDENT');
+      setRole('TEACHER');
     } catch (error) {
-      // El error se maneja en la pantalla padre o aquí
     } finally {
       setSubmitting(false);
     }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, Modal, StyleSheet, Alert, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
-import { COLORS } from '../constants/colors'; // Asumo que tienes esto
+import { COLORS } from '../constants/colors'; 
 
 export default function CreateGroupModal({ visible, subjects, onClose, onSubmit }) {
   const [name, setName] = useState('');

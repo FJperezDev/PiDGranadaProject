@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { apiClient } from './api'
 
 // Simula la URL base
 const API_URL = 'https://tu-backend-api.com'; 

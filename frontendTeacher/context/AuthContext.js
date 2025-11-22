@@ -1,5 +1,6 @@
 import React, { createContext, useEffect, useState } from 'react';
-import { login as authLogin, logout as authLogout, restoreSession, getLoggedUserInfo } from '../api';
+import {  getLoggedUserInfo } from '../api/authRequests';
+import { restoreSession, login as authLogin, logout as authLogout, } from '../api/sessionApi';
 
 export const AuthContext = createContext();
 

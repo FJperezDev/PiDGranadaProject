@@ -10,20 +10,19 @@ export const StyledButton = ({
   disabled,
   children,
 }) => {
-  // Combina los estilos de StyleSheet con los de className
   const buttonStyles = [
     styles.buttonBase,
     disabled ? styles.disabled : styles.active,
-    style, // Permite pasar estilos personalizados desde fuera
+    style,
   ];
 
   return (
     <TouchableOpacity
       style={buttonStyles}
-      className={className} // className puede sobreescribir o añadir estilos
+      className={className}
       onPress={onPress}
       disabled={disabled}
-      activeOpacity={0.8} // Controla la opacidad al presionar
+      activeOpacity={0.8} 
     >
       {icon && <View className="mr-2">{icon}</View>}
 
@@ -41,10 +40,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary, // Color principal por defecto
+    backgroundColor: COLORS.primary,
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 999, // rounded-full
+    borderRadius: 999,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 2px 4px rgba(0,0,0,0.1)' }
       : {
@@ -63,7 +62,4 @@ const styles = StyleSheet.create({
   disabled: {
     opacity: 0.5,
   },
-  // active:bg-cyan-200 no se puede aplicar directamente aquí,
-  // pero activeOpacity da un buen feedback.
-  // Si usas una librería como `twrnc`, podrías aplicar estilos condicionales.
 });

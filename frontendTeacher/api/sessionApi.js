@@ -1,6 +1,6 @@
 
 import { setRefreshToken, getRefreshToken, setAccessToken, getAccessToken, deleteRefreshToken,  } from '../utils/memory';
-import { instance } from './api'
+import { apiClient } from './api'
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -18,7 +18,7 @@ const processQueue = (error, token = null) => {
 };
 
 // Authorization interceptor
-instance.interceptors.request.use(
+apiClient.interceptors.request.use(
   async config => {
     const token = getAccessToken();
     if (token) {
@@ -30,7 +30,7 @@ instance.interceptors.request.use(
 );
 
 // Response interceptor: 401 code errors refreshing token
-instance.interceptors.response.use(
+apiClient.interceptors.response.use(
   response => response,
   async error => {
     const originalRequest = error.config;
@@ -59,7 +59,7 @@ instance.interceptors.response.use(
 
       try {
         const refresh = await getRefreshToken();
-        const res = await instance.post('/token/refresh/', { refresh });
+        const res = await apiClient.post('/token/refresh/', { refresh });
         const newAccess = res.data.access;
         if (res.data.refresh) {
           await setRefreshToken(res.data.refresh);
@@ -86,7 +86,7 @@ instance.interceptors.response.use(
 
 export const login = async (email, password) => {
   try {
-    const res = await instance.post("/login/", { email, password });
+    const res = await apiClient.post("/login/", { email, password });
     const { access, refresh } = res.data;
 
     if (!access || !refresh) throw new Error("Tokens not arrived");
@@ -102,12 +102,12 @@ export const login = async (email, password) => {
 export const logout = async () => {
   await deleteRefreshToken("refresh");
   setAccessToken(null);
-  await instance.post("/logout/");
+  await apiClient.post("/logout/");
 };
 
 export const register = async (data) => {
   try {
-    const res = await instance.post("/register/", data);
+    const res = await apiClient.post("/register/", data);
     return res.data;
   } catch (err) {
     console.warn("Register error:", err.response?.data || err.message);
@@ -121,7 +121,7 @@ export const refreshAccessToken = async () => {
     const refresh = await getRefreshToken();
     if (!refresh) throw new Error("No refresh token saved");
     
-    const res = await instance.post("/token/refresh/", { refresh });
+    const res = await apiClient.post("/token/refresh/", { refresh });
     const newAccess = res.data.access;
     if (res.data.refresh) {
       await setRefreshToken(res.data.refresh); 
@@ -141,7 +141,7 @@ export const refreshAccessToken = async () => {
 
 export const restoreSession = async () => {
   try {
-    await refreshAccessToken(); // si falla, se atrapará
+    await refreshAccessToken(); 
     return true;
   } catch (err) {
     console.warn("Couldn't restore session", err);

@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { View, Text, StyleSheet, Button, Alert, TouchableOpacity, Share, Platform } from 'react-native';
-import { deleteGroup } from '../api/getRequest'; // Ajusta la ruta
+import { deleteGroup } from '../api/coursesRequests'; // Ajusta la ruta
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import { COLORS } from '../constants/colors';
 import {Clipboard} from 'react-native';

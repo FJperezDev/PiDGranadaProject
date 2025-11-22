@@ -13,6 +13,7 @@ export const STRINGS = {
     inviteTeacher: 'Invite Teacher',
     logs: 'Logs',
     panel: 'Teacher Panel',
+    topicDetail: 'Topic Detail',
   },
   es: {
     login: "Iniciar sesión",
@@ -28,5 +29,6 @@ export const STRINGS = {
     inviteTeacher: 'Invitar Profesor',
     logs: 'Auditoría',
     panel: 'Panel del Profesor',
+    topicDetail: 'Detalle del Tema',
   },
 };

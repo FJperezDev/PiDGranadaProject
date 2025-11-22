@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.primary, // tu color cyan-50
+    backgroundColor: COLORS.primary,
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.secondary,
