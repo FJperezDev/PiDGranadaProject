@@ -3,13 +3,18 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from apps.utils.permissions import BaseContentViewSet
-from .serializers import ConceptSerializer, TopicSerializer, EpigraphSerializer
+from .serializers import ConceptSerializer, TopicSerializer, EpigraphSerializer, ShortConceptSerializer, ShortEpigraphSerializer, ShortTopicSerializer
 from apps.content.domain import services, selectors
 
 # Create your views here.
 
 class TopicViewSet(BaseContentViewSet):
-    serializer_class = TopicSerializer
+    serializer_class = ShortTopicSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve': 
+            return TopicSerializer
+        return super().get_serializer_class()
 
     def get_queryset(self):
         return selectors.get_all_topics()
@@ -167,11 +172,16 @@ class TopicViewSet(BaseContentViewSet):
     
 
 class ConceptViewSet(BaseContentViewSet):
-    serializer_class = ConceptSerializer
+    serializer_class = ShortConceptSerializer
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve': 
+            return ConceptSerializer
+        return super().get_serializer_class()
 
     def get_queryset(self):
         return selectors.get_all_concepts()
-    
+
     @action(detail=True, methods=['get'], )
     def concepts(self, request, pk=None):
         """GET /concepts/<id>/concepts/"""

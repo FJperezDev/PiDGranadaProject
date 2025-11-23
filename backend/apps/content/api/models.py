@@ -3,6 +3,7 @@ from django.db import models
 from apps.customauth.models import CustomTeacher as Teacher
 from apps.utils.choices import ACTION_CHOICES
 from apps.courses.api.models import Subject, SubjectIsAboutTopic
+from django.db.models import Q
 
 # Create your models here.
 
@@ -26,14 +27,28 @@ class TeacherMakeChangeTopic(models.Model):
         return f"{self.teacher} changed {self.old_object} to {self.new_object}"
 
 class Concept(models.Model):
-    name_es = models.TextField(unique=True)
-    name_en = models.TextField(unique=True)
+    name_es = models.TextField()
+    name_en = models.TextField()
     description_es = models.TextField(null=True, blank=True)
     description_en = models.TextField(null=True, blank=True)
     old = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name_es or self.name_en
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['name_es'],
+                condition=Q(old=False),
+                name='unique_active_concept_name_es'
+            ),
+            models.UniqueConstraint(
+                fields=['name_en'],
+                condition=Q(old=False),
+                name='unique_active_concept_name_en'
+            )
+        ]
 
 class TeacherMakeChangeConcept(models.Model):
     old_object = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)

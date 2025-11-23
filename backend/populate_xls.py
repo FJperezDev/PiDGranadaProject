@@ -60,19 +60,57 @@ def main():
                           json={"topic_name": row["title_es"], "order_id": row["order_id"]})
 
     # --- CONCEPTS ---
-    concepts_map = {}
+# --- CONCEPTS ---
+    concepts_map = {}       # Mapa: Código -> ID (para la URL del origen)
+    concepts_name_map = {}  # Mapa: Código -> Nombre (para el body de la petición destino)
+    pending_concept_links = [] # Lista de tuplas: (id_origen, string_codigos_destino)
+
     print("📘 topics_map generado:", topics_map)
     for _, row in xls["concepts"].iterrows():
         payload = row.to_dict()
         topic_code = payload.pop("related_topic_code", None)
+        related_codes_str = payload.pop("related_concept_codes", None) # Columna (C002, C003)
+    
         r = requests.post(f"{BASE_URL}/concepts/", headers=headers, json=payload)
         resp = print_status(r, f"Creando concepto {row['name_es']}")
+        
         if resp:
-            concepts_map[row["concept_code"]] = resp["id"]
+            current_id = resp["id"]
+            current_code = row["concept_code"]
+            current_name = row["name_es"]
+
+            concepts_map[current_code] = current_id
+            concepts_name_map[current_code] = current_name
+
             if topic_code:
                 topic_id = topics_map.get(topic_code)
-                requests.post(f"{BASE_URL}/topics/{topic_id}/concepts/",
-                              headers=headers, json={"concept_name": row["name_es"], "order_id": 1})
+                if topic_id:
+                    requests.post(f"{BASE_URL}/topics/{topic_id}/concepts/",
+                                  headers=headers, json={"concept_name": current_name, "order_id": 1})
+
+            if related_codes_str:
+                pending_concept_links.append({
+                    "source_id": current_id,
+                    "target_codes": related_codes_str
+                })
+
+    print("Procesando vinculaciones entre conceptos...")
+    
+    for item in pending_concept_links:
+        source_id = item["source_id"]
+        target_codes = [code.strip() for code in str(item["target_codes"]).split(",") if code.strip()]
+
+        for t_code in target_codes:
+            target_name = concepts_name_map.get(t_code)
+            
+            if target_name:
+                payload_link = {"concept_name": target_name}
+                r = requests.post(f"{BASE_URL}/concepts/{source_id}/concepts/", headers=headers, json=payload_link)
+                
+                if r.status_code >= 300:
+                    print(f"   ⚠️ Falló al vincular {source_id} con {t_code} ({target_name})")
+            else:
+                print(f"   ⚠️ No se encontró el concepto con código {t_code} para vincular.")
 
     # --- EPIGRAPHS ---
     for _, row in xls["epigraphs"].iterrows():
@@ -88,6 +126,7 @@ def main():
         payload = row.to_dict()
         topic_title = xls["topics"].loc[xls["topics"]["topic_code"] == row["topic_code"], "title_es"].iloc[0]
         concept_name = xls["concepts"].loc[xls["concepts"]["concept_code"] == row["concept_code"], "name_es"].iloc[0]
+        print(concept_name)
         payload["topics_titles"] = [topic_title]
         payload["concepts"] = [concept_name]
         payload.pop("topic_code")

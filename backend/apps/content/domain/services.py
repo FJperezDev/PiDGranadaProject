@@ -64,20 +64,18 @@ def create_concept(name_es: str, name_en: str, teacher: CustomTeacher,descriptio
     makeChanges(user=teacher, old_object=None, new_object=concept)
     return concept
 
-def update_concept(concept: Concept, teacher: CustomTeacher, name_es: str = None, name_en: str = None,
-                   description_es: str = None, description_en: str = None) -> Concept:
+def update_concept(concept: Concept, teacher: CustomTeacher, **kwargs) -> Concept:
     """Actualiza un concepto con los nuevos datos proporcionados."""
     old_concept = Concept.objects.get(pk=concept.pk)
     old_concept.pk = None
     old_concept.old = True
-    if name_es is not None:
-        concept.name_es = name_es
-    if name_en is not None:
-        concept.name_en = name_en
-    if description_es is not None:
-        concept.description_es = description_es
-    if description_en is not None:
-        concept.description_en = description_en
+
+    allowed_fields = ['name_es', 'name_en', 'description_es', 'description_en']
+
+    for field, value in kwargs.items():
+        if field in allowed_fields and value is not None:
+            setattr(concept, field, value)
+
     concept.save()
     old_concept.save()
     makeChanges(user=teacher, old_object=old_concept, new_object=concept)
