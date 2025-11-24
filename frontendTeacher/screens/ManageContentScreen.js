@@ -8,6 +8,8 @@ import {
 import {
   getTopics, createTopic, updateTopic, deleteTopic, 
   getAllConcepts, createConcept, updateConcept, deleteConcept,
+  linkConceptToConcept, unlinkConceptFromConcept, subjectIsAboutTopic, subjectIsNotAboutTopic,
+  topicIsAboutConcept, topicIsNotAboutConcept
 } from '../api/contentRequests';
 import { TopicModal, ConceptModal } from '../components/ContentModals';
 import { BookOpen, Lightbulb, PlusCircle, Trash2, Edit, ChevronRight } from 'lucide-react-native';
@@ -52,17 +54,97 @@ export default function ManageContentScreen({ navigation }) {
   useFocusEffect(useCallback(() => { fetchData(); }, []));
 
   // --- HANDLERS TEMAS ---
-  const handleSaveTopic = async (data) => {
+  const handleSaveTopic = async (data, originalSubjectIds = [], originalConceptIds = []) => {
+    setLoading(true);
     try {
+      // 1. Preparar datos
+      const currentSubjectIds = data.subject_ids || [];
+      const currentConceptIds = data.concept_ids || [];
+
+      // Limpiamos el objeto para crear/editar el Tema (API no espera arrays de IDs en el body del topic)
+      const dataToSave = { ...data };
+      delete dataToSave.subject_ids;
+      delete dataToSave.concept_ids;
+
+      let topicId;
+      let topicName = data.title_es; // Necesario para las relaciones de Asignatura
+
+      // 2. Guardar o Actualizar el TEMA
       if (editingItem) {
-        await updateTopic(editingItem.id, data);
+        await updateTopic(editingItem.id, dataToSave);
+        topicId = editingItem.id;
+        topicName = dataToSave.title_es; // Actualizamos por si cambió el nombre
       } else {
-        await createTopic(data);
+        const newTopic = await createTopic(dataToSave);
+        topicId = newTopic.id;
+        topicName = newTopic.title_es;
       }
+
+      // ---------------------------------------------------------
+      // 3. GESTIÓN DE ASIGNATURAS (Subjects)
+      // ---------------------------------------------------------
+      
+      // A. Quitar (Estaban antes, ahora no)
+      const subjectsToUnlink = originalSubjectIds.filter(id => !currentSubjectIds.includes(id));
+      // B. Añadir (No estaban antes, ahora sí)
+      const subjectsToLink = currentSubjectIds.filter(id => !originalSubjectIds.includes(id));
+
+      const subjectUnlinkPromises = subjectsToUnlink.map(subId => {
+        // OJO: La API pide (subjectId, topicName)
+        return subjectIsNotAboutTopic(subId, topicName);
+      });
+
+      const subjectLinkPromises = subjectsToLink.map(subId => {
+        // OJO: La API pide (subjectId, topicName)
+        return subjectIsAboutTopic(subId, topicName);
+      });
+
+      // ---------------------------------------------------------
+      // 4. GESTIÓN DE CONCEPTOS (Concepts)
+      // ---------------------------------------------------------
+
+      // A. Quitar
+      const conceptsToUnlink = originalConceptIds.filter(id => !currentConceptIds.includes(id));
+      // B. Añadir
+      const conceptsToLink = currentConceptIds.filter(id => !originalConceptIds.includes(id));
+
+      // Helper para obtener nombre del concepto
+      const getConceptNameById = (id) => {
+        const found = concepts.find(c => c.id === id);
+        return found ? (found.name_es || found.name) : null;
+      };
+
+      const conceptUnlinkPromises = conceptsToUnlink.map(cId => {
+        const cName = getConceptNameById(cId);
+        if (cName) return topicIsNotAboutConcept(topicId, cName);
+        return Promise.resolve();
+      });
+
+      const conceptLinkPromises = conceptsToLink.map(cId => {
+        const cName = getConceptNameById(cId);
+        if (cName) return topicIsAboutConcept(topicId, cName);
+        return Promise.resolve();
+      });
+
+      // 5. Ejecutar TODO junto
+      await Promise.all([
+        ...subjectUnlinkPromises,
+        ...subjectLinkPromises,
+        ...conceptUnlinkPromises,
+        ...conceptLinkPromises
+      ]);
+
       setTopicModalVisible(false);
       setEditingItem(null);
       fetchData();
-    } catch (e) { Alert.alert('Error', 'Falló al guardar el tema'); }
+      Alert.alert('Éxito', 'Tema guardado correctamente');
+
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Error', 'Falló al guardar el tema o sus relaciones');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteTopic = (id) => {
@@ -73,17 +155,77 @@ export default function ManageContentScreen({ navigation }) {
   };
 
   // --- HANDLERS CONCEPTOS ---
-  const handleSaveConcept = async (data) => {
+  const handleSaveConcept = async (data, originalIdsFromModal = []) => {
+    setLoading(true);
     try {
+      // 1. Preparar datos
+      const currentSelectedIds = data.related_concept_ids || [];
+      
+      // Quitamos 'related_concept_ids' del objeto data antes de enviarlo a create/update
+      const dataToSave = { ...data };
+      delete dataToSave.related_concept_ids; 
+
+      let parentConceptId;
+
+      // 2. Guardar o Actualizar el concepto PADRE para tener su ID
       if (editingItem) {
-        await updateConcept(editingItem.id, data);
+        await updateConcept(editingItem.id, dataToSave);
+        parentConceptId = editingItem.id;
       } else {
-        await createConcept(data);
+        const newConcept = await createConcept(dataToSave);
+        parentConceptId = newConcept.id;
       }
+
+      // 3. Calcular Deltas (Lógica de conjuntos)
+      
+      // A. QUITAR (Estaban antes, ahora no)
+      const idsToUnlink = originalIdsFromModal.filter(id => !currentSelectedIds.includes(id));
+
+      // B. AÑADIR (No estaban antes, ahora sí)
+      const idsToLink = currentSelectedIds.filter(id => !originalIdsFromModal.includes(id));
+
+      // Helper: Necesitamos el NOMBRE del hijo porque tu backend lo pide en el body
+      const getConceptNameById = (id) => {
+        const found = concepts.find(c => c.id === id);
+        return found ? (found.name_es || found.name) : null;
+      };
+
+      // 4. Ejecutar promesas (Link / Unlink)
+      // CAMBIO IMPORTANTE: Usamos parentConceptId (URL) y childName (Body)
+
+      const unlinkPromises = idsToUnlink.map(childId => {
+        const childName = getConceptNameById(childId);
+        if (childName) {
+          // API: delete /concepts/{parentId}/concepts/ body: { concept_name: childName }
+          return unlinkConceptFromConcept(parentConceptId, childName);
+        }
+        return Promise.resolve();
+      });
+
+      const linkPromises = idsToLink.map(childId => {
+        const childName = getConceptNameById(childId);
+        if (childName) {
+          // API: post /concepts/{parentId}/concepts/ body: { concept_name: childName }
+          return linkConceptToConcept(parentConceptId, childName);
+        }
+        return Promise.resolve();
+      });
+
+      // Esperar a que terminen todas las relaciones
+      await Promise.all([...unlinkPromises, ...linkPromises]);
+
+      // 5. Finalizar
       setConceptModalVisible(false);
       setEditingItem(null);
-      fetchData();
-    } catch (e) { Alert.alert('Error', 'Falló al guardar el concepto'); }
+      fetchData(); // Recargar todo
+      Alert.alert('Éxito', 'Concepto y relaciones guardados');
+
+    } catch (e) { 
+      console.error(e);
+      Alert.alert('Error', 'Ocurrió un error al guardar'); 
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteConcept = (id) => {

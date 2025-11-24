@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, Modal, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { Check, X } from 'lucide-react-native';
+import { getConceptInfo, getTopicInfo } from '../api/contentRequests'
 
 // --- COMPONENTE AUXILIAR PARA SELECCIÓN MÚLTIPLE ---
 const MultiSelect = ({ items, selectedIds, onToggle, labelKey = 'name' }) => (
@@ -31,24 +32,40 @@ export const TopicModal = ({ visible, onClose, onSubmit, editingTopic, allSubjec
     subject_ids: [], concept_ids: [] 
   });
 
-  useEffect(() => {
-    if (editingTopic) {
-      // Cargar datos existentes. Asegúrate de que tu backend devuelva los IDs de relaciones
-      // Si tu backend devuelve objetos completos en 'subjects', mapealos a IDs:
-      const existingSubjectIds = editingTopic.subjects ? editingTopic.subjects.map(s => s.id) : [];
-      const existingConceptIds = editingTopic.concepts ? editingTopic.concepts.map(c => c.id) : [];
+  const [originalSubjectIds, setOriginalSubjectIds] = useState([]);
+  const [originalConceptIds, setOriginalConceptIds] = useState([]);
 
-      setData({
-        title_es: editingTopic.title_es || editingTopic.title || '',
-        title_en: editingTopic.title_en || '',
-        description_es: editingTopic.description_es || editingTopic.description || '',
-        description_en: editingTopic.description_en || '',
-        subject_ids: existingSubjectIds,
-        concept_ids: existingConceptIds
-      });
-    } else {
-      setData({ title_es: '', title_en: '', description_es: '', description_en: '', subject_ids: [], concept_ids: [] });
+  useEffect(() => {
+    const loadTopicData = async () => {
+      if (editingTopic) {
+        try{
+          const detailedTopic = await getTopicInfo(editingTopic.id);
+          const existingSubjectIds = detailedTopic.subjects ? detailedTopic.subjects.map(s => s.id) : [];
+          const existingConceptIds = detailedTopic.concepts ? detailedTopic.concepts.map(c => c.id) : [];
+          console.log(detailedTopic)
+
+          setData({
+            title_es: detailedTopic.title_es || detailedTopic.title || '',
+            title_en: detailedTopic.title_en || '',
+            description_es: detailedTopic.description_es || detailedTopic.description || '',
+            description_en: detailedTopic.description_en || '',
+            subject_ids: existingSubjectIds,
+            concept_ids: existingConceptIds
+          });
+          setOriginalSubjectIds(existingSubjectIds);
+          setOriginalConceptIds(existingConceptIds);
+        } catch (err){
+          console.error("Error: ", err);
+        }
+      } else {
+        setData({ title_es: '', title_en: '', description_es: '', description_en: '', subject_ids: [], concept_ids: [] });
+        setOriginalSubjectIds([]);
+        setOriginalConceptIds([]);
+      }
     }
+    if(visible)
+      loadTopicData();
+    
   }, [editingTopic, visible]);
 
   const toggleSubject = (id) => {
@@ -71,7 +88,7 @@ export const TopicModal = ({ visible, onClose, onSubmit, editingTopic, allSubjec
 
   const handleSubmit = () => {
     if (!data.title_es) { Alert.alert('Error', 'El título en español es obligatorio'); return; }
-    onSubmit(data);
+    onSubmit(data, originalSubjectIds, originalConceptIds);
   };
 
   return (
@@ -103,23 +120,37 @@ export const TopicModal = ({ visible, onClose, onSubmit, editingTopic, allSubjec
   );
 };
 
-// --- CONCEPT MODAL (Crear / Editar) ---
 export const ConceptModal = ({ visible, onClose, onSubmit, editingConcept, allConcepts = [] }) => {
-  const [data, setData] = useState({ name_es: '', name_en: '', related_concept_ids: [] });
+  const [data, setData] = useState({ name_es: '', name_en: '', description_es:'', description_en:'', related_concept_ids: [] });
+  const [originalRelatedIds, setOriginalRelatedIds] = useState([]);
 
   useEffect(() => {
-    if (editingConcept) {
-      // Asumiendo que el backend devuelve 'related_concepts'
-      const existingRelatedIds = editingConcept.related_concepts ? editingConcept.related_concepts.map(c => c.id) : [];
-      
-      setData({
-        name_es: editingConcept.name_es || editingConcept.name || '',
-        name_en: editingConcept.name_en || '',
-        related_concept_ids: existingRelatedIds
-      });
-    } else {
-      setData({ name_es: '', name_en: '', related_concept_ids: [] });
+    const loadConceptData = async () => {
+      if (editingConcept) {
+        try{
+          const detailedConcept = await getConceptInfo(editingConcept.id)
+          console.log(detailedConcept)
+          const existingRelatedIds = detailedConcept.related_concepts ? detailedConcept.related_concepts.map(c => c.id) : [];
+
+          setData({
+            name_es: detailedConcept.name_es || '',
+            name_en: detailedConcept.name_en || '',
+            description_es: detailedConcept.description_es || '',
+            description_en: detailedConcept.description_en || '',
+            related_concept_ids: existingRelatedIds,
+          });
+          setOriginalRelatedIds(existingRelatedIds);
+        } catch (err){
+          console.error("Error: ", err);
+        }
+        
+      } else {
+        setData({ name_es: '', name_en: '', description_es: '', description_en: '', related_concept_ids: [] });
+        setOriginalRelatedIds([]);
+      }
     }
+    if(visible)
+      loadConceptData();
   }, [editingConcept, visible]);
 
   const toggleRelated = (id) => {
@@ -131,12 +162,11 @@ export const ConceptModal = ({ visible, onClose, onSubmit, editingConcept, allCo
     }));
   };
 
-  // Filtramos para que no pueda vincularse a sí mismo
   const availableConceptsToLink = allConcepts.filter(c => !editingConcept || c.id !== editingConcept.id);
 
   const handleSubmit = () => {
     if (!data.name_es) { Alert.alert('Error', 'El nombre es obligatorio'); return; }
-    onSubmit(data);
+    onSubmit(data, originalRelatedIds);
   };
 
   return (
@@ -148,6 +178,8 @@ export const ConceptModal = ({ visible, onClose, onSubmit, editingConcept, allCo
             <Text style={styles.label}>Información</Text>
             <TextInput style={styles.input} placeholder="Nombre (ES)" value={data.name_es} onChangeText={t => setData({...data, name_es: t})} />
             <TextInput style={styles.input} placeholder="Name (EN)" value={data.name_en} onChangeText={t => setData({...data, name_en: t})} />
+            <TextInput style={styles.input} placeholder="Descripcion (ES)" value={data.description_es} onChangeText={t => setData({...data, description_es: t})} />
+            <TextInput style={styles.input} placeholder="Description (EN)" value={data.description_en} onChangeText={t => setData({...data, description_en: t})} />
             
             <Text style={styles.label}>Conceptos Relacionados</Text>
             {availableConceptsToLink.length === 0 ? (
@@ -198,8 +230,6 @@ export const EpigraphModal = ({ visible, onClose, onSubmit, editingEpigraph }) =
         return; 
     }
     onSubmit(data);
-    // No reseteamos aquí inmediatamente para evitar parpadeos visuales antes de que cierre,
-    // se reseteará vía useEffect cuando visible cambie o editingEpigraph cambie.
   };
 
   return (
