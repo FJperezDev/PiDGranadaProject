@@ -44,6 +44,13 @@ def delete_topic(topic: Topic, teacher: CustomTeacher):
     makeChanges(user=teacher, old_object=topic, new_object=None)
     return topic.delete()
 
+def get_next_order_id_for_topic(topic: Topic) -> int:
+    """Obtiene el siguiente order_id disponible para un Concept en un topic dado."""
+    last_relation = TopicIsAboutConcept.objects.filter(topic=topic).order_by('-order_id').first()
+    if last_relation:
+        return last_relation.order_id + 1
+    return 1
+
 # --- Concept Services ---
 def create_concept(name_es: str, name_en: str, teacher: CustomTeacher,description_es=None, description_en=None) -> Concept:
     """Crea un nuevo Concept."""

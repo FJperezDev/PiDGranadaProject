@@ -93,6 +93,13 @@ def create_student_group(subject: Subject, name_es: str, name_en: str, teacher: 
 
     return group
 
+def get_next_order_id_for_subject(subject: Subject) -> int:
+    """Obtiene el siguiente order_id disponible para un SubjectIsAboutTopic en una asignatura dada."""
+    last_relation = SubjectIsAboutTopic.objects.filter(subject=subject).order_by('-order_id').first()
+    if last_relation:
+        return last_relation.order_id + 1
+    return 1
+
 def update_student_group(group: StudentGroup, teacher: Teacher, name_es: str = None, name_en: str = None):
     """Actualiza un grupo de estudiantes dado."""
     if name_es is not None:

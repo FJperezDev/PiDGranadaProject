@@ -8,11 +8,25 @@ from django.db.models import Q
 # Create your models here.
 
 class Topic(models.Model):
-    title_es = models.TextField(unique=True)
-    title_en = models.TextField(unique=True)
+    title_es = models.TextField()
+    title_en = models.TextField()
     description_es = models.TextField(null=True, blank=True)
     description_en = models.TextField(null=True, blank=True)
     old = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['title_es'],
+                condition=Q(old=False),
+                name='unique_active_topic_title_es'
+            ),
+            models.UniqueConstraint(
+                fields=['title_en'],
+                condition=Q(old=False),
+                name='unique_active_topic_title_en'
+            )
+        ]
 
     def __str__(self):
         return self.title_es or self.title_en

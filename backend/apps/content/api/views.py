@@ -128,6 +128,8 @@ class TopicViewSet(BaseContentViewSet):
         if not concept:
             return Response({'detail': 'Concept not found'}, status=status.HTTP_404_NOT_FOUND)
         order_id = data.get('order_id')
+        if not order_id:
+            order_id = services.get_next_order_id_for_topic(topic)
 
         try:
             link = services.link_concept_to_topic(

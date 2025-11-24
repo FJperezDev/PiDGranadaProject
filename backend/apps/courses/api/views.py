@@ -71,6 +71,8 @@ class SubjectViewSet(BaseContentViewSet):
         if not topic:
             return Response({'detail': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
         order_id = data.get('order_id')
+        if(not order_id):
+            order_id = services.get_next_order_id_for_subject(subject)
 
         try:
             link = services.link_topic_to_subject(
