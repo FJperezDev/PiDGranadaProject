@@ -6,6 +6,7 @@ export const StyledButton = ({
   onPress,
   className = '',
   style,
+  textStyle,
   icon,
   disabled,
   children,
@@ -30,7 +31,7 @@ export const StyledButton = ({
       {children ? (
         children
       ) : (
-        <Text style={styles.text}>{title}</Text>
+        <Text style={[styles.text, textStyle]}>{title}</Text>
       )}
     </TouchableOpacity>
   );

@@ -26,7 +26,6 @@ export const inviteUser = async (userData) => {
     // if (!response.ok) throw new Error('Error en invitación');
     // return await response.json();
 
-    console.log("Enviando invitación a:", userData);
     return true; // Simula éxito
   } catch (error) {
     throw error;

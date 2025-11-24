@@ -39,7 +39,6 @@ def create_question(teacher: Teacher, type: str, statement_es: str = None, state
 
     if topics_titles:
         for title in topics_titles:
-            print(title)
             topic = content_selectors.get_topic_by_title(title)
             QuestionBelongsToTopic.objects.create(question=question, topic=topic)
     

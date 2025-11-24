@@ -252,16 +252,24 @@ class StudentGroupViewSet(BaseContentViewSet):
     def topics(self, request):
         subject = courses_selectors.get_subject_by_code(request.query_params.get('code')) 
         trs = courses_selectors.get_topics_relation_by_subject(subject)
+        topics_with_order = []
         for tr in trs:
-            tr.topic.order_id = tr.order_id
-            tr.topic.save()
+            topic = tr.topic
+            topic.order_id = tr.order_id 
+            topics_with_order.append(topic)
         topics = courses_selectors.get_topics_related(trs)
-        return Response(ShortTopicSerializer(topics, many=True, context={'request': request}).data)
+        return Response(ShortTopicSerializer(topics_with_order, many=True, context={'request': request}).data)
     
-    #/studentgroups/topic/topic=t1
+    #/studentgroups/topic/?title=t1
     @action(detail=False, methods=['get'], url_path='topic', url_name='topic')
     def topic(self, request):
-        topic = content_selectors.get_topic_by_title(request.query_params.get('title'))
+
+        title = request.query_params.get('title')
+        if not title:
+            return Response({'detail': 'No title provided'}, status=status.HTTP_400_BAD_REQUEST)
+
+        topic = content_selectors.get_topic_by_title(title)
+        
         if not topic:
             return Response({'detail': 'Topic not found'}, status=status.HTTP_404_NOT_FOUND)
         
@@ -278,7 +286,7 @@ class StudentGroupViewSet(BaseContentViewSet):
     def exam(self, request):
         topics_str = request.query_params.get('topics')
         nQuestions = request.query_params.get('nQuestions')
-        print(nQuestions)
+        
         code = request.query_params.get('code')
         if not topics_str:
             return Response({'detail': 'No topics provided'}, status=status.HTTP_400_BAD_REQUEST)

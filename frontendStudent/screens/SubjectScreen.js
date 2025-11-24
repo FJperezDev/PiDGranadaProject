@@ -52,7 +52,7 @@ export const SubjectScreen = ({ route }) => {
       }}
     >
       <Text style={{ fontSize: 18, fontWeight: '600', color: '#000' }}>
-        {item.name}
+        {item.title}
       </Text>
       <Text style={{ fontSize: 14, color: '#555', marginTop: 4 }}>
         {item.description}

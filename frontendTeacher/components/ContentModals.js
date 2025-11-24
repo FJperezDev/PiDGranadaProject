@@ -42,7 +42,6 @@ export const TopicModal = ({ visible, onClose, onSubmit, editingTopic, allSubjec
           const detailedTopic = await getTopicInfo(editingTopic.id);
           const existingSubjectIds = detailedTopic.subjects ? detailedTopic.subjects.map(s => s.id) : [];
           const existingConceptIds = detailedTopic.concepts ? detailedTopic.concepts.map(c => c.id) : [];
-          console.log(detailedTopic)
 
           setData({
             title_es: detailedTopic.title_es || detailedTopic.title || '',
@@ -129,7 +128,6 @@ export const ConceptModal = ({ visible, onClose, onSubmit, editingConcept, allCo
       if (editingConcept) {
         try{
           const detailedConcept = await getConceptInfo(editingConcept.id)
-          console.log(detailedConcept)
           const existingRelatedIds = detailedConcept.related_concepts ? detailedConcept.related_concepts.map(c => c.id) : [];
 
           setData({

@@ -61,10 +61,10 @@ export default function ManageGroupsScreen({ navigation }) {
 
   const handleCreateGroup = async (subjectId, name) => {
     try {
-      await createGroup(subjectId, name_es=name, name_en=name);
+      await createGroup(subjectId, name, name);
       setModalVisible(false);
       Alert.alert('Éxito', 'Grupo creado correctamente.');
-      fetchData(); // Recargar la lista de grupos
+      fetchData(); 
     } catch (error) {
       Alert.alert('Error', 'No se pudo crear el grupo.');
     }

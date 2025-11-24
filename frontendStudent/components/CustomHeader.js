@@ -1,6 +1,6 @@
 import { useLanguage } from '../context/LanguageContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { ChevronLeft, BookMarked, LogOut } from 'lucide-react-native';
+import { ChevronLeft, BookMarked, LogOutIcon } from 'lucide-react-native';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
@@ -41,7 +41,7 @@ export const CustomHeader = ({routeName}) => {
             {isHome ? (
               <BookMarked size={28} color={COLORS.black} />
             ) : logout ? (
-              <LogOut
+              <LogOutIcon
                 size={28}
                 color={COLORS.black}
                 style={{ transform: [{ rotate: '180deg' }] }}

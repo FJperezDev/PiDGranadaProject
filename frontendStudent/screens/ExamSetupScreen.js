@@ -87,7 +87,7 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
             ) : (
               <Square size={24} color="#94a3b8" /> // slate-400
             )}
-            <Text style={styles.topicText}>{topic.name}</Text>
+            <Text style={styles.topicText}>{topic.title}</Text>
           </StyledButton>
         ))}
 

@@ -33,7 +33,7 @@ export const mockApi = {
 
   getTopicDetails: async (title) => {
     try {
-      const response = await apiClient.get(`/studentgroups/topic/`, { params: { title } });
+      const response = await apiClient.get(`/studentgroups/topic/`, {params: { title: title }});
       return response.data;
     } catch (error) {
       console.error('Error obteniendo detalles del tema:', error);
@@ -54,7 +54,7 @@ export const mockApi = {
   generateExam: async (topics, nQuestions) => {
     let topicTitles = "";
     if (topics && topics.length > 0) {
-      topicTitles = topics.map(topic => topic.name).join(', ');
+      topicTitles = topics.map(topic => topic.title).join(', ');
     }
     try {
       const response = await apiClient.get('/studentgroups/exam/?topics=' + topicTitles + '&nQuestions=' + nQuestions);

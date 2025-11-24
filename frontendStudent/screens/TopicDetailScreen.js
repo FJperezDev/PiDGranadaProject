@@ -15,44 +15,32 @@ export const TopicDetailScreen = ({ setPage, route }) => {
   const [modalContent, setModalContent] = useState({ title: "", content: "" });
 
   const { topic } = route.params;
-  const didMountRef = useRef(false);
 
-  useEffect(() => {
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      return;
-    }
-
-    const fetchData = async () => {
-      try {
-        const response = await mockApi.getTopicDetails(topic.name);
-        setDetails(response);
-      } catch (error) {
-        console.error("Error actualizando los datos de la asignatura: ", error);
-      }
-    };
-
-    fetchData();
-  }, [language]);
-
-  useEffect(() => {
-    const fetchDetails = async () => {
-      const data = await mockApi.getTopicDetails(topic.name, t("languageCode"));
-      setDetails(data);
+  const fetchTopicDetails = async () => {
+    try{
+      setIsLoading(true);
+      const response = await mockApi.getTopicDetails(topic.title);
+      setDetails(response);
+    } catch (error) {
+      console.error("Error obteniendo los detalles del tema:", error);
+    } finally {
       setIsLoading(false);
-    };
-    fetchDetails();
-  }, [topic.id]);
+    }
+  };
+
+  useEffect(() => {
+    fetchTopicDetails();
+  }, [topic, language]);
 
   const showContent = (item) => {
-    setModalContent({ title: item.name, content: item.description });
+    setModalContent({ title: item.title, content: item.description });
     setModalVisible(true);
   };
 
   const renderItem = (item) => (
     <StyledButton style={styles.button} key={item.id} onPress={() => showContent(item)}>
       <Text style={styles.itemTitle}>{item.name}</Text>
-      <Text style={styles.itemSubtitle}>{item.summary}</Text>
+      <Text style={styles.itemSubtitle}>{item.description}</Text>
     </StyledButton>
   );
 

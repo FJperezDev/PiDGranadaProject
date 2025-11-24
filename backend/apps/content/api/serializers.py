@@ -154,11 +154,12 @@ class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
 class ShortTopicSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     title = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
+    order_id = serializers.IntegerField(read_only=True, required=False, allow_null=True)
 
     class Meta:
         model = Topic
         fields = [
-            'title',
+            'title', 'order_id',
             'description', 'id'
         ]
 
