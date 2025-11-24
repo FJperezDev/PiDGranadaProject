@@ -9,3 +9,16 @@ export const getLoggedUserInfo = async () => {
         return null;
     }
 }
+
+export const changePassword = async (oldPassword, newPassword) => {
+    try{
+        const res = await apiClient.put("/change-password/", {
+            old_password: oldPassword,
+            new_password: newPassword
+        });
+        return res.data;
+    }catch(err){
+        console.error("Error changing password: ", err);
+        return null;
+    }
+}

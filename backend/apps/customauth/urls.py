@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework import routers
-from .views import TeacherViewSet, RegisterView, LogoutView, LoggedUserView, LoginView
+from .views import TeacherViewSet, RegisterView, LogoutView, LoggedUserView, LoginView, ChangePasswordView
 
 # from django.contrib.auth.views import LoginView, LogoutView
 
@@ -22,6 +22,7 @@ urlpatterns += [
 urlpatterns += [
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('change-password/', ChangePasswordView.as_view(), name='change_password'),
 ]
 
 urlpatterns += [
