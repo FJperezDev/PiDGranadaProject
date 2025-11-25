@@ -20,7 +20,7 @@ from apps.utils.permissions import IsTeacher
 class SubjectViewSet(BaseContentViewSet):
     queryset = courses_selectors.get_all_subjects()
     serializer_class = SubjectSerializer
-    permission_classes = [permissions.AllowAny] # Allow any access for now
+    permission_classes = [permissions.AllowAny]
 
     def create(self, request, *args, **kwargs):
         data = request.data
@@ -286,8 +286,6 @@ class StudentGroupViewSet(BaseContentViewSet):
     def exam(self, request):
         topics_str = request.query_params.get('topics')
         nQuestions = request.query_params.get('nQuestions')
-        
-        code = request.query_params.get('code')
         if not topics_str:
             return Response({'detail': 'No topics provided'}, status=status.HTTP_400_BAD_REQUEST)
         

@@ -99,3 +99,14 @@ export const getConceptsByTopic = async (topicId) => {
     throw error;
   }
 };
+
+export const getAnalytics = async (filters) => {
+    // filters es objeto: { subject_id, group_id, group_by, etc. }
+    try {
+        const response = await apiClient.get('/analytics/performance/', { params: filters });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching analytics:', error);
+        throw error;
+    }
+};

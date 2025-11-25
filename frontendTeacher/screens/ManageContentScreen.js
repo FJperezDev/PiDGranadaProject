@@ -1,5 +1,5 @@
 import React, { useState, useContext, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, RefreshControl, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext';
 import { 
@@ -16,7 +16,6 @@ import { BookOpen, Lightbulb, PlusCircle, Trash2, Edit, ChevronRight } from 'luc
 import { COLORS } from '../constants/colors';
 
 export default function ManageContentScreen({ navigation }) {
-  const { isSuper } = useContext(AuthContext);
   
   // Datos
   const [topics, setTopics] = useState([]);
@@ -147,12 +146,34 @@ export default function ManageContentScreen({ navigation }) {
     }
   };
 
-  const handleDeleteTopic = (id) => {
-    Alert.alert('Eliminar Tema', '¿Seguro? Se borrarán sus epígrafes.', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: async () => { await deleteTopic(id); fetchData(); }}
-    ]);
-  };
+  const handleDeleteTopic = (orderId) => {
+      // Definimos la lógica de borrado para reutilizarla
+      const performDelete = async () => {
+        try {
+          await deleteTopic(orderId);
+          fetchData();
+        } catch (error) {
+          console.error("Error al eliminar", error);
+        }
+      };
+  
+      if (Platform.OS === 'web') {
+        // Lógica para Navegador (usa el confirm nativo del browser)
+        if (window.confirm('Eliminar: ¿Seguro que quieres eliminar este tema?')) {
+          performDelete();
+        }
+      } else {
+        // Lógica para Móvil (iOS/Android)
+        Alert.alert('Eliminar', '¿Seguro?', [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Eliminar', 
+            style: 'destructive', 
+            onPress: performDelete 
+          }
+        ]);
+      }
+    };
 
   // --- HANDLERS CONCEPTOS ---
   const handleSaveConcept = async (data, originalIdsFromModal = []) => {
@@ -228,12 +249,34 @@ export default function ManageContentScreen({ navigation }) {
     }
   };
 
-  const handleDeleteConcept = (id) => {
-    Alert.alert('Eliminar Concepto', '¿Seguro?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: async () => { await deleteConcept(id); fetchData(); }}
-    ]);
-  };
+  const handleDeleteConcept = (conceptId) => {
+      // Definimos la lógica de borrado para reutilizarla
+      const performDelete = async () => {
+        try {
+          await deleteConcept(conceptId);
+          fetchData();
+        } catch (error) {
+          console.error("Error al eliminar", error);
+        }
+      };
+  
+      if (Platform.OS === 'web') {
+        // Lógica para Navegador (usa el confirm nativo del browser)
+        if (window.confirm('Eliminar: ¿Seguro que quieres eliminar este concepto?')) {
+          performDelete();
+        }
+      } else {
+        // Lógica para Móvil (iOS/Android)
+        Alert.alert('Eliminar', '¿Seguro?', [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Eliminar', 
+            style: 'destructive', 
+            onPress: performDelete 
+          }
+        ]);
+      }
+    };
 
   // --- ABRIR MODALES ---
   const openCreateModal = () => {
@@ -262,16 +305,12 @@ export default function ManageContentScreen({ navigation }) {
         </View>
       </View>
       <View style={styles.actions}>
-        {isSuper && (
-          <>
-            <TouchableOpacity onPress={() => openEditModal(item)} style={styles.iconBtn}>
-              <Edit size={20} color={COLORS.secondary} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDeleteTopic(item.id)} style={styles.iconBtn}>
-              <Trash2 size={20} color={COLORS.danger || 'red'} />
-            </TouchableOpacity>
-          </>
-        )}
+        <TouchableOpacity onPress={() => openEditModal(item)} style={styles.iconBtn}>
+          <Edit size={20} color={COLORS.secondary} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleDeleteTopic(item.id)} style={styles.iconBtn}>
+          <Trash2 size={20} color={COLORS.danger || 'red'} />
+        </TouchableOpacity>
         <ChevronRight size={20} color="gray" />
       </View>
     </TouchableOpacity>
@@ -288,16 +327,14 @@ export default function ManageContentScreen({ navigation }) {
           )}
         </View>
       </View>
-      {isSuper && (
-        <View style={styles.actions}>
-           <TouchableOpacity onPress={() => openEditModal(item)} style={styles.iconBtn}>
-              <Edit size={20} color={COLORS.secondary} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDeleteConcept(item.id)} style={styles.iconBtn}>
-              <Trash2 size={20} color={COLORS.danger || 'red'} />
-            </TouchableOpacity>
-        </View>
-      )}
+      <TouchableOpacity onPress={() => openEditModal(item)} style={styles.iconBtn}>
+        <Edit size={20} color={COLORS.secondary} />
+      </TouchableOpacity>
+      <View style={styles.actions}>
+        <TouchableOpacity onPress={() => handleDeleteConcept(item.id)} style={styles.iconBtn}>
+          <Trash2 size={20} color={COLORS.danger || 'red'} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -306,11 +343,9 @@ export default function ManageContentScreen({ navigation }) {
       {/* Header con Título y Botón Crear */}
       <View style={styles.header}>
         <Text style={styles.title}>Contenido Académico</Text>
-        {isSuper && (
-          <TouchableOpacity onPress={openCreateModal}>
-            <PlusCircle size={30} color={COLORS.secondary || 'blue'} />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity onPress={openCreateModal}>
+          <PlusCircle size={30} color={COLORS.secondary || 'blue'} />
+        </TouchableOpacity>
       </View>
 
       {/* Pestañas (Tabs) */}

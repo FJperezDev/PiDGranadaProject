@@ -8,7 +8,6 @@ import { Edit, Trash2, FileSpreadsheet, Plus, Filter, X, Book } from 'lucide-rea
 import QuestionWizardModal from '../components/QuestionWizardModal';
 
 export default function ManageQuestionsScreen({ navigation }) {
-  const { isSuper } = useContext(AuthContext);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -105,11 +104,34 @@ export default function ManageQuestionsScreen({ navigation }) {
   };
 
   // ... (Handlers handleEdit, handleDelete, etc. IGUALES QUE ANTES) ...
+
   const handleDelete = (id) => {
-    Alert.alert("Eliminar Pregunta", "¿Estás seguro?", [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Eliminar", style: "destructive", onPress: async () => { try { await deleteQuestion(id); fetchQuestions(); } catch (e) { Alert.alert("Error", "No se pudo eliminar."); } } }
-    ]);
+    // Definimos la lógica de borrado para reutilizarla
+    const performDelete = async () => {
+      try {
+        await deleteQuestion(id);
+        fetchQuestions();
+      } catch (error) {
+        console.error("Error al eliminar", error);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      // Lógica para Navegador (usa el confirm nativo del browser)
+      if (window.confirm('Eliminar: ¿Seguro que quieres eliminar esta pregunta?')) {
+        performDelete();
+      }
+    } else {
+      // Lógica para Móvil (iOS/Android)
+      Alert.alert('Eliminar', '¿Seguro?', [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Eliminar', 
+          style: 'destructive', 
+          onPress: performDelete 
+        }
+      ]);
+    }
   };
   const handleEdit = (item) => { setEditingQuestion(item); setModalVisible(true); };
   const handleCreate = () => { setEditingQuestion(null); setModalVisible(true); };
@@ -145,11 +167,9 @@ export default function ManageQuestionsScreen({ navigation }) {
             <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconBtn}>
                 <Edit size={22} color={COLORS.primary || 'blue'} />
             </TouchableOpacity>
-            {isSuper && (
                 <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.iconBtn}>
                     <Trash2 size={22} color={COLORS.danger || 'red'} />
                 </TouchableOpacity>
-            )}
         </View>
       </View>
     );

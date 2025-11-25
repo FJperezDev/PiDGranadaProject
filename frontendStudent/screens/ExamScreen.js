@@ -1,11 +1,11 @@
 import { useLanguage } from "../context/LanguageContext";
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { mockApi } from "../services/api";
-import { mockApi as oldMockApi } from "../services/oldApi";
 import { StyledButton } from "../components/StyledButton";
-import { Text, View, StyleSheet } from "react-native";
+import { Text, View, StyleSheet, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { COLORS } from "../constants/colors";
+
 
 export const ExamScreen = ({ route }) => {
   const { t, language } = useLanguage();
@@ -15,6 +15,7 @@ export const ExamScreen = ({ route }) => {
   const [answers, setAnswers] = useState({});
   const [currentQ, setCurrentQ] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [timeLeft, setTimeLeft] = useState(nQuestions * 90);
   const isInitialMount = useRef(true);
 
@@ -50,43 +51,33 @@ export const ExamScreen = ({ route }) => {
     translateQuestions();
   }, [language]);
 
-  const handleFinish = useMemo(
-    () => () => {
-      let score = 0;
-      
-      const recommendations = [];
-      questions.forEach((q) => {
-        if (answers[q.id]) {
-          const selectedAnswerId = answers[q.id];
-          let isAnswerCorrect = false;
-          if(selectedAnswerId !== undefined){
-            const answerObj = q.answers.find((answer) => answer.id === selectedAnswerId);
-            
-            if (answerObj && answerObj.is_correct) {
-              isAnswerCorrect = true;
-            }
-          }
-          if (isAnswerCorrect){
-            score++;
-          } else {
-            recommendations.push(q.statement);
-          }
-        } 
+  const handleFinish = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const result = await mockApi.evaluateExam(code, answers);
+     
+      navigation.replace("ExamResult", {
+        code: code,
+        score: result.mark,
+        total: questions.length,
+        recommendations: [],
       });
 
-      navigation.navigate("ExamResult", {
-        code: code,
-        score,
-        total: questions.length,
-        recommendations,
-      });
-    },
-    [questions, answers]
-  );
+    } catch (error) {
+      Alert.alert(
+        t("error") || "Error", 
+        t("errorSubmittingExam") || "Hubo un problema enviando el examen. Inténtalo de nuevo."
+      );
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Temporizador
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || isSubmitting) return;
 
     if (timeLeft <= 0) {
       handleFinish();
@@ -98,7 +89,7 @@ export const ExamScreen = ({ route }) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, isLoading, handleFinish]);
+  }, [timeLeft, isLoading, isSubmitting]);
 
   const handleSelectAnswer = (questionId, answer) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));

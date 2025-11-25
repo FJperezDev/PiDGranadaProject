@@ -1,17 +1,13 @@
 import React, { useState, useContext, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { AuthContext } from '../context/AuthContext';
-// IMPORTAMOS LA NUEVA FUNCIÓN UPDATE
 import { getTopicEpigraphs, createEpigraph, updateEpigraph, deleteEpigraph } from '../api/contentRequests';
 import { EpigraphModal } from '../components/ContentModals';
-// IMPORTAMOS EL ICONO EDIT
 import { List, Plus, Trash2, Edit } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
 
 export default function TopicDetailScreen({ route, navigation }) {
   const { topic } = route.params;
-  const { isSuper } = useContext(AuthContext);
   
   const [epigraphs, setEpigraphs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,19 +31,16 @@ export default function TopicDetailScreen({ route, navigation }) {
 
   useFocusEffect(useCallback(() => { fetchEpigraphs(); }, [topic.id]));
 
-  // Función unificada para Guardar (Crear o Editar)
   const handleSave = async (data) => {
     try {
       if (editingEpigraph) {
-        // ACTUALIZAR
-        // Nota: Pasamos editingEpigraph.order_id como identificador original por si el usuario cambia el order_id en el form
         await updateEpigraph(topic.id, editingEpigraph.order_id, data);
       } else {
         // CREAR
         await createEpigraph(topic.id, data);
       }
       setModalVisible(false);
-      setEditingEpigraph(null); // Limpiar estado de edición
+      setEditingEpigraph(null); 
       fetchEpigraphs();
     } catch (e) { 
       Alert.alert('Error', 'No se pudo guardar el epígrafe. Revisa si el ID de orden ya existe.'); 
@@ -56,22 +49,39 @@ export default function TopicDetailScreen({ route, navigation }) {
   };
 
   const handleDelete = (orderId) => {
-    Alert.alert('Eliminar', '¿Seguro?', [
-      { text: 'Cancelar' },
-      { text: 'Eliminar', style: 'destructive', onPress: async () => {
-         await deleteEpigraph(topic.id, orderId);
-         fetchEpigraphs();
-      }}
-    ]);
+    // Definimos la lógica de borrado para reutilizarla
+    const performDelete = async () => {
+      try {
+        await deleteEpigraph(topic.id, orderId);
+        fetchEpigraphs();
+      } catch (error) {
+        console.error("Error al eliminar", error);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      // Lógica para Navegador (usa el confirm nativo del browser)
+      if (window.confirm('Eliminar: ¿Seguro que quieres eliminar este epígrafe?')) {
+        performDelete();
+      }
+    } else {
+      // Lógica para Móvil (iOS/Android)
+      Alert.alert('Eliminar', '¿Seguro?', [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Eliminar', 
+          style: 'destructive', 
+          onPress: performDelete 
+        }
+      ]);
+    }
   };
 
-  // Abrir modal para crear
   const openCreateModal = () => {
     setEditingEpigraph(null);
     setModalVisible(true);
   };
 
-  // Abrir modal para editar
   const openEditModal = (item) => {
     setEditingEpigraph(item);
     setModalVisible(true);
@@ -80,26 +90,22 @@ export default function TopicDetailScreen({ route, navigation }) {
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.info}>
-         <Text style={styles.orderId}>{item.order_id}</Text>
-         <View style={{flex: 1}}>
-            <Text style={styles.name}>{item.name || item.name_es}</Text>
-            {item.description_es && <Text style={styles.desc} numberOfLines={2}>{item.description_es}</Text>}
-         </View>
+        <View style={{flex: 1}}>
+          <Text style={styles.name}>{item.name || item.name_es}</Text>
+          {item.description_es && <Text style={styles.desc} numberOfLines={2}>{item.description_es}</Text>}
+        </View>
       </View>
       
-      {isSuper && (
-        <View style={styles.actions}>
-            {/* BOTÓN EDITAR */}
-            <TouchableOpacity onPress={() => openEditModal(item)} style={styles.iconBtn}>
-              <Edit size={20} color={COLORS.secondary || 'blue'} />
-            </TouchableOpacity>
+      <View style={styles.actions}>
+        <TouchableOpacity onPress={() => openEditModal(item)} style={styles.iconBtn}>
+          <Edit size={20} color={COLORS.secondary || 'blue'} />
+        </TouchableOpacity>
 
-            {/* BOTÓN ELIMINAR */}
-            <TouchableOpacity onPress={() => handleDelete(item.order_id)} style={styles.iconBtn}>
-              <Trash2 size={20} color={COLORS.danger || 'red'} />
-            </TouchableOpacity>
-        </View>
-      )}
+        <TouchableOpacity onPress={() => handleDelete(item.order_id)} style={styles.iconBtn}>
+          <Trash2 size={20} color={COLORS.danger || 'red'} />
+        </TouchableOpacity>
+      </View>
+    
     </View>
   );
 
@@ -116,17 +122,15 @@ export default function TopicDetailScreen({ route, navigation }) {
         />
       )}
 
-      {isSuper && (
-        <TouchableOpacity style={styles.fab} onPress={openCreateModal}>
-          <Plus size={24} color="white" />
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity style={styles.fab} onPress={openCreateModal}>
+        <Plus size={24} color="white" />
+      </TouchableOpacity>
 
       <EpigraphModal 
         visible={modalVisible} 
         onClose={() => setModalVisible(false)} 
         onSubmit={handleSave} 
-        editingEpigraph={editingEpigraph} // Pasamos el objeto a editar
+        editingEpigraph={editingEpigraph} 
       />
     </View>
   );
@@ -140,7 +144,7 @@ const styles = StyleSheet.create({
   orderId: { fontWeight: 'bold', marginRight: 10, fontSize: 16, color: '#555', minWidth: 30 },
   name: { fontSize: 16, fontWeight: '600', color: '#333' },
   desc: { fontSize: 12, color: 'gray' },
-  actions: { flexDirection: 'row', gap: 10 }, // Contenedor para los iconos
+  actions: { flexDirection: 'row', gap: 10 }, 
   iconBtn: { padding: 5 },
   empty: { textAlign: 'center', marginTop: 20, color: 'gray' },
   fab: { position: 'absolute', right: 20, bottom: 20, backgroundColor: COLORS.primary, width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 5 }

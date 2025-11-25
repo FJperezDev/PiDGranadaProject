@@ -9,6 +9,7 @@ import TopicDetailScreen from '../screens/TopicDetailScreen';
 import ManageQuestionsScreen from '../screens/ManageQuestionsScreen'
 import ManageUsersScreen from '../screens/ManageUsersScreen'
 import ManageContentScreen from '../screens/ManageContentScreen'
+import AnalyticsScreen from '../screens/AnalyticsScreen'
 import UnauthorizedScreen from '../screens/UnauthorizedScreen'
 import { CustomHeader } from '../components/CustomHeader';
 import { useLanguage } from '../context/LanguageContext';
@@ -32,7 +33,7 @@ export default function AppNavigator() {
           <Stack.Screen name="ManageQuestions" component={ManageQuestionsScreen} options={{ title: t('manageQuestions') }} />
           <Stack.Screen name="ManageContent" component={ManageContentScreen} options={{ title: t('manageContent') }} />
           <Stack.Screen name="TopicDetail" component={TopicDetailScreen} options={({ route }) => ({ title: t('topicDetail') })} />
-          <Stack.Screen name="Statistics" component={UserHomeScreen} options={{ title: t('statistics') }} />
+          <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ title: t('analytics') }} />
           <Stack.Screen name="InviteTeacher" component={ManageUsersScreen} options={{ title: t('inviteTeacher') }} />
           <Stack.Screen name="Logs" component={UserHomeScreen} options={{ title: t('logs') }} />
         </>

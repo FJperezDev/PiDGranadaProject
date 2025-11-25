@@ -12,7 +12,7 @@ def create_subject(name_es: str, name_en: str, teacher: Teacher, description_es=
     """Crea una nueva asignatura con validaciones básicas."""
     if not name_es and not name_en:
         raise ValidationError("Debe proporcionar al menos un nombre en algún idioma.")
-    if Subject.objects.filter(name_es=name_es).exists() or Subject.objects.filter(name_en=name_en).exists():
+    if Subject.objects.filter(name_es=name_es).exists():
         raise ValidationError("Ya existe una asignatura con ese nombre en español.")
     
     subject = Subject.objects.create(

@@ -14,19 +14,19 @@ class Topic(models.Model):
     description_en = models.TextField(null=True, blank=True)
     old = models.BooleanField(default=False)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['title_es'],
-                condition=Q(old=False),
-                name='unique_active_topic_title_es'
-            ),
-            models.UniqueConstraint(
-                fields=['title_en'],
-                condition=Q(old=False),
-                name='unique_active_topic_title_en'
-            )
-        ]
+    # class Meta:
+    #     constraints = [
+    #         models.UniqueConstraint(
+    #             fields=['title_es'],
+    #             condition=Q(old=False),
+    #             name='unique_active_topic_title_es'
+    #         ),
+    #         models.UniqueConstraint(
+    #             fields=['title_en'],
+    #             condition=Q(old=False),
+    #             name='unique_active_topic_title_en'
+    #         )
+    #     ]
 
     def __str__(self):
         return self.title_es or self.title_en
@@ -50,19 +50,19 @@ class Concept(models.Model):
     def __str__(self):
         return self.name_es or self.name_en
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=['name_es'],
-                condition=Q(old=False),
-                name='unique_active_concept_name_es'
-            ),
-            models.UniqueConstraint(
-                fields=['name_en'],
-                condition=Q(old=False),
-                name='unique_active_concept_name_en'
-            )
-        ]
+    # class Meta:
+    #     constraints = [
+    #         models.UniqueConstraint(
+    #             fields=['name_es'],
+    #             condition=Q(old=False),
+    #             name='unique_active_concept_name_es'
+    #         ),
+    #         models.UniqueConstraint(
+    #             fields=['name_en'],
+    #             condition=Q(old=False),
+    #             name='unique_active_concept_name_en'
+    #         )
+    #     ]
 
 class TeacherMakeChangeConcept(models.Model):
     old_object = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)

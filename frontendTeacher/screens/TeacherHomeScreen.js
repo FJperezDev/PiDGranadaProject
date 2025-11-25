@@ -20,7 +20,7 @@ export default function UserHomeScreen({ navigation }) {
     { title: t('manageGroups'), icon: Users, onPress: () => navigation.navigate("ManageGroups") },
     { title: t('manageQuestions'), icon: FileQuestion, onPress: () => navigation.navigate("ManageQuestions") },
     { title: t('manageContent'), icon: BookOpen, onPress: () => navigation.navigate("ManageContent") },
-    { title: t('statistics'), icon: BarChart3, onPress: () => navigation.navigate("Statistics") },
+    { title: t('statistics'), icon: BarChart3, onPress: () => navigation.navigate("Analytics") },
     ...(isSuper
       ? [
           { title: t('inviteTeacher'), icon: UserPlus, onPress: () => navigation.navigate("InviteTeacher") },

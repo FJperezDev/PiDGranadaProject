@@ -56,8 +56,6 @@ def create_concept(name_es: str, name_en: str, teacher: CustomTeacher,descriptio
     """Crea un nuevo Concept."""
     if Concept.objects.filter(name_es=name_es).exists():
         raise ValidationError("Ya existe un concepto con ese nombre.")
-    if Concept.objects.filter(name_en=name_en).exists():
-        raise ValidationError("Exists a concept with that name already.")
     
     if not name_es and not name_en:
         raise ValidationError("Debe proporcionar al menos un nombre.")

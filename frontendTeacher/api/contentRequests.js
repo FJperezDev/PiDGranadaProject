@@ -31,8 +31,6 @@ export const updateConcept = async (id, data) => (await apiClient.put(`/concepts
 // --- Conceptos (Linked actions) ---
 
 export const getTopicConcepts = async (topicId) => (await apiClient.get(`/topics/${topicId}/concepts/`)).data;
-export const linkConceptToTopic = async (topicId, conceptName) => (await apiClient.post(`/topics/${topicId}/concepts/`, { concept_name: conceptName })).data;
-export const unlinkConceptFromTopic = async (topicId, conceptName) => (await apiClient.delete(`/topics/${topicId}/concepts/`, { data: { concept_name: conceptName } })).data;
 export const linkConceptToConcept = async (parentId, childConceptName) => (await apiClient.post(`/concepts/${parentId}/concepts/`, { concept_name: childConceptName })).data;
 export const unlinkConceptFromConcept = async (parentId, childConceptName) => (await apiClient.delete(`/concepts/${parentId}/concepts/`, { data: { concept_name: childConceptName } })).data;
 
