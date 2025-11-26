@@ -33,7 +33,7 @@ export const TopicDetailScreen = ({ setPage, route }) => {
   }, [topic, language]);
 
   const showContent = (item) => {
-    setModalContent({ title: item.title, content: item.description });
+    setModalContent({ title: item.name, content: item.description });
     setModalVisible(true);
   };
 

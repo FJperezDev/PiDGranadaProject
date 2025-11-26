@@ -113,9 +113,9 @@ class QuestionViewSet(BaseContentViewSet):
 
     @action(detail=True, methods=['get', 'put', 'delete'], url_path='answers/(?P<answer_id>[^/.]+)')
     def answer_detail(self, request, pk=None, answer_id=None):
-        """GET /questions/<id>/answers/<id>/ — obtiene un epigrafe específico.
-           PUT /questions/<id>/answers/<id>/ — actualiza un epigrafe asociado al tema.
-           DELETE /questions/<id>/answers/<id>/ — elimina un epigrafe."""
+        """GET /questions/<id>/answers/<id>/ — obtiene un answers específico.
+           PUT /questions/<id>/answers/<id>/ — actualiza un answers asociado al tema.
+           DELETE /questions/<id>/answers/<id>/ — elimina un answers."""
         answer = selectors.get_answer_by_id(answer_id=answer_id)
         if not answer or answer.question.id != int(pk):
             return Response({'detail': 'Answer not found in this question'}, status=status.HTTP_404_NOT_FOUND)

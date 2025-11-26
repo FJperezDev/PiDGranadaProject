@@ -227,6 +227,8 @@ class ConceptViewSet(BaseContentViewSet):
         """POST /concepts/<id>/concepts/ — enlaza este concepto con otro"""
         concept_from = selectors.get_concept_by_id(pk)
         concept_name = request.data.get('concept_name')
+        description_es = request.data.get('description_es', '')
+        description_en = request.data.get('description_en', '')
         concept_to = selectors.get_concept_by_name(name=concept_name)
         bidirectional = request.data.get('bidirectional', False)
 
@@ -234,7 +236,7 @@ class ConceptViewSet(BaseContentViewSet):
             return Response({'detail': 'Concept not found'}, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            services.link_concepts(concept_from, concept_to, bidirectional)
+            services.link_concepts(concept_from, concept_to, description_es, description_en, bidirectional)
         except ValidationError as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

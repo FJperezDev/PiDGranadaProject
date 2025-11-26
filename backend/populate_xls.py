@@ -3,211 +3,184 @@ import requests
 import json
 import sys
 
-# --- CONFIGURACIÓN ---
 BASE_URL = "http://127.0.0.1:8000"
 TEACHER_EMAIL = "admin@admin.com"
 TEACHER_PASSWORD = "admin123"
 EXCEL_FILE = "Prueba.xlsx"
 
+def clean_str(val):
+    if pd.isna(val) or val == "":
+        return ""
+    return str(val).replace(".0", "").strip()
+
 def print_status(response, action):
     if 200 <= response.status_code < 300:
-        print(f"✅ {action} (status {response.status_code})")
+        print(f"✅ {action}")
         try:
             return response.json()
         except json.JSONDecodeError:
             return None
     else:
-        print(f"❌ {action} FAILED (status {response.status_code})")
-        print(f"   Response: {response.text}")
+        print(f"❌ {action} FAILED ({response.status_code})")
         return None
 
 def authenticate():
-    url = f"{BASE_URL}/login/"
-    payload = {"email": TEACHER_EMAIL, "password": TEACHER_PASSWORD}
-    r = requests.post(url, json=payload)
-    data = print_status(r, "Autenticando profesor")
+    r = requests.post(f"{BASE_URL}/login/", json={"email": TEACHER_EMAIL, "password": TEACHER_PASSWORD})
+    data = print_status(r, "Autenticando")
     if not data or "access" not in data:
         sys.exit("🛑 Error de autenticación")
     return {"Authorization": f"Bearer {data['access']}"}
 
 def main():
     headers = authenticate()
-
-    # Leer las hojas
     xls = {name: df.fillna("") for name, df in pd.read_excel(EXCEL_FILE, sheet_name=None).items()}
 
-    # --- SUBJECTS ---
+    # SUBJECTS
     subjects_map = {}
     for _, row in xls["subjects"].iterrows():
         payload = row.to_dict()
-        r = requests.post(f"{BASE_URL}/subjects/", headers=headers, json=payload)
-        resp = print_status(r, f"Creando asignatura {row['name_es']}")
+        s_code = clean_str(row["subject_code"])
+        payload["subject_code"] = s_code
+        
+        resp = print_status(requests.post(f"{BASE_URL}/subjects/", headers=headers, json=payload), f"Asignatura {s_code}")
         if resp:
-            subjects_map[row["subject_code"]] = resp["id"]
+            subjects_map[s_code] = resp["id"]
 
-    # --- TOPICS ---
+    # TOPICS
     topics_map = {}
     for _, row in xls["topics"].iterrows():
         payload = row.to_dict()
-        subject_id = subjects_map.get(row["subject_code"])
-        payload.pop("subject_code")
-        r = requests.post(f"{BASE_URL}/topics/", headers=headers, json=payload)
-        resp = print_status(r, f"Creando tema {row['title_es']}")
+        t_code = clean_str(row["topic_code"])
+        s_code = clean_str(row["subject_code"])
+        
+        subject_id = subjects_map.get(s_code)
+        payload["topic_code"] = t_code
+        payload.pop("subject_code", None)
+
+        resp = print_status(requests.post(f"{BASE_URL}/topics/", headers=headers, json=payload), f"Tema {t_code}")
         if resp:
-            topics_map[row["topic_code"]] = resp["id"]
-            # Vincular a la asignatura
-            requests.post(f"{BASE_URL}/subjects/{subject_id}/topics/", headers=headers,
-                          json={"topic_name": row["title_es"], "order_id": row["order_id"]})
+            topics_map[t_code] = resp["id"]
+            if subject_id:
+                requests.post(f"{BASE_URL}/subjects/{subject_id}/topics/", headers=headers,
+                              json={"topic_name": row["title_es"], "order_id": row["order_id"]})
 
-    # --- CONCEPTS ---
-    concepts_map = {}       # Mapa: Código -> ID (para la URL del origen)
-    concepts_name_map = {}  # Mapa: Código -> Nombre (para el body de la petición destino)
-    pending_concept_links = [] # Lista de tuplas: (id_origen, string_codigos_destino)
+    # CONCEPTS
+    concepts_map = {}
+    concepts_name_map = {}
+    pending_links = []
 
-    print("📘 topics_map generado:", topics_map)
     for _, row in xls["concepts"].iterrows():
         payload = row.to_dict()
-        topic_code = payload.pop("related_topic_code", None)
-        related_codes_str = payload.pop("related_concept_codes", None) # Columna (C002, C003)
-    
-        r = requests.post(f"{BASE_URL}/concepts/", headers=headers, json=payload)
-        resp = print_status(r, f"Creando concepto {row['name_es']}")
+        c_code = clean_str(row["concept_code"])
+        t_code = clean_str(payload.pop("related_topic_code", None))
+        related_str = str(payload.pop("related_concept_codes", ""))
+        
+        payload["concept_code"] = c_code
+        resp = print_status(requests.post(f"{BASE_URL}/concepts/", headers=headers, json=payload), f"Concepto {c_code}")
         
         if resp:
-            current_id = resp["id"]
-            current_code = str(row["concept_code"]).strip()
-            current_name = row["name_es"]
+            c_id = resp["id"]
+            concepts_map[c_code] = c_id
+            concepts_name_map[c_code] = row["name_es"]
 
-            concepts_map[current_code] = current_id
-            concepts_name_map[current_code] = current_name
+            if t_code and (t_id := topics_map.get(t_code)):
+                requests.post(f"{BASE_URL}/topics/{t_id}/concepts/", headers=headers, 
+                              json={"concept_name": row["name_es"], "order_id": 1})
 
-            if topic_code:
-                topic_id = topics_map.get(topic_code)
-                if topic_id:
-                    requests.post(f"{BASE_URL}/topics/{topic_id}/concepts/",
-                                  headers=headers, json={"concept_name": current_name, "order_id": 1})
+    for item in pending_links:
+        targets = [clean_str(x) for x in item["targets"].split(",") if clean_str(x)]
+        for t_code in targets:
+            if t_name := concepts_name_map.get(t_code):
+                requests.post(f"{BASE_URL}/concepts/{item['source_id']}/concepts/", headers=headers, json={"concept_name": t_name})
 
-            if related_codes_str:
-                pending_concept_links.append({
-                    "source_id": current_id,
-                    "target_codes": related_codes_str
-                })
-    
-    for item in pending_concept_links:
-        source_id = item["source_id"]
-        raw_targets = str(item["target_codes"])
-        target_codes = [code.strip() for code in raw_targets.split(",") if code.strip()]
-        
-        for t_code in target_codes:
+    # --- RELATIONS (NUEVO BLOQUE) ---
+    # Procesamos la hoja separada 'relations'
+    if "relations" in xls:
+        print("\n🔗 Procesando Relaciones (Tabla 'relations')...")
+        for index, row in xls["relations"].iterrows():
+            # 1. Obtenemos los códigos origen (variable1) y destino (variable2)
+            code_from = clean_str(row["variable1"])
+            code_to = clean_str(row["variable2"])
 
-            target_name = concepts_name_map.get(t_code)
-            
-            if target_name:
-                payload_link = {"concept_name": target_name}
+            # 2. Buscamos los datos necesarios en los mapas creados anteriormente
+            source_id = concepts_map.get(code_from)      # ID para la URL
+            target_name = concepts_name_map.get(code_to) # Nombre para el body (según tu API)
+
+            if source_id and target_name:
+                # 3. Construimos el payload con las descripciones
+                payload_link = {
+                    "concept_name": target_name,
+                    "description_es": row.get("description_es", ""),
+                    "description_en": row.get("description_en", "")
+                }
+                
+                # 4. Hacemos la petición
                 r = requests.post(f"{BASE_URL}/concepts/{source_id}/concepts/", headers=headers, json=payload_link)
                 
                 if r.status_code >= 300:
-                    print(f"   ⚠️ Falló al vincular {source_id} con {t_code} ({target_name})")
+                    print(f"   ⚠️ Falló al vincular {code_from} -> {code_to}")
+                else:
+                    print_status(r, f"Link {code_from} -> {code_to}")
             else:
-                print(f"   ⚠️ No se encontró el concepto con código {t_code} para vincular.")
+                if not source_id:
+                    print(f"   ⚠️ Fila {index+2}: Concepto Origen '{code_from}' no existe.")
+                if not target_name:
+                    print(f"   ⚠️ Fila {index+2}: Concepto Destino '{code_to}' no existe.")
 
-    # --- EPIGRAPHS ---
+    # EPIGRAPHS
     for _, row in xls["epigraphs"].iterrows():
         payload = row.to_dict()
-        topic_id = topics_map[row["topic_code"]]
-        payload.pop("topic_code")
-        r = requests.post(f"{BASE_URL}/topics/{topic_id}/epigraphs/", headers=headers, json=payload)
-        print_status(r, f"Creando epígrafe {row['name_es']}")
+        t_code = clean_str(payload.pop("topic_code", None))
+        
+        if t_id := topics_map.get(t_code):
+            print_status(requests.post(f"{BASE_URL}/topics/{t_id}/epigraphs/", headers=headers, json=payload), f"Epígrafe {row.get('name_es')}")
 
-    # --- QUESTIONS ---
+    # QUESTIONS
     questions_map = {}
     if "questions" in xls:
-        print("\n❓ Procesando preguntas...")
-        for index, row in xls["questions"].iterrows():
-            # 1. Obtenemos los códigos y los limpiamos (quitamos espacios y .0)
-            t_code = str(row.get("topic_code", "")).strip().replace(".0", "")
-            c_code = str(row.get("concept_code", "")).strip().replace(".0", "")
+        for _, row in xls["questions"].iterrows():
+            t_code = clean_str(row.get("topic_code"))
+            c_code = clean_str(row.get("concept_code"))
+            q_code = clean_str(row.get("question_code"))
 
-            # Si la fila está vacía (Excel a veces deja basura al final), saltamos
-            if not t_code or t_code == "nan": 
+            if not t_code: continue
+
+            # Búsqueda compacta
+            topic_title = next((r["title_es"] for _, r in xls["topics"].iterrows() if clean_str(r["topic_code"]) == t_code), None)
+            concept_name = next((r["name_es"] for _, r in xls["concepts"].iterrows() if clean_str(r["concept_code"]) == c_code), None)
+
+            if not topic_title or not concept_name:
+                print(f"⚠️ Saltando Q{q_code}: Datos faltantes")
                 continue
 
-            # 2. BÚSQUEDA ROBUSTA (Convirtiendo todo a string para comparar)
-            # Buscamos en la hoja 'topics' donde la columna 'topic_code' (como string) coincida
-            topic_match = xls["topics"].loc[
-                xls["topics"]["topic_code"].astype(str).str.strip().str.replace(".0", "") == t_code, 
-                "title_es"
-            ]
-
-            # Buscamos en la hoja 'concepts'
-            concept_match = xls["concepts"].loc[
-                xls["concepts"]["concept_code"].astype(str).str.strip().str.replace(".0", "") == c_code, 
-                "name_es"
-            ]
-
-            # 3. VALIDACIÓN: Si no existe, AVISAR en lugar de ROMPERSE
-            if topic_match.empty:
-                print(f"   ⚠️ SALTA Fila {index+2}: El topic_code '{t_code}' no existe en la hoja 'topics'.")
-                continue # <--- Esto evita el crash
-            
-            if concept_match.empty:
-                print(f"   ⚠️ SALTA Fila {index+2}: El concept_code '{c_code}' no existe en la hoja 'concepts'.")
-                continue # <--- Esto evita el crash
-
-            # 4. Si llegamos aquí, es seguro extraer los datos
-            topic_title = topic_match.iloc[0]
-            concept_name = concept_match.iloc[0]
-
             payload = row.to_dict()
-            payload["topics_titles"] = [topic_title]
-            payload["concepts"] = [concept_name]
-            
-            # Limpiamos campos internos del excel
-            if "topic_code" in payload: payload.pop("topic_code")
-            if "concept_code" in payload: payload.pop("concept_code")
-            
-            # Enviar al backend
-            r = requests.post(f"{BASE_URL}/questions/", headers=headers, json=payload)
-            
-            # Log visual corto
-            statement = str(row.get('statement_es', 'Sin enunciado'))[:30]
-            resp = print_status(r, f"Pregunta: {statement}...")
-            
-            if resp and "id" in resp:
-                questions_map[row["question_code"]] = resp["id"]
+            payload.update({"topics_titles": [topic_title], "concepts": [concept_name], "question_code": q_code})
+            payload.pop("topic_code", None)
+            payload.pop("concept_code", None)
 
-    # --- ANSWERS ---
+            resp = print_status(requests.post(f"{BASE_URL}/questions/", headers=headers, json=payload), f"Pregunta {q_code}")
+            if resp:
+                questions_map[q_code] = resp["id"]
+
+    # ANSWERS
     if "answers" in xls:
-        print("\n📝 Procesando respuestas...")
-        for index, row in xls["answers"].iterrows():
-            q_code = row.get("question_code")
-            
-            # VALIDACIÓN DEFENSIVA: Verificamos si la pregunta padre existe
-            if q_code in questions_map:
-                qid = questions_map[q_code]
-                
+        for _, row in xls["answers"].iterrows():
+            q_code = clean_str(row.get("question_code"))
+            if q_id := questions_map.get(q_code):
                 payload = row.to_dict()
-                if "question_code" in payload: payload.pop("question_code")
+                payload.pop("question_code", None)
+                if "is_correct" in payload:
+                    payload["is_correct"] = str(payload["is_correct"]).lower() in ['true', '1', 'yes']
                 
-                r = requests.post(f"{BASE_URL}/questions/{qid}/answers/", headers=headers, json=payload)
-                
-                # Log corto
-                texto_rta = str(row.get('text_es', 'Sin texto'))[:20]
-                print_status(r, f"Rta '{texto_rta}' para Q{q_code}")
-            else:
-                # Si la pregunta no se creó (por error o salto), avisamos pero NO ROMPEMOS
-                print(f"   ⚠️ SALTA Rta Fila {index+2}: Pregunta padre '{q_code}' no existe (no se creó previamente).")
-        print_status(r, f"Creando respuesta {row['text_es']}")
+                print_status(requests.post(f"{BASE_URL}/questions/{q_id}/answers/", headers=headers, json=payload), f"Rta para Q{q_code}")
 
-    # --- STUDENT GROUPS ---
+    # STUDENT GROUPS
     for _, row in xls["student_groups"].iterrows():
-        subject_id = subjects_map[row["subject_code"]]
-        payload = row.to_dict()
-        payload.pop("subject_code")
-        r = requests.post(f"{BASE_URL}/subjects/{subject_id}/groups/", headers=headers, json=payload)
-        print_status(r, f"Creando grupo {row['name_es']}")
-
-    # print("\n🎉 ¡Base de datos poblada exitosamente desde Excel!")
+        s_code = clean_str(row["subject_code"])
+        if s_id := subjects_map.get(s_code):
+            payload = row.to_dict()
+            payload.pop("subject_code", None)
+            print_status(requests.post(f"{BASE_URL}/subjects/{s_id}/groups/", headers=headers, json=payload), f"Grupo {row['name_es']}")
 
 if __name__ == "__main__":
     main()

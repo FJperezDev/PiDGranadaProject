@@ -77,6 +77,8 @@ class TeacherMakeChangeConcept(models.Model):
 class ConceptIsRelatedToConcept(models.Model):
     concept_from= models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='related_concepts_from')
     concept_to = models.ForeignKey(Concept, on_delete=models.CASCADE, related_name='related_concepts_to')
+    description_es = models.TextField(null=True, blank=True)
+    description_en = models.TextField(null=True, blank=True)
 
     class Meta:
         unique_together = ('concept_from', 'concept_to')

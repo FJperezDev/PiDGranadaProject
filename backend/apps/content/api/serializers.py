@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Topic, Concept, Epigraph
+from .models import ConceptIsRelatedToConcept, Topic, Concept, Epigraph
 from apps.utils.mixins import LanguageSerializerMixin
 from apps.content.domain import selectors
 
@@ -36,22 +36,14 @@ class EpigraphSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
 class RelatedConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField(read_only=True)
     description = serializers.SerializerMethodField(read_only=True)
+    explanation = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Concept
         fields = [
             'id',
-            'name', 'description',
-            'name_es', 'description_es',
-            'name_en', 'description_en',
+            'name', 'description', 'explanation',
         ]
-
-        extra_kwargs = {
-            'name_es': {'write_only': True, 'required': True},
-            'name_en': {'write_only': True, 'required': True},
-            'description_es': {'write_only': True, 'required': False},
-            'description_en': {'write_only': True, 'required': False},
-        }
 
     def get_name(self, obj):
         lang = self.get_lang()
@@ -60,6 +52,11 @@ class RelatedConceptSerializer(LanguageSerializerMixin, serializers.ModelSeriali
     def get_description(self, obj):
         lang = self.get_lang()
         return getattr(obj, f'description_{lang}', None)
+    
+    def get_explanation(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'_annotated_explanation_{lang}', None)
+    
 
 class ShortConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
@@ -148,8 +145,23 @@ class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
         return getattr(obj, f'description_en', None)
     
     def get_related_concepts(self, obj):
-        related = selectors.get_concepts_by_concept(obj.id)
-        return ShortConceptSerializer(related, many=True, context=self.context).data
+        relationships = ConceptIsRelatedToConcept.objects.filter(
+            concept_from=obj
+        ).select_related('concept_to')
+
+        concepts_to_serialize = []
+        
+        for rel in relationships:
+            target_concept = rel.concept_to
+            target_concept._annotated_explanation_es = rel.description_es
+            target_concept._annotated_explanation_en = rel.description_en
+            concepts_to_serialize.append(target_concept)
+
+        return RelatedConceptSerializer(
+            concepts_to_serialize, 
+            many=True, 
+            context=self.context
+        ).data
     
 class ShortTopicSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     title = serializers.SerializerMethodField()

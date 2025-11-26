@@ -157,7 +157,7 @@ def unlink_concept_from_topic(topic: Topic, concept: Concept) -> None:
     relation.delete()
 
 # --- Concept ↔ Concept relation ---
-def link_concepts(concept_from: Concept, concept_to: Concept, bidirectional=False):
+def link_concepts(concept_from: Concept, concept_to: Concept, description_es=None, description_en=None, bidirectional=False):
     """Asocia uno o dos conceptos (de forma opcional bidireccional)."""
     if concept_from == concept_to:
         raise ValidationError("No se puede asociar un concepto consigo mismo.")
@@ -173,7 +173,8 @@ def link_concepts(concept_from: Concept, concept_to: Concept, bidirectional=Fals
 
     if bidirectional:
         ConceptIsRelatedToConcept.objects.get_or_create(
-            concept_from=concept_to, concept_to=concept_from
+            concept_from=concept_to, concept_to=concept_from,
+            defaults={'description_es': description_es, 'description_en': description_en}
         )
 
 def unlink_concepts(concept_from: Concept, concept_to: Concept, bidirectional=False) -> None:
