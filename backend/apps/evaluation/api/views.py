@@ -1,4 +1,4 @@
-from django.db.models import Sum
+from django.db.models import Sum, F, Case, When, Value, FloatField, ExpressionWrapper
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -73,7 +73,14 @@ class QuestionViewSet(BaseContentViewSet):
 
     @action(detail=False, methods=['get'], url_path='long-questions', url_name='long-questions')
     def long_questions(self, request):
-        queryset = selectors.get_all_questions()
+        # Usamos self.get_queryset() para aprovechar el prefetch definido arriba
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        page = self.paginate_queryset(queryset) # 2. OPTIMIZACIÓN: Paginación manual en acciones custom
+        if page is not None:
+            serializer = QuestionSerializer(page, many=True, context={'request': request})
+            return self.get_paginated_response(serializer.data)
+
         serializer = QuestionSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
@@ -175,88 +182,104 @@ class AnalyticsViewSet(BaseContentViewSet):
 
     @action(detail=False, methods=['get'])
     def performance(self, request):
-        # ... (Queryset y filtros previos se quedan IGUAL) ...
+        # 1. Iniciamos el QuerySet base
         queryset = QuestionEvaluationGroup.objects.all()
         
-        # Filtros (Subject, Group, Topic...) se quedan IGUAL que antes
-        # ...
+        # --- NUEVA LÓGICA DE FILTRADO POR SUBJECT ---
+        subject_id_param = request.query_params.get('subject_id')
+        
+        # Validamos que exista y sea un número mayor a 0
+        if subject_id_param and subject_id_param.isdigit():
+            subject_id = int(subject_id_param)
+            if subject_id > 0:
+                # Filtramos a través de la relación:
+                # QuestionEvaluationGroup -> group (StudentGroup) -> subject (Subject)
+                queryset = queryset.filter(group__subject_id=subject_id)
+        # Si es 0 o None, simplemente no aplicamos filtro (trae todo)
+        # ---------------------------------------------
+
+        # ... (Resto de filtros previos de Group o Topic si los tuvieras) ...
 
         group_by = request.query_params.get('group_by', 'topic')
         
+        # Obtener el límite
+        limit_param = request.query_params.get('limit', 10)
+        limit = int(limit_param) if limit_param else None
+
         try:
-            # --- CAMBIOS EN LA LÓGICA DE AGRUPACIÓN ---
-            
+            fields_to_select = []
+            label_key = None 
+            is_question_grouping = False
+
             if group_by == 'topic':
-                # ... (Igual que antes) ...
                 label_path = 'question__topics__topic__title_es'
-                result = queryset.values(label_path).annotate(
-                    total_attempts=Sum('ev_count'),
-                    total_correct=Sum('correct_count')
-                ).order_by(label_path)
+                fields_to_select = [label_path]
                 label_key = label_path
 
             elif group_by == 'concept':
-                # ... (Igual que antes) ...
                 label_path = 'question__concepts__concept__name_es'
-                result = queryset.values(label_path).annotate(
-                    total_attempts=Sum('ev_count'),
-                    total_correct=Sum('correct_count')
-                ).order_by(label_path)
+                fields_to_select = [label_path]
                 label_key = label_path
 
             elif group_by == 'group':
-                # ... (Igual que antes) ...
                 label_path = 'group__name_es'
-                result = queryset.values(label_path).annotate(
-                    total_attempts=Sum('ev_count'),
-                    total_correct=Sum('correct_count')
-                ).order_by(label_path)
+                fields_to_select = [label_path]
                 label_key = label_path
 
             elif group_by == 'question':
-                # --- AQUÍ ESTÁ EL CAMBIO CLAVE ---
-                # Agrupamos por ID y Enunciado. Ordenamos por ID para que salga Q1, Q2, Q3...
-                result = queryset.values('question__id', 'question__statement_es').annotate(
-                    total_attempts=Sum('ev_count'),
-                    total_correct=Sum('correct_count')
-                ).order_by('question__id') 
-                
-                # No usaremos label_key estándar aquí, lo manejaremos en el bucle
-                label_key = None 
-
+                fields_to_select = ['question__id', 'question__statement_es']
+                is_question_grouping = True
+            
             else:
                 return Response({'detail': 'Invalid group_by parameter'}, status=400)
 
+            # --- CONSTRUCCIÓN DE LA CONSULTA EFICIENTE ---
+            
+            # Django aplicará el WHERE subject_id = X antes de hacer el GROUP BY
+            result = queryset.values(*fields_to_select).annotate(
+                total_attempts=Sum('ev_count'),
+                total_correct=Sum('correct_count')
+            )
+
+            # Calcular Porcentaje en BD y Ordenar
+            result = result.annotate(
+                accuracy=Case(
+                    When(total_attempts=0, then=Value(0.0)),
+                    default=ExpressionWrapper(
+                        (F('total_correct') * 100.0) / F('total_attempts'),
+                        output_field=FloatField()
+                    ),
+                    output_field=FloatField()
+                )
+            ).order_by('accuracy') 
+
+            # Aplicar límite
+            if limit:
+                result = result[:limit]
+
             # --- FORMATEO DE DATOS ---
             formatted_data = []
+            
             for item in result:
-                
-                # Lógica especial para etiquetas de Preguntas
-                if group_by == 'question':
+                attempts = item['total_attempts']
+                percentage = round(item['accuracy'], 2)
+
+                if is_question_grouping:
                     q_id = item['question__id']
                     statement = item['question__statement_es'] or "Sin enunciado"
-                    # Etiqueta corta para la gráfica: "Q14"
                     label = f"Q{q_id}" 
-                    # Etiqueta larga para la lista: "Q14: ¿Cuál es la capital de...?"
                     full_label = f"Q{q_id}: {statement}"
                 else:
-                    # Lógica estándar para temas, grupos, etc.
                     raw_label = item.get(label_key)
-                    if not raw_label: continue
+                    if not raw_label: 
+                        raw_label = "Sin asignar"
+                    
                     label = str(raw_label)[:15] + '...' if len(str(raw_label)) > 15 else str(raw_label)
                     full_label = str(raw_label)
 
-                attempts = item['total_attempts']
-                correct = item['total_correct']
-                
-                if attempts > 0:
-                    percentage = round((correct / attempts) * 100, 2)
-                else:
-                    percentage = 0
-
                 formatted_data.append({
-                    'label': label,       # Para la gráfica (corto)
-                    'full_label': full_label, # Para la lista (largo)
+                    'label': label,
+                    'full_label': full_label,
                     'value': percentage,
                     'attempts': attempts
                 })
@@ -265,4 +288,6 @@ class AnalyticsViewSet(BaseContentViewSet):
 
         except Exception as e:
             print(f"Error Analytics: {e}")
+            import traceback
+            traceback.print_exc()
             return Response({'detail': str(e)}, status=500)

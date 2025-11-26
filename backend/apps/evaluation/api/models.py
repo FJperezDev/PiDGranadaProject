@@ -91,6 +91,10 @@ class QuestionEvaluationGroup(models.Model):
 
     class Meta:
         unique_together = ('group', 'question')
+        indexes = [
+            # Ayuda a agrupar por pregunta rápidamente
+            models.Index(fields=['question']), 
+        ]
 
     def __str__(self):
         return f"{self.group} evaluated Q{self.question.id}  "

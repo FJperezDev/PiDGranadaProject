@@ -272,7 +272,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
 
         {/* --- TOPICS SELECTOR --- */}
         <Text style={styles.label}>Temas (Selecciona para ver Conceptos)</Text>
-        <View style={styles.topicsBox}>
+        <ScrollView style={styles.topicsBox} nestedScrollEnabled={true} paddingBottom={10} >
             <View style={styles.topicsGrid}>
                 {topics.length === 0 && <Text style={{color: 'gray', padding: 5}}>Selecciona una asignatura.</Text>}
                 {topics.map((t, i) => {
@@ -286,13 +286,13 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                     );
                 })}
             </View>
-        </View>
+        </ScrollView>
 
         {/* --- CONCEPTS SELECTOR --- */}
         {selectedTopicTitles.length > 0 && (
             <>
                 <Text style={styles.label}>Conceptos (Opcional)</Text>
-                <View style={styles.topicsBox}>
+                <ScrollView style={styles.topicsBox} nestedScrollEnabled={true} paddingBottom={10} >
                     <View style={styles.topicsGrid}>
                         {concepts.length === 0 && <Text style={{color: 'gray', padding: 5}}>Cargando o sin conceptos...</Text>}
                         {concepts.map((c, i) => {
@@ -306,7 +306,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                             );
                         })}
                     </View>
-                </View>
+                </ScrollView>
             </>
         )}
 
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   pickerWrapper: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, marginBottom: 10 },
   
   topicsBox: { maxHeight: 150, marginBottom: 10, borderWidth: 1, borderColor: '#eee', borderRadius: 5, padding: 5 },
-  topicsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  topicsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 15 },
   
   topicChip: { backgroundColor: '#f0f0f0', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: '#ccc', flexDirection: 'row', alignItems: 'center' },
   topicChipSelected: { backgroundColor: COLORS.primary || 'blue', borderColor: COLORS.primary || 'blue' },

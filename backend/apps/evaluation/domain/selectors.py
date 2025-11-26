@@ -9,7 +9,16 @@ import random
 from apps.courses.api.models import StudentGroup
 
 def get_all_questions():
-    return Question.objects.filter(old=False).all()
+    return Question.objects.all().prefetch_related(
+        # Trae las respuestas en la misma consulta
+        'answers',
+        
+        # Trae la tabla intermedia Y el tema final
+        'topics__topic', 
+        
+        # Trae la tabla intermedia Y el concepto final
+        'concepts__concept'
+    ).order_by('-id').filter(old=False)
 
 def get_question_by_id(question_id: int) -> Question:
     return Question.objects.filter(old=False).get(id=question_id)

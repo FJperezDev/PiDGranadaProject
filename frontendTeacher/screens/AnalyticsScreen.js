@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, TouchableOpacity, Modal, FlatList, RefreshControl } from 'react-native';
+import { 
+    View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, 
+    TouchableOpacity, Modal, FlatList, RefreshControl, LayoutAnimation, Platform, UIManager 
+} from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
+// Asegúrate de importar tus rutas correctas aquí
 import { getAnalytics } from '../api/evaluationRequests'; 
 import { getSubjects } from '../api/coursesRequests';
 import { COLORS } from '../constants/colors';
@@ -9,17 +13,23 @@ import { StyledButton } from '../components/StyledButton';
 
 const screenWidth = Dimensions.get("window").width;
 
+// Habilitar animaciones para Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export default function AnalyticsScreen() {
     const { t } = useLanguage();
     
     // Estados de Datos
     const [chartData, setChartData] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [refreshing, setRefreshing] = useState(false); // Para pull-to-refresh
+    const [refreshing, setRefreshing] = useState(false);
 
     // Estados de Filtros
     const [groupBy, setGroupBy] = useState('topic'); 
     const [selectedSubject, setSelectedSubject] = useState(null); 
+    const [showFilters, setShowFilters] = useState(false); // <--- NUEVO: Estado para ocultar/mostrar
     
     // Estados para Modales
     const [showFilterModal, setShowFilterModal] = useState(false);
@@ -41,6 +51,12 @@ export default function AnalyticsScreen() {
         setShowFilterModal(false);
     };
 
+    // Toggle de filtros con animación
+    const toggleFilters = () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setShowFilters(!showFilters);
+    };
+
     // Función de carga de datos
     const fetchData = async () => {
         setLoading(true);
@@ -58,12 +74,10 @@ export default function AnalyticsScreen() {
         }
     };
 
-    // Efecto inicial y cuando cambian filtros
     useEffect(() => {
         fetchData();
     }, [groupBy, selectedSubject]);
 
-    // Función para refrescar al deslizar
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await fetchData();
@@ -74,12 +88,11 @@ export default function AnalyticsScreen() {
     const chartConfig = {
         backgroundGradientFrom: "#fff",
         backgroundGradientTo: "#fff",
-        color: (opacity = 1) => `rgba(13, 148, 136, ${opacity})`, // Teal
+        color: (opacity = 1) => `rgba(13, 148, 136, ${opacity})`,
         strokeWidth: 2,
         barPercentage: 0.7,
         decimalPlaces: 0,
         labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-        // Evita que los números se corten en los lados
         propsForLabels: { fontSize: 10 }
     };
 
@@ -97,40 +110,52 @@ export default function AnalyticsScreen() {
         >
             <Text style={styles.headerTitle}>{t('performanceAnalytics') || 'Analíticas de Rendimiento'}</Text>
 
-            {/* SECCIÓN DE FILTROS */}
+            {/* SECCIÓN DE FILTROS (MODIFICADA) */}
             <View style={styles.filterContainer}>
-                
-                {/* Selector de Agrupación */}
-                <Text style={styles.label}>{t('groupBy') || 'Agrupar por:'}</Text>
-                <View style={styles.tabs}>
-                    {['topic', 'concept', 'group', 'question'].map((mode) => (
-                        <TouchableOpacity 
-                            key={mode} 
-                            style={[styles.tab, groupBy === mode && styles.activeTab]}
-                            onPress={() => setGroupBy(mode)}
-                        >
-                            <Text style={[styles.tabText, groupBy === mode && styles.activeTabText]}>
-                                {t(mode) || mode.toUpperCase()}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                {/* Cabecera del desplegable */}
+                <TouchableOpacity onPress={toggleFilters} style={styles.filterHeader}>
+                    <Text style={styles.filterTitle}>{t('filters') || 'Filtros y Configuración'}</Text>
+                    <Text style={styles.filterIcon}>{showFilters ? '▲' : '▼'}</Text>
+                </TouchableOpacity>
 
-                {/* Filtro de Asignatura */}
-                <View style={{ marginTop: 15 }}>
-                    <Text style={styles.label}>{t('filterBy') || 'Filtrar por:'}</Text>
-                    <StyledButton 
-                        title={selectedSubject ? `${t('subject')}: ${selectedSubject.name}` : t('allSubjects') || "Todas las Asignaturas"} 
-                        onPress={handleOpenSubjectFilter}
-                        style={{ backgroundColor: selectedSubject ? COLORS.secondary : '#e5e7eb' }}
-                        textStyle={{ color: selectedSubject ? 'white' : 'black' }}
-                    />
-                    {selectedSubject && (
-                        <TouchableOpacity onPress={() => setSelectedSubject(null)} style={{marginTop: 8, alignItems: 'center'}}>
-                            <Text style={{color: '#ef4444', fontSize: 14, fontWeight: '500'}}>{t('clearFilter') || "Limpiar filtro"}</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
+                {/* Contenido ocultable */}
+                {showFilters && (
+                    <View style={styles.filterContent}>
+                        {/* Selector de Agrupación (2 filas si es necesario) */}
+                        <Text style={styles.label}>{t('groupBy') || 'Agrupar por:'}</Text>
+                        
+                        
+                        <View style={styles.tabs}>
+                            {['topic', 'concept', 'group', 'question'].map((mode) => (
+                                <TouchableOpacity 
+                                    key={mode} 
+                                    style={[styles.tab, groupBy === mode && styles.activeTab]}
+                                    onPress={() => setGroupBy(mode)}
+                                >
+                                    <Text style={[styles.tabText, groupBy === mode && styles.activeTabText]}>
+                                        {t(mode) || mode.toUpperCase()}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* Filtro de Asignatura */}
+                        <View style={{ marginTop: 15 }}>
+                            <Text style={styles.label}>{t('filterBy') || 'Filtrar por:'}</Text>
+                            <StyledButton 
+                                title={selectedSubject ? `${t('subject')}: ${selectedSubject.name}` : t('allSubjects') || "Todas las Asignaturas"} 
+                                onPress={handleOpenSubjectFilter}
+                                style={{ backgroundColor: selectedSubject ? COLORS.secondary : '#e5e7eb' }}
+                                textStyle={{ color: selectedSubject ? 'white' : 'black' }}
+                            />
+                            {selectedSubject && (
+                                <TouchableOpacity onPress={() => setSelectedSubject(null)} style={{marginTop: 8, alignItems: 'center'}}>
+                                    <Text style={{color: '#ef4444', fontSize: 14, fontWeight: '500'}}>{t('clearFilter') || "Limpiar filtro"}</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
+                )}
             </View>
 
             {/* GRÁFICA */}
@@ -145,7 +170,6 @@ export default function AnalyticsScreen() {
                     <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
                         <BarChart
                             data={dataForChart}
-                            // Lógica de ancho dinámico para evitar solapamiento
                             width={Math.max(screenWidth - 40, chartData.length * 60)} 
                             height={300}
                             yAxisLabel=""
@@ -188,14 +212,14 @@ export default function AnalyticsScreen() {
                 </View>
             )}
 
-            {/* MODAL */}
+            {/* MODAL (Sin Cambios) */}
             <Modal visible={showFilterModal} animationType="slide" transparent={true}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>{t('selectSubject') || 'Seleccionar Asignatura'}</Text>
                         <FlatList
                             data={filterOptions}
-                            keyExtractor={(item) => item.id}
+                            keyExtractor={(item) => item.id.toString()}
                             renderItem={({ item }) => (
                                 <TouchableOpacity 
                                     style={styles.modalItem}
@@ -221,13 +245,51 @@ export default function AnalyticsScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f5f5f5', padding: 15 },
     headerTitle: { fontSize: 24, fontWeight: 'bold', color: COLORS.text, marginBottom: 20 },
-    filterContainer: { backgroundColor: 'white', padding: 15, borderRadius: 10, marginBottom: 20, elevation: 2 },
-    label: { fontSize: 14, color: 'gray', marginBottom: 10, fontWeight: '600' },
-    tabs: { flexDirection: 'row', backgroundColor: '#f3f4f6', borderRadius: 8, padding: 4 },
-    tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
+    
+    // --- ESTILOS FILTROS MODIFICADOS ---
+    filterContainer: { 
+        backgroundColor: 'white', 
+        borderRadius: 10, 
+        marginBottom: 20, 
+        elevation: 2,
+        overflow: 'hidden' // Importante para la animación
+    },
+    filterHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 15,
+        backgroundColor: 'white'
+    },
+    filterTitle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+    filterIcon: { fontSize: 18, color: 'gray' },
+    filterContent: { padding: 15, paddingTop: 0, borderTopWidth: 1, borderTopColor: '#f3f4f6' },
+    
+    label: { fontSize: 14, color: 'gray', marginBottom: 10, marginTop: 10, fontWeight: '600' },
+    
+    // Contenedor de Tabs con Wrap
+    tabs: { 
+        flexDirection: 'row', 
+        flexWrap: 'wrap', // <--- Permite salto de línea
+        justifyContent: 'space-between', // Espaciado uniforme
+        backgroundColor: '#f3f4f6', 
+        borderRadius: 8, 
+        padding: 4 
+    },
+    // Botones individuales
+    tab: { 
+        width: '48%', // <--- Fuerza 2 elementos por fila (aprox 50%)
+        paddingVertical: 10, // Un poco más alto para mejor tacto
+        alignItems: 'center', 
+        borderRadius: 6,
+        marginBottom: 4, // Espacio vertical entre filas si hay salto
+        marginTop: 4
+    },
     activeTab: { backgroundColor: 'white', elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2 },
     tabText: { color: 'gray', fontSize: 11, fontWeight: '600' },
     activeTabText: { color: COLORS.primary, fontWeight: 'bold' },
+
+    // ... Resto de estilos iguales ...
     chartWrapper: { backgroundColor: 'white', padding: 10, borderRadius: 10, alignItems: 'center', elevation: 2, marginBottom: 20 },
     chartTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: '#333' },
     emptyContainer: { alignItems: 'center', marginTop: 50, padding: 20 },

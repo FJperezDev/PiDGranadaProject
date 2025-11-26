@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet, Platform } from "react-native";
+import { Text, View, StyleSheet, Platform, ScrollView } from "react-native";
 import { StyledButton } from "../components/StyledButton";
 import { useLanguage } from "../context/LanguageContext";
 import { useEffect, useState } from "react";
@@ -76,20 +76,22 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
       <View style={styles.scrollArea}>
         <Text style={styles.sectionTitle}>{t("selectTopics")}</Text>
 
-        {topics.map((topic) => (
-          <StyledButton
-            key={topic.id}
-            onPress={() => toggleTopic(topic.id)}
-            style={styles.topicButton}
-          >
-            {selectedTopics[topic.id] ? (
-              <CheckSquare size={24} color="#06b6d4" /> // cyan-500
-            ) : (
-              <Square size={24} color="#94a3b8" /> // slate-400
-            )}
-            <Text style={styles.topicText}>{topic.title}</Text>
-          </StyledButton>
-        ))}
+        <ScrollView style={{ maxHeight: 450, marginBottom: 20 }}>
+          {topics.map((topic) => (
+            <StyledButton
+              key={topic.id}
+              onPress={() => toggleTopic(topic.id)}
+              style={styles.topicButton}
+            >
+              {selectedTopics[topic.id] ? (
+                <CheckSquare size={24} color="#06b6d4" /> // cyan-500
+              ) : (
+                <Square size={24} color="#94a3b8" /> // slate-400
+              )}
+              <Text style={styles.topicText}>{topic.title}</Text>
+            </StyledButton>
+          ))}
+        </ScrollView>
 
         <Text style={styles.sectionTitle}>{t("numQuestions")}</Text>
 
