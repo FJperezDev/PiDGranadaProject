@@ -104,85 +104,90 @@ export const TopicDetailScreen = ({ route }) => {
   return (
     
 
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.headerTitle}>{topicData.topic.title}</Text>
-      <Text style={styles.headerDescription}>{topicData.topic.description}</Text>
-
-      {/* SECCIÓN CONCEPTOS */}
-      <View style={styles.sectionHeader}>
-        <Ionicons name="bulb" size={20} color={COLORS.primary || "#000"} />
-        <Text style={styles.sectionTitle}>{t("concepts")}</Text>
+    <>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{topicData.topic.title}</Text>
+        <Text style={styles.headerDescription}>{topicData.topic.description}</Text>
       </View>
       
-      {topicData.concepts && topicData.concepts.length > 0 ? (
-        topicData.concepts.map((item) => (
-          <StyledButton 
-            style={styles.cardButton} 
-            key={`concept-${item.id}`} 
-            onPress={() => handleConceptPress(item)}
-          >
-            <View style={styles.cardContent}>
-              <View style={styles.cardTextContainer}>
-                <Text style={styles.itemTitle}>{item.name}</Text>
-                <Text style={styles.itemSubtitle} numberOfLines={2}>
-                  {item.description}
-                </Text>
-              </View>
-              {/* Badge de relaciones */}
-              {item.related_concepts && item.related_concepts.length > 0 && (
-                <View style={styles.badge}>
-                  <Ionicons name="git-network-outline" size={14} color="#fff" />
-                  <Text style={styles.badgeText}>{item.related_concepts.length}</Text>
+      
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        {/* SECCIÓN CONCEPTOS */}
+        <View style={styles.sectionHeader}>
+          <Ionicons name="bulb" size={20} color={COLORS.primary || "#000"} />
+          <Text style={styles.sectionTitle}>{t("concepts")}</Text>
+        </View>
+        
+        {topicData.concepts && topicData.concepts.length > 0 ? (
+          topicData.concepts.map((item) => (
+            <StyledButton 
+              style={styles.cardButton} 
+              key={`concept-${item.id}`} 
+              onPress={() => handleConceptPress(item)}
+            >
+              <View style={styles.cardContent}>
+                <View style={styles.cardTextContainer}>
+                  <Text style={styles.itemTitle}>{item.name}</Text>
+                  <Text style={styles.itemSubtitle} numberOfLines={2}>
+                    {item.description}
+                  </Text>
                 </View>
-              )}
-            </View>
-          </StyledButton>
-        ))
-      ) : (
-        <Text style={styles.emptyText}>{t("no_concepts")}</Text>
-      )}
+                {/* Badge de relaciones */}
+                {item.related_concepts && item.related_concepts.length > 0 && (
+                  <View style={styles.badge}>
+                    <Ionicons name="git-network-outline" size={14} color="#fff" />
+                    <Text style={styles.badgeText}>{item.related_concepts.length}</Text>
+                  </View>
+                )}
+              </View>
+            </StyledButton>
+          ))
+        ) : (
+          <Text style={styles.emptyText}>{t("no_concepts")}</Text>
+        )}
 
-      {/* SECCIÓN EPÍGRAFES */}
-      <View style={styles.sectionHeader}>
-        <Ionicons name="list" size={20} color={COLORS.primary || "#000"} />
-        <Text style={styles.sectionTitle}>{t("headings")}</Text>
-      </View>
+        {/* SECCIÓN EPÍGRAFES */}
+        <View style={styles.sectionHeader}>
+          <Ionicons name="list" size={20} color={COLORS.primary || "#000"} />
+          <Text style={styles.sectionTitle}>{t("headings")}</Text>
+        </View>
 
-      {topicData.epigraphs && topicData.epigraphs.length > 0 ? (
-        topicData.epigraphs.map((item) => (
-          <StyledButton 
-            style={[styles.cardButton, styles.epigraphCard]} 
-            key={`epigraph-${item.id}`} 
-            onPress={() => handleEpigraphPress(item)}
-          >
-            <Text style={styles.epigraphTitle}>
-              {item.order_id}. {item.name}
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.secondary || "#999"} />
-          </StyledButton>
-        ))
-      ) : (
-        <Text style={styles.emptyText}>{t("no_headings")}</Text>
-      )}
+        {topicData.epigraphs && topicData.epigraphs.length > 0 ? (
+          topicData.epigraphs.map((item) => (
+            <StyledButton 
+              style={[styles.cardButton, styles.epigraphCard]} 
+              key={`epigraph-${item.id}`} 
+              onPress={() => handleEpigraphPress(item)}
+            >
+              <Text style={styles.epigraphTitle}>
+                {item.order_id}. {item.name}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={COLORS.secondary || "#999"} />
+            </StyledButton>
+          ))
+        ) : (
+          <Text style={styles.emptyText}>{t("no_headings")}</Text>
+        )}
 
-      {/* Modal Simple (Epígrafes) */}
-      <ContentModal
-        visible={epigraphModalVisible}
-        onClose={() => setEpigraphModalVisible(false)}
-        title={epigraphContent.title}
-        content={epigraphContent.content}
-      />
+        {/* Modal Simple (Epígrafes) */}
+        <ContentModal
+          visible={epigraphModalVisible}
+          onClose={() => setEpigraphModalVisible(false)}
+          title={epigraphContent.title}
+          content={epigraphContent.content}
+        />
 
-      {/* Modal Complejo (Conceptos) */}
-      <ConceptModal
-        visible={conceptModalVisible}
-        onClose={() => setConceptModalVisible(false)}
-        concept={selectedConcept}
-        t={t}
-        // Pasamos la función de navegación
-        onRelatedPress={handleRelatedConceptNavigation}
-      />
-    </ScrollView>
+        {/* Modal Complejo (Conceptos) */}
+        <ConceptModal
+          visible={conceptModalVisible}
+          onClose={() => setConceptModalVisible(false)}
+          concept={selectedConcept}
+          t={t}
+          // Pasamos la función de navegación
+          onRelatedPress={handleRelatedConceptNavigation}
+        />
+      </ScrollView>
+    </>
   );
 };
 
@@ -196,6 +201,9 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
     backgroundColor: COLORS.background || "#f4f6f8",
+  },
+  header: {
+    paddingTop: 20,
   },
   headerTitle: {
     fontSize: 28,
