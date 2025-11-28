@@ -32,36 +32,47 @@ class EpigraphSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
         lang = self.get_lang()
         return getattr(obj, f'description_{lang}', None)
 
-# RelatedConcept serializer
-class RelatedConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
-    name = serializers.SerializerMethodField(read_only=True)
-    description = serializers.SerializerMethodField(read_only=True)
-    explanation = serializers.SerializerMethodField(read_only=True)
+class ShortShortConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
 
     class Meta:
         model = Concept
         fields = [
             'id',
-            'name', 'description', 'explanation',
+            'name',  
         ]
 
     def get_name(self, obj):
         lang = self.get_lang()
         return getattr(obj, f'name_{lang}', None)
 
+
+# RelatedConcept serializer
+class RelatedConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
+    concept_to = ShortShortConceptSerializer(read_only=True)
+    description = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = ConceptIsRelatedToConcept
+        fields = [
+            'id', 'description', 'description_es', 'description_en', 'concept_to',
+        ]
+
     def get_description(self, obj):
         lang = self.get_lang()
         return getattr(obj, f'description_{lang}', None)
     
-    def get_explanation(self, obj):
+    def get_concept_to(self, obj):
         lang = self.get_lang()
-        return getattr(obj, f'_annotated_explanation_{lang}', None)
+        return getattr(obj.concept_to, f'name_{lang}', None)
     
+
 
 class ShortConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
-    related_concepts = RelatedConceptSerializer(many=True, read_only=True)
+    examples = serializers.SerializerMethodField()
+    related_concepts = serializers.SerializerMethodField()
 
     class Meta:
         model = Concept
@@ -69,6 +80,7 @@ class ShortConceptSerializer(LanguageSerializerMixin, serializers.ModelSerialize
             'id',
             'name',  
             'description',
+            'examples',
             'related_concepts',
         ]
 
@@ -76,13 +88,24 @@ class ShortConceptSerializer(LanguageSerializerMixin, serializers.ModelSerialize
         lang = self.get_lang()
         return getattr(obj, f'name_{lang}', None)
     
+    def get_examples(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'examples_{lang}', None)
+    
     def get_description(self, obj):
         lang = self.get_lang()
         return getattr(obj, f'description_{lang}', None)
     
     def get_related_concepts(self, obj):
-        related = selectors.get_concepts_by_concept(obj.id)
-        return ShortConceptSerializer(related, many=True, context=self.context).data
+        relationships = ConceptIsRelatedToConcept.objects.filter(
+            concept_from=obj
+        ).select_related('concept_to', 'concept_from')
+
+        return RelatedConceptSerializer(
+            relationships, 
+            many=True, 
+            context=self.context
+        ).data
     
 
 class ShortEpigraphSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
@@ -108,11 +131,14 @@ class ShortEpigraphSerializer(LanguageSerializerMixin, serializers.ModelSerializ
 class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField(read_only=True)
     description = serializers.SerializerMethodField(read_only=True)
-    related_concepts = RelatedConceptSerializer(many=True, read_only=True)
+    related_concepts = serializers.SerializerMethodField()
     name_es = serializers.SerializerMethodField()
     name_en = serializers.SerializerMethodField()
     description_es = serializers.SerializerMethodField()
     description_en = serializers.SerializerMethodField()
+    examples = serializers.SerializerMethodField()
+    examples_es = serializers.SerializerMethodField()
+    examples_en = serializers.SerializerMethodField()
 
     class Meta:
         model = Concept
@@ -121,6 +147,8 @@ class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
             'name', 'description',
             'name_es', 'description_es',
             'name_en', 'description_en',
+            'examples_es', 'examples_en',
+            'examples',
             'related_concepts',
         ]
 
@@ -144,26 +172,29 @@ class ConceptSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     def get_description_en(self, obj):
         return getattr(obj, f'description_en', None)
     
+    def get_examples_es(self, obj):
+        return getattr(obj, f'examples_es', None)
+    
+    def get_examples_en(self, obj):
+        return getattr(obj, f'examples_en', None)
+    
+    def get_examples(self, obj):
+        lang = self.get_lang()
+        return getattr(obj, f'examples_{lang}', None)
+    
     def get_related_concepts(self, obj):
         relationships = ConceptIsRelatedToConcept.objects.filter(
             concept_from=obj
-        ).select_related('concept_to')
-
-        concepts_to_serialize = []
-        
-        for rel in relationships:
-            target_concept = rel.concept_to
-            target_concept._annotated_explanation_es = rel.description_es
-            target_concept._annotated_explanation_en = rel.description_en
-            concepts_to_serialize.append(target_concept)
+        ).select_related('concept_to', 'concept_from')
 
         return RelatedConceptSerializer(
-            concepts_to_serialize, 
+            relationships, 
             many=True, 
             context=self.context
         ).data
     
 class ShortTopicSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
+
     title = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
     order_id = serializers.IntegerField(read_only=True, required=False, allow_null=True)

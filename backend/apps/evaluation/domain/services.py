@@ -7,12 +7,13 @@ from apps.utils.audit import makeChanges
 from apps.courses.api.models import StudentGroup
 from apps.evaluation.domain import selectors as evaluation_selectors
 from apps.customauth.models import CustomTeacher as Teacher
+from django.utils import translation
 
 # --- Question Services ---
 def create_question(teacher: Teacher, type: str, statement_es: str = None, statement_en: str = None,
                     approved: bool = False, generated: bool = False, topics_titles: set[str] = None, 
                     concepts_names: set[str] = None, is_true = None, answers: list[Answer] = None,
-                    recommendation_es: str = None, recommendation_en: str = None) -> Question:
+                    explanation_es: str = None, explanation_en: str = None) -> Question:
     """Crea una nueva pregunta con validaciones básicas."""
 
     if not statement_es and not statement_en:
@@ -21,8 +22,8 @@ def create_question(teacher: Teacher, type: str, statement_es: str = None, state
         type=type,
         statement_es=statement_es,
         statement_en=statement_en,
-        recommendation_es=recommendation_es,
-        recommendation_en=recommendation_en,
+        explanation_es=explanation_es,
+        explanation_en=explanation_en,
         approved=approved,
         generated=generated,
     )
@@ -179,12 +180,27 @@ def create_exam(topics: set[Topic], num_questions: int) -> list[Question]:
 
     return exam_questions
 
-def correct_exam(student_group: StudentGroup, questions_and_answers: dict[Question, Answer]) -> int:
-    """Corrige un examen dado un conjunto de preguntas y respuestas."""
-    mark = 0
+def getRecommendations(questions_and_answers: dict[Question, Answer]) -> list[str]:
+    recommendations = []
+    return recommendations
 
+def correct_exam(student_group: StudentGroup, questions_and_answers: dict[Question, Answer], lang: str = 'es') -> tuple[int, list[str], list[str]]:
+    """Corrige un examen dado un conjunto de preguntas y respuestas."""
+    language_code = translation.get_language()
+    lang = 'es' if language_code and language_code.startswith('es') else 'en'
+    mark = 0
+    explanations = []
+    recommendations = getRecommendations(questions_and_answers)
     for question, answer in questions_and_answers.items():
         is_correct = evaluate_question(student_group, question, answer)
         if is_correct:
             mark += 1
-    return mark
+        else:
+            exp = getattr(question, f'explanation_{lang}', None)
+            if not exp:
+                fallback_lang = 'en' if lang == 'es' else 'es'
+                exp = getattr(question, f'explanation_{fallback_lang}', None)
+            if exp:
+                explanations.append(exp)
+
+    return mark, explanations, recommendations

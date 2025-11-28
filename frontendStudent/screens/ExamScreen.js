@@ -21,6 +21,7 @@ export const ExamScreen = ({ route }) => {
 
   // Cargar preguntas
   useEffect(() => {
+    
     setIsLoading(true);
     mockApi.generateExam(topics, nQuestions).then((data) => {
       setQuestions(data);
@@ -56,12 +57,11 @@ export const ExamScreen = ({ route }) => {
     setIsSubmitting(true);
     try {
       const result = await mockApi.evaluateExam(code, answers);
-     
       navigation.replace("ExamResult", {
         code: code,
         score: result.mark,
         total: questions.length,
-        recommendations: [],
+        recommendations: result.recommendations,
       });
 
     } catch (error) {

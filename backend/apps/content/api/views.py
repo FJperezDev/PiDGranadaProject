@@ -115,11 +115,15 @@ class TopicViewSet(BaseContentViewSet):
             name_en = data.get('name_en')
             description_es = data.get('description_es')
             description_en = data.get('description_en')
+            examples_es = data.get('examples_es')
+            examples_en = data.get('examples_en')
             concept = services.create_concept(
                 name_es=name_es,
                 name_en=name_en,
                 description_es=description_es,
                 description_en=description_en,
+                examples_es=examples_es,
+                examples_en=examples_en,
                 teacher=request.user
             )
             concept_name = concept.name_es or concept.name_en
@@ -210,6 +214,8 @@ class ConceptViewSet(BaseContentViewSet):
                 name_en=data.get('name_en'),
                 description_es=data.get('description_es'),
                 description_en=data.get('description_en'),
+                examples_es=data.get('examples_es'),
+                examples_en=data.get('examples_en'),
                 teacher=request.user
             )
             serializer = self.get_serializer(concept)

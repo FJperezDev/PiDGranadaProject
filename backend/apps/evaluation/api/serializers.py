@@ -41,19 +41,19 @@ class ShortAnswerSerializer(LanguageSerializerMixin, serializers.ModelSerializer
 class ShortQuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     statement = serializers.SerializerMethodField()
     answers = ShortAnswerSerializer(many=True, read_only=True)
-    recommendation = serializers.SerializerMethodField()
+    explanation = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
-        fields = ['id', 'type', 'statement', 'answers', 'recommendation']
+        fields = ['id', 'type', 'statement', 'answers', 'explanation']
 
     def get_statement(self, obj):
         lang = self.get_lang()
         return getattr(obj, f'statement_{lang}', None)
     
-    def get_recommendation(self, obj):
+    def get_explanation(self, obj):
         lang = self.get_lang()
-        return getattr(obj, f'recommendation_{lang}', None)
+        return getattr(obj, f'explanation_{lang}', None)
 
 class QuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     # 1. Cambiamos esto para usar un método personalizado en lugar de la relación directa
@@ -65,20 +65,20 @@ class QuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     statement = serializers.SerializerMethodField()
     statement_es = serializers.SerializerMethodField()
     statement_en = serializers.SerializerMethodField()
-    recommendation = serializers.SerializerMethodField()
+    explanation = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
         fields = [
             'id', 'type', 'statement', 'statement_es', 'statement_en', 'approved', 'generated',
-            'answers', 'topics', 'subjects', 'concepts', 'recommendation', 'recommendation_es', 'recommendation_en'
+            'answers', 'topics', 'subjects', 'concepts', 'explanation', 'explanation_es', 'explanation_en'
         ]
         read_only_fields = ['id', 'answers']
         extra_kwargs = {
             'statement_es': {'write_only': True, 'required': True},
             'statement_en': {'write_only': True, 'required': True},
-            'recommendation_es': {'write_only': True, 'required': False},
-            'recommendation_en': {'write_only': True, 'required': False},
+            'explanation_es': {'write_only': True, 'required': False},
+            'explanation_en': {'write_only': True, 'required': False},
         }
 
     # 2. Implementamos el método para filtrar las respuestas
@@ -97,9 +97,9 @@ class QuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
         queryset = [qc.concept for qc in obj.concepts.all()]
         return ShortConceptSerializer(queryset, many=True, context=self.context).data
     
-    def get_recommendation(self, obj):
+    def get_explanation(self, obj):
         lang = self.get_lang()
-        return getattr(obj, f'recommendation_{lang}', None)
+        return getattr(obj, f'explanation_{lang}', None)
     
     def get_statement_es(self, obj):
         return obj.statement_es

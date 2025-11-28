@@ -45,6 +45,9 @@ class Concept(models.Model):
     name_en = models.TextField()
     description_es = models.TextField(null=True, blank=True)
     description_en = models.TextField(null=True, blank=True)
+    examples_es = models.TextField(null=True, blank=True)
+    examples_en = models.TextField(null=True, blank=True)
+    
     old = models.BooleanField(default=False)
 
     def __str__(self):

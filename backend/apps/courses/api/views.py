@@ -277,6 +277,7 @@ class StudentGroupViewSet(BaseContentViewSet):
         epigraphs = content_selectors.get_epigraphs_by_topic(topic.id)
 
         return Response({
+            'topic': ShortTopicSerializer(topic, context={'request': request}).data,
             'concepts': ShortConceptSerializer(concepts, many=True, context={'request': request}).data,
             'epigraphs': ShortEpigraphSerializer(epigraphs, many=True, context={'request': request}).data
         })

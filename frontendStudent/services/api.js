@@ -21,6 +21,16 @@ export const mockApi = {
     }
   },
 
+  getConcepts: async () => {
+    try {
+      const response = await apiClient.get('/concepts/');
+      return response.data;
+    } catch (error) {
+      console.error('Error obteniendo los conceptos:', error);
+      throw error;
+    }
+  },
+
   getTopics: async (code) => {
     try {
       const response = await apiClient.get('/studentgroups/topics/', { params: { code } });

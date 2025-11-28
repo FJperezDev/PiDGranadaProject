@@ -111,7 +111,9 @@ def main():
                 payload_link = {
                     "concept_name": target_name,
                     "description_es": row.get("description_es", ""),
-                    "description_en": row.get("description_en", "")
+                    "description_en": row.get("description_en", ""),
+                    "examples_es": row.get("examples_es", ""),
+                    "examples_en": row.get("examples_en", ""),
                 }
                 
                 # 4. Hacemos la petición

@@ -52,7 +52,7 @@ def get_next_order_id_for_topic(topic: Topic) -> int:
     return 1
 
 # --- Concept Services ---
-def create_concept(name_es: str, name_en: str, teacher: CustomTeacher,description_es=None, description_en=None) -> Concept:
+def create_concept(name_es: str, name_en: str, teacher: CustomTeacher,description_es=None, description_en=None, examples_es=None, examples_en=None) -> Concept:
     """Crea un nuevo Concept."""
     if Concept.objects.filter(name_es=name_es).exists():
         raise ValidationError("Ya existe un concepto con ese nombre.")
@@ -65,6 +65,8 @@ def create_concept(name_es: str, name_en: str, teacher: CustomTeacher,descriptio
         name_en=name_en,
         description_es=description_es,
         description_en=description_en,
+        examples_es=examples_es,
+        examples_en=examples_en,
     )
     makeChanges(user=teacher, old_object=None, new_object=concept)
     return concept
@@ -75,7 +77,7 @@ def update_concept(concept: Concept, teacher: CustomTeacher, **kwargs) -> Concep
     old_concept.pk = None
     old_concept.old = True
 
-    allowed_fields = ['name_es', 'name_en', 'description_es', 'description_en']
+    allowed_fields = ['name_es', 'name_en', 'description_es', 'description_en', 'examples_es', 'examples_en']
 
     for field, value in kwargs.items():
         if field in allowed_fields and value is not None:
@@ -168,7 +170,8 @@ def link_concepts(concept_from: Concept, concept_to: Concept, description_es=Non
         raise ValidationError("Estos conceptos ya están relacionados.")
     
     ConceptIsRelatedToConcept.objects.create(
-        concept_from=concept_from, concept_to=concept_to
+        concept_from=concept_from, concept_to=concept_to, 
+        description_es=description_es, description_en=description_en
     )
 
     if bidirectional:

@@ -38,6 +38,8 @@ class QuestionViewSet(BaseContentViewSet):
             is_true=data.get('is_true'),
             statement_es=data.get('statement_es'),
             statement_en=data.get('statement_en'),
+            explanation_es=data.get('explanation_es'),
+            explanation_en=data.get('explanation_en'),
             approved=data.get('approved', False),
             generated=data.get('generated', False),
             topics_titles=topics_titles,
@@ -168,6 +170,7 @@ class ExamViewSet(viewsets.GenericViewSet):
     @action(detail=False, methods=['post'], url_path='evaluate-exam', url_name='evaluate-exam', permission_classes=[permissions.AllowAny])
     def evaluate_exam(self, request):
         data = request.data
+        explanations = []
         student_group = courses_selectors.get_student_group_by_code(data.get('student_group_code'))
         questions_and_answers = data.get('questions_and_answers', [])
         questions_and_answers_dict = {}
@@ -175,8 +178,8 @@ class ExamViewSet(viewsets.GenericViewSet):
             question = selectors.get_question_by_id(qa)
             answer = selectors.get_answer_by_id(questions_and_answers[qa])
             questions_and_answers_dict[question] = answer
-        mark = services.correct_exam(student_group, questions_and_answers_dict)
-        return Response({'mark': mark})
+        mark, explanations, recommendations = services.correct_exam(student_group, questions_and_answers_dict)
+        return Response({'mark': mark, "explanations": explanations, "recommendations": recommendations})
     
 class AnalyticsViewSet(BaseContentViewSet):
 
