@@ -82,7 +82,6 @@ class QuestionRelatedToConcept(models.Model):
     def __str__(self):
         return f"Q{self.question.id} -> Concept {self.concept.id}"
 
-
 class QuestionEvaluationGroup(models.Model):
     group = models.ForeignKey(StudentGroup, on_delete=models.CASCADE, related_name='evaluations')
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='evaluations')

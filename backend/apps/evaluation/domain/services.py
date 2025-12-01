@@ -8,6 +8,7 @@ from apps.courses.api.models import StudentGroup
 from apps.evaluation.domain import selectors as evaluation_selectors
 from apps.customauth.models import CustomTeacher as Teacher
 from django.utils import translation
+from django.db.models import F
 
 # --- Question Services ---
 def create_question(teacher: Teacher, type: str, statement_es: str = None, statement_en: str = None,
@@ -154,9 +155,9 @@ def evaluate_question(student_group: StudentGroup, question: Question, answer: A
         group=student_group,
         defaults={'ev_count': 0, 'correct_count': 0}
     )
-    qeg.ev_count += 1
+    qeg.ev_count = F('ev_count') + 1
     if is_correct:
-        qeg.correct_count += 1
+        qeg.correct_count = F('correct_count') + 1
     qeg.save()
     return is_correct
 

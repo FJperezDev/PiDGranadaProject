@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
     View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, 
-    TouchableOpacity, Modal, FlatList, RefreshControl, LayoutAnimation, Platform, UIManager 
+    TouchableOpacity, Modal, FlatList, RefreshControl, Platform, UIManager 
 } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
-// Asegúrate de importar tus rutas correctas aquí
 import { getAnalytics } from '../api/evaluationRequests'; 
 import { getSubjects } from '../api/coursesRequests';
 import { COLORS } from '../constants/colors';
@@ -13,7 +12,7 @@ import { StyledButton } from '../components/StyledButton';
 
 const screenWidth = Dimensions.get("window").width;
 
-// Habilitar animaciones para Android
+// Habilitar animaciones SOLO para Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -21,21 +20,20 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export default function AnalyticsScreen() {
     const { t } = useLanguage();
     
-    // Estados de Datos
+    // Estados
     const [chartData, setChartData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
-    // Estados de Filtros
+    // Filtros
     const [groupBy, setGroupBy] = useState('topic'); 
     const [selectedSubject, setSelectedSubject] = useState(null); 
-    const [showFilters, setShowFilters] = useState(false); // <--- NUEVO: Estado para ocultar/mostrar
+    const [showFilters, setShowFilters] = useState(false);
     
-    // Estados para Modales
+    // Modal
     const [showFilterModal, setShowFilterModal] = useState(false);
     const [filterOptions, setFilterOptions] = useState([]); 
 
-    // Cargar asignaturas
     const handleOpenSubjectFilter = async () => {
         try {
             const subjects = await getSubjects(); 
@@ -51,13 +49,10 @@ export default function AnalyticsScreen() {
         setShowFilterModal(false);
     };
 
-    // Toggle de filtros con animación
     const toggleFilters = () => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setShowFilters(!showFilters);
     };
 
-    // Función de carga de datos
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -84,22 +79,39 @@ export default function AnalyticsScreen() {
         setRefreshing(false);
     }, [groupBy, selectedSubject]);
 
-    // Configuración de la Gráfica
+    // --- LÓGICA DE PREFIJOS ---
+    const getPrefix = () => {
+        switch (groupBy) {
+            case 'topic': return 'T';     // T1, T2...
+            case 'concept': return 'C';   // C1, C2...
+            case 'group': return 'G';     // G1, G2...
+            case 'question': return 'Q';  // Q1, Q2...
+            default: return '';
+        }
+    };
+
+    const prefix = getPrefix();
+
+    // Generamos las etiquetas cortas para la gráfica
+    const dataForChart = {
+        labels: chartData.map((_, index) => `${prefix}${index + 1}`),
+        datasets: [{ data: chartData.map(item => item.value) }]
+    };
+
     const chartConfig = {
         backgroundGradientFrom: "#fff",
         backgroundGradientTo: "#fff",
         color: (opacity = 1) => `rgba(13, 148, 136, ${opacity})`,
         strokeWidth: 2,
-        barPercentage: 0.7,
+        barPercentage: 0.6,
         decimalPlaces: 0,
         labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-        propsForLabels: { fontSize: 10 }
+        propsForLabels: { fontSize: 11, fontWeight: 'bold' }
     };
 
-    const dataForChart = {
-        labels: chartData.map(item => item.label),
-        datasets: [{ data: chartData.map(item => item.value) }]
-    };
+    // Ancho calculado: Ahora es mucho más predecible porque las etiquetas son cortas
+    // 40px por barra es suficiente
+    const chartWidth = Math.max(screenWidth - 40, chartData.length * 40);
 
     return (
         <ScrollView 
@@ -110,21 +122,16 @@ export default function AnalyticsScreen() {
         >
             <Text style={styles.headerTitle}>{t('performanceAnalytics') || 'Analíticas de Rendimiento'}</Text>
 
-            {/* SECCIÓN DE FILTROS (MODIFICADA) */}
+            {/* SECCIÓN DE FILTROS */}
             <View style={styles.filterContainer}>
-                {/* Cabecera del desplegable */}
                 <TouchableOpacity onPress={toggleFilters} style={styles.filterHeader}>
                     <Text style={styles.filterTitle}>{t('filters') || 'Filtros y Configuración'}</Text>
                     <Text style={styles.filterIcon}>{showFilters ? '▲' : '▼'}</Text>
                 </TouchableOpacity>
 
-                {/* Contenido ocultable */}
                 {showFilters && (
                     <View style={styles.filterContent}>
-                        {/* Selector de Agrupación (2 filas si es necesario) */}
                         <Text style={styles.label}>{t('groupBy') || 'Agrupar por:'}</Text>
-                        
-                        
                         <View style={styles.tabs}>
                             {['topic', 'concept', 'group', 'question'].map((mode) => (
                                 <TouchableOpacity 
@@ -138,8 +145,6 @@ export default function AnalyticsScreen() {
                                 </TouchableOpacity>
                             ))}
                         </View>
-
-                        {/* Filtro de Asignatura */}
                         <View style={{ marginTop: 15 }}>
                             <Text style={styles.label}>{t('filterBy') || 'Filtrar por:'}</Text>
                             <StyledButton 
@@ -170,14 +175,16 @@ export default function AnalyticsScreen() {
                     <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
                         <BarChart
                             data={dataForChart}
-                            width={Math.max(screenWidth - 40, chartData.length * 60)} 
-                            height={300}
+                            width={chartWidth} 
+                            height={260} 
                             yAxisLabel=""
                             yAxisSuffix="%"
                             chartConfig={chartConfig}
-                            verticalLabelRotation={30}
+                            verticalLabelRotation={0}
+                
+                            showValuesOnTopOfBars={true} 
+                            
                             fromZero={true}
-                            showValuesOnTopOfBars={true}
                             withInnerLines={true}
                         />
                     </ScrollView>
@@ -188,16 +195,24 @@ export default function AnalyticsScreen() {
                 </View>
             )}
 
-            {/* TABLA DE DETALLES */}
+            {/* TABLA DE DETALLES (LEYENDA) */}
             {!loading && chartData.length > 0 && (
                 <View style={styles.detailsContainer}>
-                    <Text style={styles.subTitle}>{t('details') || 'Detalles'}</Text>
+                    <Text style={styles.subTitle}>{t('details') || 'Leyenda y Detalles'}</Text>
+                    
                     {chartData.map((item, index) => (
                         <View key={index} style={styles.row}>
+                            {/* CÓDIGO + NOMBRE COMPLETO */}
                             <View style={{flex: 1, paddingRight: 10}}>
-                                <Text style={styles.rowLabel}>{item.full_label}</Text>
+                                <Text style={styles.rowLabel}>
+                                    <Text style={{fontWeight: 'bold', color: COLORS.primary}}>
+                                        {`${prefix}${index + 1}: `}
+                                    </Text>
+                                    {item.full_label || item.label}
+                                </Text>
                             </View>
                             
+                            {/* VALORES */}
                             <View style={styles.rowStats}>
                                 <Text style={[
                                     styles.rowValue, 
@@ -212,8 +227,13 @@ export default function AnalyticsScreen() {
                 </View>
             )}
 
-            {/* MODAL (Sin Cambios) */}
-            <Modal visible={showFilterModal} animationType="slide" transparent={true}>
+            {/* MODAL */}
+            <Modal 
+                visible={showFilterModal} 
+                animationType="slide" 
+                transparent={true}
+                hardwareAccelerated={Platform.OS !== 'web'}
+            >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <Text style={styles.modalTitle}>{t('selectSubject') || 'Seleccionar Asignatura'}</Text>
@@ -246,20 +266,24 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f5f5f5', padding: 15 },
     headerTitle: { fontSize: 24, fontWeight: 'bold', color: COLORS.text, marginBottom: 20 },
     
-    // --- ESTILOS FILTROS MODIFICADOS ---
     filterContainer: { 
         backgroundColor: 'white', 
         borderRadius: 10, 
         marginBottom: 20, 
-        elevation: 2,
-        overflow: 'hidden' // Importante para la animación
+        ...Platform.select({
+            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 2 },
+            android: { elevation: 2 },
+            web: { boxShadow: '0px 2px 4px rgba(0,0,0,0.1)' }
+        }),
+        overflow: 'hidden' 
     },
     filterHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: 15,
-        backgroundColor: 'white'
+        backgroundColor: 'white',
+        ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {})
     },
     filterTitle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
     filterIcon: { fontSize: 18, color: 'gray' },
@@ -267,34 +291,57 @@ const styles = StyleSheet.create({
     
     label: { fontSize: 14, color: 'gray', marginBottom: 10, marginTop: 10, fontWeight: '600' },
     
-    // Contenedor de Tabs con Wrap
     tabs: { 
         flexDirection: 'row', 
-        flexWrap: 'wrap', // <--- Permite salto de línea
-        justifyContent: 'space-between', // Espaciado uniforme
+        flexWrap: 'wrap', 
+        justifyContent: 'space-between', 
         backgroundColor: '#f3f4f6', 
         borderRadius: 8, 
         padding: 4 
     },
-    // Botones individuales
     tab: { 
-        width: '48%', // <--- Fuerza 2 elementos por fila (aprox 50%)
-        paddingVertical: 10, // Un poco más alto para mejor tacto
+        width: '48%', 
+        paddingVertical: 10, 
         alignItems: 'center', 
         borderRadius: 6,
-        marginBottom: 4, // Espacio vertical entre filas si hay salto
-        marginTop: 4
+        marginBottom: 4, 
+        marginTop: 4,
+        ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {})
     },
-    activeTab: { backgroundColor: 'white', elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2 },
+    activeTab: { 
+        backgroundColor: 'white', 
+        ...Platform.select({
+            android: { elevation: 2 },
+            default: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2 }
+        })
+    },
     tabText: { color: 'gray', fontSize: 11, fontWeight: '600' },
     activeTabText: { color: COLORS.primary, fontWeight: 'bold' },
 
-    // ... Resto de estilos iguales ...
-    chartWrapper: { backgroundColor: 'white', padding: 10, borderRadius: 10, alignItems: 'center', elevation: 2, marginBottom: 20 },
+    chartWrapper: { 
+        backgroundColor: 'white', 
+        padding: 10, 
+        borderRadius: 10, 
+        alignItems: 'center', 
+        marginBottom: 20,
+        ...Platform.select({
+            android: { elevation: 2 },
+            default: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2 }
+        })
+    },
     chartTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: '#333' },
     emptyContainer: { alignItems: 'center', marginTop: 50, padding: 20 },
     emptyText: { color: 'gray', fontStyle: 'italic', textAlign: 'center' },
-    detailsContainer: { backgroundColor: 'white', padding: 15, borderRadius: 10, marginBottom: 40, elevation: 2 },
+    detailsContainer: { 
+        backgroundColor: 'white', 
+        padding: 15, 
+        borderRadius: 10, 
+        marginBottom: 40, 
+        ...Platform.select({
+            android: { elevation: 2 },
+            default: { shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2 }
+        })
+    },
     subTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 10 },
     row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
     rowLabel: { flex: 1, fontSize: 14, color: '#333', lineHeight: 20 },

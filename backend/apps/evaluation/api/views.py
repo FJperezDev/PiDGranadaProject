@@ -6,6 +6,7 @@ from apps.content.api.models import Topic
 from apps.content.domain import selectors as content_selectors
 from apps.courses.domain import selectors as courses_selectors
 from rest_framework import permissions
+from django.db.models.functions import Coalesce
 from .models import (
     Question, Answer,
     QuestionBelongsToTopic, QuestionRelatedToConcept,
@@ -185,67 +186,47 @@ class AnalyticsViewSet(BaseContentViewSet):
 
     @action(detail=False, methods=['get'])
     def performance(self, request):
-        # 1. Iniciamos el QuerySet base
         queryset = QuestionEvaluationGroup.objects.all()
+
+        # 1. Filtramos basura (cosas sin intentos)
+        queryset = queryset.filter(ev_count__gt=0) 
         
-        # --- NUEVA LÓGICA DE FILTRADO POR SUBJECT ---
+        # Filtro Subject
         subject_id_param = request.query_params.get('subject_id')
-        
-        # Validamos que exista y sea un número mayor a 0
         if subject_id_param and subject_id_param.isdigit():
             subject_id = int(subject_id_param)
             if subject_id > 0:
-                # Filtramos a través de la relación:
-                # QuestionEvaluationGroup -> group (StudentGroup) -> subject (Subject)
                 queryset = queryset.filter(group__subject_id=subject_id)
-        # Si es 0 o None, simplemente no aplicamos filtro (trae todo)
-        # ---------------------------------------------
 
-        # ... (Resto de filtros previos de Group o Topic si los tuvieras) ...
-
+        # Configuración
         group_by = request.query_params.get('group_by', 'topic')
-        
-        # Obtener el límite
         limit_param = request.query_params.get('limit', 10)
         limit = int(limit_param) if limit_param else None
 
         try:
-            fields_to_select = []
             label_key = None 
             is_question_grouping = False
 
             if group_by == 'topic':
-                label_path = 'question__topics__topic__title_es'
-                fields_to_select = [label_path]
-                label_key = label_path
-
+                label_key = 'question__topics__topic__title_es'
+                queryset = queryset.exclude(question__topics__topic__isnull=True)
             elif group_by == 'concept':
-                label_path = 'question__concepts__concept__name_es'
-                fields_to_select = [label_path]
-                label_key = label_path
-
+                label_key = 'question__concepts__concept__name_es'
+                queryset = queryset.exclude(question__concepts__concept__isnull=True)
             elif group_by == 'group':
-                label_path = 'group__name_es'
-                fields_to_select = [label_path]
-                label_key = label_path
-
+                label_key = 'group__name_es'
             elif group_by == 'question':
-                fields_to_select = ['question__id', 'question__statement_es']
+                label_key = 'question__id'
                 is_question_grouping = True
-            
             else:
                 return Response({'detail': 'Invalid group_by parameter'}, status=400)
 
-            # --- CONSTRUCCIÓN DE LA CONSULTA EFICIENTE ---
-            
-            # Django aplicará el WHERE subject_id = X antes de hacer el GROUP BY
-            result = queryset.values(*fields_to_select).annotate(
-                total_attempts=Sum('ev_count'),
-                total_correct=Sum('correct_count')
-            )
-
-            # Calcular Porcentaje en BD y Ordenar
-            result = result.annotate(
+            # --- CONSULTA Y CÁLCULOS ---
+            result = queryset.values(label_key).annotate(
+                total_attempts=Coalesce(Sum('ev_count'), 0),
+                total_correct=Coalesce(Sum('correct_count'), 0)
+            ).annotate(
+                # Calculamos el % de precisión
                 accuracy=Case(
                     When(total_attempts=0, then=Value(0.0)),
                     default=ExpressionWrapper(
@@ -253,30 +234,47 @@ class AnalyticsViewSet(BaseContentViewSet):
                         output_field=FloatField()
                     ),
                     output_field=FloatField()
+                ),
+                # NUEVO: Calculamos el "Volumen de Fallos" (Intentos - Aciertos)
+                total_failures=ExpressionWrapper(
+                    F('total_attempts') - F('total_correct'),
+                    output_field=FloatField()
                 )
-            ).order_by('accuracy') 
+            )
+            
+            # --- AQUÍ ESTÁ TU "BALANCE" ---
+            
+            # OPCIÓN A (Impacto Real): Ordena por volumen de fallos. 
+            # Pone primero las preguntas que más "puntos" han quitado a la clase en total.
+            # Equilibra naturalmente % malo con muchos intentos.
+            result = result.order_by('-total_failures') 
 
-            # Aplicar límite
+            # OPCIÓN B (Cascada): Si prefieres estricto % primero y luego intentos:
+            # result = result.order_by('accuracy', '-total_attempts')
+
             if limit:
                 result = result[:limit]
 
-            # --- FORMATEO DE DATOS ---
+            # --- MAPEO DE TEXTOS ---
+            question_map = {}
+            if is_question_grouping and result:
+                q_ids = [item['question__id'] for item in result]
+                questions = Question.objects.filter(id__in=q_ids).values('id', 'statement_es')
+                for q in questions:
+                    question_map[q['id']] = q['statement_es']
+
             formatted_data = []
-            
             for item in result:
                 attempts = item['total_attempts']
-                percentage = round(item['accuracy'], 2)
+                percentage = round(item['accuracy'], 2) if item['accuracy'] is not None else 0
 
                 if is_question_grouping:
                     q_id = item['question__id']
-                    statement = item['question__statement_es'] or "Sin enunciado"
+                    statement = question_map.get(q_id, "Texto no encontrado")
                     label = f"Q{q_id}" 
                     full_label = f"Q{q_id}: {statement}"
                 else:
-                    raw_label = item.get(label_key)
-                    if not raw_label: 
-                        raw_label = "Sin asignar"
-                    
+                    raw_label = item.get(label_key) or "Sin asignar"
                     label = str(raw_label)[:15] + '...' if len(str(raw_label)) > 15 else str(raw_label)
                     full_label = str(raw_label)
 

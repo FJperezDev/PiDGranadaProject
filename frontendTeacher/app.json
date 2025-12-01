@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mockupReactNative",
-    "slug": "mockupReactNative",
+    "name": "frontendTeacher",
+    "slug": "frontendTeacher",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,7 +21,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.fran1763.mockupReactNative"
+      "package": "com.fran1763.frontendTeacher"
     },
     "web": {
       "favicon": "./assets/favicon.png"
