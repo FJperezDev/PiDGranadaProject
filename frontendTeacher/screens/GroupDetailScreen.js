@@ -1,25 +1,18 @@
-import React, { useState, useContext } from 'react';
-import { View, Text, StyleSheet, Button, Alert, TouchableOpacity, Share, Platform } from 'react-native';
-import { deleteGroup } from '../api/coursesRequests'; // Ajusta la ruta
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Button, Alert, TouchableOpacity, Share, Platform, Clipboard } from 'react-native';
+import { deleteGroup } from '../api/coursesRequests'; 
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import { COLORS } from '../constants/colors';
-import {Clipboard} from 'react-native';
 import { Copy, Trash2, BarChart } from 'lucide-react-native';
 
 export default function GroupDetailScreen({ route, navigation }) {
   const { group } = route.params;
   const [modalVisible, setModalVisible] = useState(false);
   
-  // La API no es clara sobre cómo se obtiene el access_code. 
-  // Asumo que viene en el objeto 'group' de la lista.
-  // Si no, se necesitaría otra llamada a la API aquí.
-  // La API DOC dice: GET /studentgroups/exists/?code=XXX-XXX, por lo que el código se llama 'code'
-  const accessCode = group.groupCode; // O group.access_code, group.groupCode, etc.
+  const accessCode = group.groupCode; 
 
   const handleDelete = async () => {
     try {
-      // El endpoint de borrado necesita (subjectId, groupId)
-      // Asumo que el objeto 'group' de la lista tiene 'subject' (ID) y 'id' (ID)
       await deleteGroup(group.subject.id, group.id);
       setModalVisible(false);
       Alert.alert('Éxito', 'Grupo eliminado correctamente.');
@@ -59,7 +52,11 @@ export default function GroupDetailScreen({ route, navigation }) {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Gestión</Text>
         
-        <TouchableOpacity style={styles.actionButton} onPress={() => Alert.alert('Próximamente', 'Las estadísticas estarán disponibles pronto.')}>
+        {/* --- CAMBIO AQUÍ: NAVEGACIÓN A ANALYTICS CON PARÁMETRO --- */}
+        <TouchableOpacity 
+          style={styles.actionButton} 
+          onPress={() => navigation.navigate('Analytics', { initialGroupBy: 'group' })}
+        >
           <BarChart size={22} color={COLORS.text} />
           <Text style={styles.actionButtonText}>Ver Estadísticas</Text>
         </TouchableOpacity>

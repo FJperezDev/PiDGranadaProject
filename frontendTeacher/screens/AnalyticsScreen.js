@@ -17,16 +17,19 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export default function AnalyticsScreen() {
+export default function AnalyticsScreen({ route }) {
     const { t } = useLanguage();
     
+    // Recupera el parámetro, si no existe usa 'topic' por defecto
+    const { initialGroupBy } = route.params || {};
+
     // Estados
     const [chartData, setChartData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
     // Filtros
-    const [groupBy, setGroupBy] = useState('topic'); 
+    const [groupBy, setGroupBy] = useState(initialGroupBy || 'topic'); 
     const [selectedSubject, setSelectedSubject] = useState(null); 
     const [showFilters, setShowFilters] = useState(false);
     
