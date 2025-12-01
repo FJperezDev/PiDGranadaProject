@@ -274,7 +274,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
         <Text style={styles.label}>Temas (Selecciona para ver Conceptos)</Text>
         <ScrollView style={styles.topicsBox} nestedScrollEnabled={true} paddingBottom={10} >
             <View style={styles.topicsGrid}>
-                {topics.length === 0 && <Text style={{color: 'gray', padding: 5}}>Selecciona una asignatura.</Text>}
+                {topics.length === 0 && <Text style={{color: 'gray', padding: 5}}>Selecciona un tema.</Text>}
                 {topics.map((t, i) => {
                     const topicTitle = t.title || t.name; 
                     const isSelected = selectedTopicTitles.includes(topicTitle);

@@ -62,6 +62,8 @@ export const ExamScreen = ({ route }) => {
         score: result.mark,
         total: questions.length,
         recommendations: result.recommendations,
+        questions: questions,
+        userAnswers: answers,
       });
 
     } catch (error) {

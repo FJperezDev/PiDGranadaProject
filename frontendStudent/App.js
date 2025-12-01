@@ -9,6 +9,7 @@ import { GameResultScreen } from './screens/GameResultScreen';
 import { ExamSetupScreen } from './screens/ExamSetupScreen';
 import { ExamScreen } from './screens/ExamScreen';
 import { ExamResultScreen } from './screens/ExamResultScreen';
+import { ExamRecommendationsScreen } from './screens/ExamRecommendationScreen';
 import { CustomHeader } from './components/CustomHeader';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from './constants/colors';
@@ -35,6 +36,7 @@ export default function App() {
               <Stack.Screen name="ExamSetup" component={ExamSetupScreen} />
               <Stack.Screen name="Exam" component={ExamScreen} />
               <Stack.Screen name="ExamResult" component={ExamResultScreen} /> 
+              <Stack.Screen name="ExamRecommendations" component={ExamRecommendationsScreen} /> 
             </Stack.Navigator>
           </SafeAreaView>
         </NavigationContainer>
