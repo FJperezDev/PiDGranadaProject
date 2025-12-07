@@ -106,7 +106,7 @@ La estructura principal del código fuente (`src` o raíz de desarrollo) es la s
 * **Interceptor**: Añade automáticamente el header `Accept-Language` basado en el contexto actual (`es` o `en`).
 
 ### Endpoints (`api.js`)
-La aplicación consume los siguientes endpoints REST [cite: 319-343]:
+La aplicación consume los siguientes endpoints REST:
 
 | Función JS | Método HTTP | Endpoint | Descripción |
 | :--- | :--- | :--- | :--- |
@@ -123,6 +123,6 @@ La aplicación consume los siguientes endpoints REST [cite: 319-343]:
 ---
 
 ## 7. Internacionalización (`LanguageContext`)
-* [cite_start]**Contexto**: Almacena el idioma actual (`es` por defecto)[span_61](end_span).
-* **[span_62](start_span)Traducción**: Expone la función `t(key)` que busca la cadena correspondiente en `constants/strings.js`[span_62](end_span).
-* **[span_63](start_span)[span_64](start_span)Persistencia**: El cambio de idioma se propaga a los headers de la API y recarga componentes sensibles al idioma[span_63](end_span)[span_64](end_span).
+* **Contexto**: Almacena el idioma actual (`es` por defecto).
+* **Traducción**: Expone la función `t(key)` que busca la cadena correspondiente en `constants/strings.js`.
+* **Persistencia**: El cambio de idioma se propaga a los headers de la API y recarga componentes sensibles al idioma.
