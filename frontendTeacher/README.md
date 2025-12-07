@@ -1,13 +1,13 @@
 # Documentación Técnica: frontendTeacher
 
 ## Descripción General
-[span_0](start_span)Este proyecto es una aplicación móvil y web desarrollada en **React Native** con **Expo**[span_0](end_span). [span_1](start_span)Su función principal es servir como panel de administración para profesores (`Teacher_iOrg`), permitiendo la gestión de grupos de alumnos, contenido académico (temas y conceptos), bancos de preguntas y visualización de analíticas de rendimiento[span_1](end_span).
+Este proyecto es una aplicación móvil y web desarrollada en **React Native** con **Expo**. Su función principal es servir como panel de administración para profesores (`Teacher_iOrg`), permitiendo la gestión de grupos de alumnos, contenido académico (temas y conceptos), bancos de preguntas y visualización de analíticas de rendimientos.
 
 ---
 
 ## Estructura del Proyecto
 
-[span_2](start_span)El proyecto sigue una arquitectura modular separando la lógica de negocio, la interfaz de usuario y el estado global[span_2](end_span):
+El proyecto sigue una arquitectura modular separando la lógica de negocio, la interfaz de usuario y el estado global:
 
 * **`api/`**: Contiene la configuración de Axios y las funciones para realizar peticiones HTTP al backend.
 * **`components/`**: Componentes de UI reutilizables (Modales, Headers, Botones).
@@ -21,12 +21,12 @@
 
 ## 1. Configuración y Dependencias
 
-* **[span_3](start_span)Core:** React Native, Expo (SDK 54), React 19[span_3](end_span).
-* **[span_4](start_span)Navegación:** `@react-navigation/native` y `@react-navigation/native-stack`[span_4](end_span).
-* **[span_5](start_span)HTTP Client:** `axios` con interceptores para manejo de tokens y errores[span_5](end_span).
-* **[span_6](start_span)Almacenamiento:** `expo-secure-store` para persistencia segura de credenciales (móvil) y `localStorage` para web[span_6](end_span).
-* **[span_7](start_span)Gráficos:** `react-native-chart-kit` para visualización de analíticas[span_7](end_span).
-* **[span_8](start_span)UI/Iconos:** `lucide-react-native` para iconografía[span_8](end_span).
+* **Core:** React Native, Expo (SDK 54), React 19.
+* **Navegación:** `@react-navigation/native` y `@react-navigation/native-stack`.
+* **HTTP Client:** `axios` con interceptores para manejo de tokens y errores.
+* **Almacenamiento:** `expo-secure-store` para persistencia segura de credenciales (móvil) y `localStorage` para web.
+* **Gráficos:** `react-native-chart-kit` para visualización de analíticas.
+* **UI/Iconos:** `lucide-react-native` para iconografía.
 
 ---
 
@@ -34,64 +34,64 @@
 
 ### Contexto de Autenticación (`AuthContext`)
 Gestiona el ciclo de vida de la sesión del usuario:
-* **[span_9](start_span)Login:** Autentica contra el backend y almacena `access` y `refresh` tokens[span_9](end_span).
-* **[span_10](start_span)Sesión:** Verifica y restaura la sesión al iniciar la app usando `restoreSession`[span_10](end_span).
-* **[span_11](start_span)Roles:** Determina si el usuario es "Super Admin" para habilitar funciones extra (ver grupos de otros, invitar usuarios)[span_11](end_span).
+* **Login:** Autentica contra el backend y almacena `access` y `refresh` tokens.
+* **Sesión:** Verifica y restaura la sesión al iniciar la app usando `restoreSession`.
+* **Roles:** Determina si el usuario es "Super Admin" para habilitar funciones extra (ver grupos de otros, invitar usuarios).
 
 ### Manejo de Tokens (`sessionApi.js`)
 Implementa un sistema robusto de renovación de tokens:
-* **[span_12](start_span)Interceptor:** Intercepta errores 401 en las peticiones[span_12](end_span).
-* **[span_13](start_span)[span_14](start_span)Refresh Logic:** Pausa las peticiones fallidas, solicita un nuevo token de acceso usando el refresh token, y reintenta las peticiones en cola[span_13](end_span)[span_14](end_span).
-* **[span_15](start_span)Logout:** Elimina tokens y cierra sesión si falla la renovación[span_15](end_span).
+* **Interceptor:** Intercepta errores 401 en las peticiones.
+* **Refresh Logic:** Pausa las peticiones fallidas, solicita un nuevo token de acceso usando el refresh token, y reintenta las peticiones en cola.
+* **Logout:** Elimina tokens y cierra sesión si falla la renovación.
 
 ### Internacionalización (`LanguageContext`)
-[span_16](start_span)[span_17](start_span)Permite el cambio dinámico entre Español (`es`) e Inglés (`en`) utilizando un diccionario de strings centralizado[span_16](end_span)[span_17](end_span).
+Permite el cambio dinámico entre Español (`es`) e Inglés (`en`) utilizando un diccionario de strings centralizado.
 
 ---
 
 ## 3. Módulos Principales (Pantallas)
 
 ### Gestión de Grupos (`ManageGroupsScreen`)
-* [span_18](start_span)Permite ver los grupos propios y, si es administrador, los grupos de otros profesores[span_18](end_span).
-* **[span_19](start_span)Creación:** Modal para crear nuevos grupos vinculados a una asignatura[span_19](end_span).
-* **[span_20](start_span)Detalle:** Visualización del código de acceso del grupo con opciones para copiar o compartir[span_20](end_span). [span_21](start_span)Navegación directa a las analíticas del grupo[span_21](end_span).
+* Permite ver los grupos propios y, si es administrador, los grupos de otros profesores.
+* **Creación:** Modal para crear nuevos grupos vinculados a una asignatura.
+* **Detalle:** Visualización del código de acceso del grupo con opciones para copiar o compartir. Navegación directa a las analíticas del grupo.
 
 ### Gestión de Contenido (`ManageContentScreen`)
 Administración compleja de estructuras académicas mediante pestañas:
-1.  **Temas (Topics):** CRUD de temas. [span_22](start_span)Permite vincular temas a múltiples Asignaturas y Conceptos[span_22](end_span).
-    * [span_23](start_span)Gestiona relaciones (Link/Unlink) comparando el estado original con el nuevo[span_23](end_span).
-2.  **Conceptos (Concepts):** CRUD de conceptos. [span_24](start_span)Permite relacionar conceptos entre sí (Jerarquía padre-hijo)[span_24](end_span).
-3.  **[span_25](start_span)Epígrafes (`TopicDetailScreen`):** Gestión de secciones específicas dentro de un tema, ordenadas por `order_id`[span_25](end_span).
+1.  **Temas (Topics):** CRUD de temas. Permite vincular temas a múltiples Asignaturas y Conceptos.
+    * Gestiona relaciones (Link/Unlink) comparando el estado original con el nuevo.
+2.  **Conceptos (Concepts):** CRUD de conceptos. Permite relacionar conceptos entre sí (Jerarquía padre-hijo).
+3.  **Epígrafes (`TopicDetailScreen`):** Gestión de secciones específicas dentro de un tema, ordenadas por `order_id`.
 
 ### Banco de Preguntas (`ManageQuestionsScreen`)
-* **[span_26](start_span)Listado:** Muestra preguntas con etiquetas de temas y asignaturas[span_26](end_span).
-* **[span_27](start_span)Filtros:** Sistema de filtrado tipo acordeón para buscar por Asignatura o Tema[span_27](end_span).
+* **Listado:** Muestra preguntas con etiquetas de temas y asignaturas.
+* **Filtros:** Sistema de filtrado tipo acordeón para buscar por Asignatura o Tema.
 * **Wizard (`QuestionWizardModal`):** Asistente de 3 pasos para crear preguntas:
-    1.  **[span_28](start_span)Contexto:** Selección de asignatura, temas (y conceptos filtrados por tema) y tipo de pregunta (Múltiple/Booleana)[span_28](end_span).
-    2.  **[span_29](start_span)Español:** Redacción del enunciado y respuestas en español, marcando las correctas[span_29](end_span).
-    3.  **[span_30](start_span)Inglés:** Traducción de los campos al inglés[span_30](end_span).
+    1.  **Contexto:** Selección de asignatura, temas (y conceptos filtrados por tema) y tipo de pregunta (Múltiple/Booleana).
+    2.  **Español:** Redacción del enunciado y respuestas en español, marcando las correctas.
+    3.  **Inglés:** Traducción de los campos al inglés.
 
 ### Analíticas (`AnalyticsScreen`)
-* [span_31](start_span)Visualización de rendimiento mediante gráficos de barras[span_31](end_span).
-* **[span_32](start_span)Filtros Dinámicos:** Permite agrupar los datos por Tema, Concepto, Grupo o Pregunta[span_32](end_span).
-* **[span_33](start_span)Filtrado por Asignatura:** Modal para acotar los datos a una asignatura específica[span_33](end_span).
-* [span_34](start_span)Muestra una tabla detallada con porcentajes de aciertos e intentos debajo de la gráfica[span_34](end_span).
+* Visualización de rendimiento mediante gráficos de barras.
+* **Filtros Dinámicos:** Permite agrupar los datos por Tema, Concepto, Grupo o Pregunta.
+* **Filtrado por Asignatura:** Modal para acotar los datos a una asignatura específica.
+* Muestra una tabla detallada con porcentajes de aciertos e intentos debajo de la gráfica.
 
 ### Gestión de Usuarios (`ManageUsersScreen`)
-* [span_35](start_span)Funcionalidad exclusiva para super-administradores (`isSuper`)[span_35](end_span).
-* [span_36](start_span)Lista usuarios existentes con sus roles y permite invitar a nuevos profesores o administradores vía email[span_36](end_span).
+* Funcionalidad exclusiva para super-administradores (`isSuper`).
+* Lista usuarios existentes con sus roles y permite invitar a nuevos profesores o administradores vía email.
 
 ---
 
 ## 4. Componentes Reutilizables Destacados
 
-* **[span_37](start_span)`CustomHeader`:** Cabecera adaptable que maneja la navegación, muestra el título, y contiene el acceso a ajustes (Cambio de idioma, Cambio de contraseña, Logout)[span_37](end_span).
-* **`ContentModals`:** Contiene `TopicModal`, `ConceptModal` y `EpigraphModal`. [span_38](start_span)Manejan formularios complejos con selectores múltiples (`MultiSelect`) para vinculaciones[span_38](end_span).
-* **[span_39](start_span)`QuestionWizardModal`:** Modal complejo de pasos para la creación estructurada de evaluaciones[span_39](end_span).
+* **`CustomHeader`:** Cabecera adaptable que maneja la navegación, muestra el título, y contiene el acceso a ajustes (Cambio de idioma, Cambio de contraseña, Logout).
+* **`ContentModals`:** Contiene `TopicModal`, `ConceptModal` y `EpigraphModal`. Manejan formularios complejos con selectores múltiples (`MultiSelect`) para vinculaciones.
+* **`QuestionWizardModal`:** Modal complejo de pasos para la creación estructurada de evaluaciones.
 
 ## 5. Endpoints API Utilizados
 
-[span_40](start_span)La aplicación se comunica con una API REST (Django, presumiblemente) en `http://172.25.28.130:8000/`[span_40](end_span).
+La aplicación se comunica con una API REST (Django, presumiblemente) en `http://172.25.28.130:8000/`.
 
 * **Auth:** `/login/`, `/logout/`, `/token/refresh/`, `/account/profile/`, `/change-password/`.
 * **Cursos:** `/subjects/`, `/studentgroups/my-groups/`, `/studentgroups/others-groups/`.
@@ -99,4 +99,5 @@ Administración compleja de estructuras académicas mediante pestañas:
 * **Relaciones:** `/subjects/{id}/topics/`, `/topics/{id}/concepts/`, `/concepts/{id}/concepts/`.
 * **Evaluación:** `/questions/long-questions/`, `/questions/{id}/answers/`.
 * **Analíticas:** `/analytics/performance/`.
-* **[span_41](start_span)Usuarios:** `/users/invite` (Simulado/Mock en código actual)[span_41](end_span).
+* **Usuarios:** `/users/invite` (Simulado/Mock en código actual).
+
