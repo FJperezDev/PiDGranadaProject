@@ -4,7 +4,7 @@ import json
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "https://api.franjpg.com"
 TEACHER_EMAIL = "admin@admin.com"
 TEACHER_PASSWORD = "admin123"
 EXCEL_FILE = "Prueba.xlsx"
