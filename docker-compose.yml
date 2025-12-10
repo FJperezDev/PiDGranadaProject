@@ -27,19 +27,19 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.django.rule=Host(`api.franjpg.com`)"
       - "traefik.http.routers.django.entrypoints=websecure"
-    
+
   frontend_student:
-    build: ./frontend_student
+    build: ./frontendStudent
     ports:
-      - "3001:80"  # Accede en http://localhost:3000
+      - "3001:80"
     depends_on:
       - backend
 
   # --- FRONTEND 2 (Profesor/Admin) ---
   frontend_teacher:
-    build: ./frontend_teacher # O como se llame la carpeta
+    build: ./frontendTeacher
     ports:
-      - "3002:80"  # Accede en http://localhost:3001
+      - "3002:80"
     depends_on:
       - backend
 
