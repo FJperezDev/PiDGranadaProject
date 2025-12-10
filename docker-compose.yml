@@ -14,7 +14,7 @@ services:
       - proxy
 
   backend:
-    build: .
+    build: ./backend
     container_name: django_backend
     restart: unless-stopped
     depends_on:
@@ -27,6 +27,21 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.django.rule=Host(`api.franjpg.com`)"
       - "traefik.http.routers.django.entrypoints=websecure"
+    
+  frontend_student:
+    build: ./frontend_student
+    ports:
+      - "3001:80"  # Accede en http://localhost:3000
+    depends_on:
+      - backend
+
+  # --- FRONTEND 2 (Profesor/Admin) ---
+  frontend_teacher:
+    build: ./frontend_teacher # O como se llame la carpeta
+    ports:
+      - "3002:80"  # Accede en http://localhost:3001
+    depends_on:
+      - backend
 
 networks:
   proxy:
