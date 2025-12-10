@@ -3,7 +3,7 @@ import requests
 import json
 import sys
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "https://api.franjpg.com"
 TEACHER_EMAIL = "admin@admin.com"
 TEACHER_PASSWORD = "admin123"
 EXCEL_FILE = "Prueba.xlsx"
