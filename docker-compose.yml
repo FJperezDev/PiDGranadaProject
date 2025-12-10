@@ -30,16 +30,24 @@ services:
 
   frontend_student:
     build: ./frontendStudent
-    ports:
-      - "3001:80"
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontendStudent.rule=Host(`student.franjpg.com`)"
+      - "traefik.http.routers.frontendStudent.entrypoints=websecure"
     depends_on:
       - backend
 
   # --- FRONTEND 2 (Profesor/Admin) ---
   frontend_teacher:
     build: ./frontendTeacher
-    ports:
-      - "3002:80"
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontendTeacher.rule=Host(`teacher.franjpg.com`)"
+      - "traefik.http.routers.frontendTeacher.entrypoints=websecure"
     depends_on:
       - backend
 
