@@ -25,6 +25,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      [
+        "@react-native-voice/voice",
+        {
+          "microphonePermission": "Permite el acceso al micrófono para responder las preguntas del examen por voz.",
+          "speechRecognitionPermission": "Permite el reconocimiento de voz para validar tus respuestas."
+        }
+      ]
+    ]
   }
 }

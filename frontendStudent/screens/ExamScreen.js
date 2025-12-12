@@ -5,7 +5,9 @@ import { StyledButton } from "../components/StyledButton";
 import { Text, View, StyleSheet, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { COLORS } from "../constants/colors";
+import { TouchableOpacity } from "react-native";
 
+import { useVoiceControl } from "../context/VoiceContext";
 
 export const ExamScreen = ({ route }) => {
   const { t, language } = useLanguage();
@@ -18,6 +20,56 @@ export const ExamScreen = ({ route }) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [timeLeft, setTimeLeft] = useState(nQuestions * 90);
   const isInitialMount = useRef(true);
+
+  const { transcript, setTranscript } = useVoiceControl();
+
+  const normalizeText = (text) => {
+    return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+  };
+
+  useEffect(() => {
+    if (!transcript) return; // Si no hay texto, no hacemos nada
+
+    const spoken = normalizeText(transcript);
+    console.log("Comando oído:", spoken);
+
+    // --- Lógica de Comandos de Navegación ---
+    const cmdNext = language === 'en' ? 'next' : 'siguiente';
+    const cmdPrev = language === 'en' ? 'previous' : 'anterior';
+    const cmdFinish = language === 'en' ? 'finish' : 'finalizar';
+
+    if (spoken.includes(cmdNext)) {
+        handleNext();
+        setTranscript(''); // Limpiar comando para no repetirlo
+        return;
+    }
+    if (spoken.includes(cmdPrev)) {
+        handlePrev();
+        setTranscript('');
+        return;
+    }
+    if (spoken.includes(cmdFinish)) {
+        handleFinish();
+        setTranscript('');
+        return;
+    }
+
+    // --- Lógica de Selección de Respuesta ---
+    if (questions.length > 0) {
+      const currentQuestion = questions[currentQ];
+      // Tu lógica de matching original adaptada:
+      const match = currentQuestion.answers.find(opt => {
+          const normOpt = normalizeText(opt.text);
+          return spoken.includes(normOpt) || normOpt.includes(spoken);
+      });
+
+      if (match) {
+        handleSelectAnswer(currentQuestion.id, match.id);
+        setTranscript(''); // Limpiar
+      }
+    }
+    
+  }, [transcript, currentQ, questions, language]);
 
   // Cargar preguntas
   useEffect(() => {
@@ -101,6 +153,9 @@ export const ExamScreen = ({ route }) => {
     if (currentQ < questions.length - 1) {
       setCurrentQ(currentQ + 1);
     }
+    if (currentQ === questions.length -1 ) {
+      handleFinish();
+    }
   };
 
   const handlePrev = () => {
@@ -130,7 +185,6 @@ export const ExamScreen = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      {/* Barra superior */}
       <View style={styles.header}>
         <Text style={styles.progressText}>{`${currentQ + 1} / ${questions.length}`}</Text>
         <Text style={styles.timerText}>
@@ -140,10 +194,8 @@ export const ExamScreen = ({ route }) => {
         </Text>
       </View>
 
-      {/* Pregunta */}
       <Text style={styles.questionText}>{question.statement}</Text>
 
-      {/* Opciones */}
       <View style={styles.optionsContainer}>
         {question.answers.map((opt) => {
           const isSelected = selectedAnswer === opt.id;

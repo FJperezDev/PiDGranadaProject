@@ -1,6 +1,7 @@
 import { useLanguage } from '../context/LanguageContext';
+import { useVoiceControl } from '../context/VoiceContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { ChevronLeft, BookMarked, LogOutIcon } from 'lucide-react-native';
+import { ChevronLeft, BookMarked, LogOutIcon, Mic, MicOff } from 'lucide-react-native';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
@@ -8,6 +9,7 @@ import { COLORS } from '../constants/colors';
 export const CustomHeader = ({routeName}) => {
   const { t } = useLanguage();
   const navigation = useNavigation();
+  const { isListening, toggleListening } = useVoiceControl();
 
   const handleGoBack = () => {
     if (navigation.canGoBack()) {
@@ -25,6 +27,7 @@ export const CustomHeader = ({routeName}) => {
     <View style={styles.container}>
       {/* Left Section */}
       <View style={styles.leftSection}>
+        
         {!hideBack && isHome ? (
           <TouchableOpacity
             activeOpacity={0.7}
@@ -51,6 +54,7 @@ export const CustomHeader = ({routeName}) => {
             )
             }
           </TouchableOpacity>
+          
         )}
       </View>
 
@@ -61,6 +65,20 @@ export const CustomHeader = ({routeName}) => {
 
       {/* Right Section */}
       <View style={styles.rightSection}>
+        <TouchableOpacity 
+          onPress={toggleListening}
+          style={[
+              styles.micButton, 
+              isListening && styles.micButtonActive
+          ]}
+        >
+          {isListening ? (
+              <Mic size={20} color="#fff" />
+          ) : (
+              <MicOff size={20} color={COLORS.text} />
+          )}
+        </TouchableOpacity>
+        
         <LanguageSwitcher />
       </View>
     </View>
@@ -114,4 +132,14 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 2,
   },
+
+  micButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f1f5f9', // slate-100
+    marginLeft: 8,
+  },
+  micButtonActive: {
+    backgroundColor: '#ef4444', // red-500
+  }
 });
