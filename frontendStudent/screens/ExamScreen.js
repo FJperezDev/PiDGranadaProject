@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { mockApi } from "../services/api";
 import { StyledButton } from "../components/StyledButton";
 import { Text, View, StyleSheet, Alert } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { COLORS } from "../constants/colors";
 import { TouchableOpacity } from "react-native";
 
@@ -12,6 +12,7 @@ import { useVoiceControl } from "../context/VoiceContext";
 export const ExamScreen = ({ route }) => {
   const { t, language } = useLanguage();
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const { code, topics, nQuestions } = route.params;
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
@@ -28,7 +29,7 @@ export const ExamScreen = ({ route }) => {
   };
 
   useEffect(() => {
-    if (!transcript) return; // Si no hay texto, no hacemos nada
+    if (!transcript || !isFocused) return; // Si no hay texto, no hacemos nada
 
     const spoken = normalizeText(transcript);
     console.log("Comando oído:", spoken);

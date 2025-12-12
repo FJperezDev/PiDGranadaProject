@@ -1,5 +1,5 @@
 import { useLanguage } from "../context/LanguageContext";
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { View, Text, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { StyledButton } from "../components/StyledButton";
 import { Hexagon, Clipboard } from 'lucide-react-native';
@@ -9,6 +9,7 @@ import { useVoiceControl } from "../context/VoiceContext";
 
 export const SubjectScreen = ({ route }) => {
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
   const { t, language } = useLanguage();
   const [subjectData, setSubjectData] =  useState();
   const [topicsData, setTopicsData] = useState();
@@ -20,7 +21,7 @@ export const SubjectScreen = ({ route }) => {
   };
 
   useEffect(() => {
-    if (!transcript) return;
+    if (!transcript || !isFocused) return;
 
     const spoken = normalizeText(transcript);
     console.log("Comando oído en SubjectScreen:", spoken);

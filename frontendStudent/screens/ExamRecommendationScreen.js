@@ -1,13 +1,60 @@
-import React from "react";
+import { useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet, Platform } from "react-native";
 import { useLanguage } from "../context/LanguageContext";
 import { StyledButton } from "../components/StyledButton";
 import { useNavigation } from "@react-navigation/native";
+import { useVoiceControl } from "../context/VoiceContext";
+import { useIsFocused } from "@react-navigation/native";
+
 
 export const ExamRecommendationsScreen = ({ route }) => {
   const { t } = useLanguage();
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
+  const { transcript, setTranscript } = useVoiceControl();
   const { code, recommendations, score, total } = route.params;
+
+  const handleFinish = () => {
+    navigation.navigate('Subject', { code: code });
+  };
+
+  const normalizeText = (text) => {
+    return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+  }
+
+  useEffect(() => {
+      // Si no hay texto o la pantalla no está activa, salimos
+      if (!transcript || !isFocused) return;
+  
+      const spoken = normalizeText(transcript);
+      console.log("Comando oído en Recommendations:", spoken);
+  
+      // --- Comandos para Terminar / Volver a la Asignatura ---
+      // Palabras clave: terminar, finalizar, asignatura, volver, finish, end, subject, back
+      if (
+          spoken.includes('terminar') || 
+          spoken.includes('finalizar') || 
+          spoken.includes('asignatura') ||
+          spoken.includes('volver') ||
+          spoken.includes('atras') ||
+          spoken.includes('finish') || 
+          spoken.includes('end') ||
+          spoken.includes('subject') ||
+          spoken.includes('back')
+      ) {
+          handleFinish();
+          setTranscript('');
+          return;
+      }
+  
+      // --- Navegación a Inicio ---
+      if (spoken.includes('inicio') || spoken.includes('home') || spoken.includes('casa')) {
+          navigation.navigate('Home');
+          setTranscript('');
+          return;
+      }
+  
+    }, [transcript, isFocused, navigation, code]);
 
   return (
     <View style={styles.container}>

@@ -6,14 +6,89 @@ import { StyledTextInput } from "../components/StyledTextInput";
 import { CheckSquare, Square } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import { mockApi } from "../services/api";
+import { COLORS } from "../constants/colors";
+import { useVoiceControl } from "../context/VoiceContext";
+import { useIsFocused } from "@react-navigation/native";
 
 export const ExamSetupScreen = ({ route, setAlert }) => {
   const { t, language } = useLanguage();
+  const { transcript, setTranscript } = useVoiceControl();
+  const isFocused = useIsFocused();
   const [ topics, setTopics ] = useState([]);
   const [selectedTopics, setSelectedTopics] = useState({});
   const [numQuestions, setNumQuestions] = useState(10);
   const navigation = useNavigation();
   const { code } = route.params;
+
+  const normalizeText = (text) => {
+    return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+  };
+
+  useEffect(() => {
+    if (!transcript || !isFocused) return;
+
+    const spoken = normalizeText(transcript);
+    console.log("Comando oído en Setup:", spoken);
+
+    // --- A. Generar Examen ---
+    if (
+        spoken.includes('generar') || 
+        spoken.includes('crear') || 
+        spoken.includes('empezar') || 
+        spoken.includes('generate') || 
+        spoken.includes('start')
+    ) {
+        handleGenerate();
+        setTranscript('');
+        return;
+    }
+
+    // --- B. Navegación General ---
+    if (spoken.includes('volver') || spoken.includes('atras') || spoken.includes('back')) {
+        if (navigation.canGoBack()) navigation.goBack();
+        setTranscript('');
+        return;
+    }
+    if (spoken.includes('inicio') || spoken.includes('home')) {
+        navigation.navigate('Home');
+        setTranscript('');
+        return;
+    }
+
+    // --- C. Detectar Números (Para cambiar cantidad de preguntas) ---
+    // Buscamos si hay dígitos en el comando (ej: "quiero 20 preguntas")
+    const numberMatch = spoken.match(/\d+/); 
+    if (numberMatch) {
+        const num = parseInt(numberMatch[0], 10);
+        if (!isNaN(num) && num > 0 && num <= 100) { // Ponemos un límite razonable
+            setNumQuestions(num);
+            // No hacemos return aquí para permitir decir "tema 1 y 20 preguntas" a la vez si quisieras
+        }
+    }
+
+    // --- D. Seleccionar/Deseleccionar Temas ---
+    if (topics.length > 0) {
+        // Buscamos si lo dicho coincide con algún título de tema
+        const matchedTopic = topics.find(topic => {
+            const normalizedTitle = normalizeText(topic.title);
+            return spoken.includes(normalizedTitle) || normalizedTitle.includes(spoken);
+        });
+
+        if (matchedTopic) {
+            toggleTopic(matchedTopic.id);
+            setTranscript('');
+            return;
+        }
+        
+        // Opción extra: "Todos" o "Ninguno"
+        if (spoken.includes('todos') || spoken.includes('all')) {
+            const allSelected = topics.reduce((acc, t) => ({...acc, [t.id]: true}), {});
+            setSelectedTopics(allSelected);
+            setTranscript('');
+        }
+    }
+
+  }, [transcript, isFocused, topics, navigation]);
 
   useEffect(() => {
     const fetchData = async () => {

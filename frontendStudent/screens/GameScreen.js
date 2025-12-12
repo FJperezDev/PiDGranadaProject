@@ -1,18 +1,93 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Text, View, StyleSheet, ScrollView } from "react-native"; // 1. Importar ScrollView
 import { useNavigation } from '@react-navigation/native';
 import { useLanguage } from "../context/LanguageContext";
 import { StyledButton } from "../components/StyledButton";
 import { GAME_QUESTIONS } from "../constants/game";
+import { useIsFocused } from "@react-navigation/native";
+import { useVoiceControl } from "../context/VoiceContext";
 
 export const GameScreen = () => {
   const navigation = useNavigation();
   const { language, t } = useLanguage();
-
+  const isFocused = useIsFocused();
+  const { transcript, setTranscript } = useVoiceControl();
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [currentQ, setCurrentQ] = useState(0);
   const [warning, setWarning] = useState("");
+
+  const normalizeText = (text) => {
+    return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+  };
+
+  useEffect(() => {
+    if (!transcript || !isFocused || questions.length === 0) return;
+
+    const spoken = normalizeText(transcript);
+    console.log("Comando oído en Game:", spoken);
+
+    // --- Navegación del Juego ---
+    if (spoken.includes('siguiente') || spoken.includes('next') || spoken.includes('continuar')) {
+        handleNext();
+        setTranscript('');
+        return;
+    }
+
+    if (
+        spoken.includes('anterior') || 
+        spoken.includes('previous') || 
+        spoken.includes('atras') || 
+        spoken.includes('volver') || 
+        spoken.includes('back')
+    ) {
+        if (currentQ > 0) {
+            // Si ya hemos avanzado, volvemos a la pregunta anterior
+            handlePrev();
+        } else {
+            // Si estamos en la primera pregunta (0), salimos del juego hacia atrás
+            if (navigation.canGoBack()) {
+                navigation.goBack();
+            } else {
+                navigation.navigate('Home'); // Fallback por si acaso
+            }
+        }
+        setTranscript('');
+        return;
+    }
+    
+    // Finalizar explícito (si estás en la última)
+    if (spoken.includes('terminar') || spoken.includes('finalizar') || spoken.includes('finish')) {
+        if (currentQ === questions.length - 1) {
+            handleNext(); // handleNext ya maneja la finalización
+        }
+        setTranscript('');
+        return;
+    }
+
+    // --- Salir del Juego ---
+    if (spoken.includes('inicio') || spoken.includes('home') || spoken.includes('salir')) {
+        navigation.navigate('Home');
+        setTranscript('');
+        return;
+    }
+
+    // --- Seleccionar Opción por Voz ---
+    const currentQuestion = questions[currentQ];
+    if (currentQuestion) {
+        // Buscamos si lo dicho coincide con alguna opción
+        const match = currentQuestion.options.find(opt => {
+            const normalizedOpt = normalizeText(opt.text);
+            return spoken.includes(normalizedOpt) || normalizedOpt.includes(spoken);
+        });
+
+        if (match) {
+            handleSelectAnswer(currentQuestion.id, match.code);
+            setTranscript('');
+        }
+    }
+
+  }, [transcript, isFocused, questions, currentQ]);
 
   useEffect(() => {
     setQuestions(GAME_QUESTIONS[language] || GAME_QUESTIONS["es"]);

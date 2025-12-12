@@ -1,12 +1,16 @@
-import React from "react";
+import { useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet, Platform } from "react-native";
 import { useLanguage } from "../context/LanguageContext";
 import { StyledButton } from "../components/StyledButton";
 import { COLORS } from "../constants/colors"; 
+import { useIsFocused } from "@react-navigation/native";
+import { useVoiceControl } from "../context/VoiceContext";
 
 export const ExamResultScreen = ({ route, navigation }) => {
   const { t } = useLanguage();
-  // Recibimos la data completa
+  const isFocused = useIsFocused();
+  const { transcript, setTranscript } = useVoiceControl();
+
   const { 
     code, 
     score, 
@@ -15,7 +19,7 @@ export const ExamResultScreen = ({ route, navigation }) => {
     questions = [], 
     userAnswers = {}
   } = route.params;
-  console.log(questions)
+  
   const handleContinue = () => {
     navigation.navigate("ExamRecommendations", {
       code,
@@ -24,6 +28,46 @@ export const ExamResultScreen = ({ route, navigation }) => {
       total,
     });
   };
+
+  const normalizeText = (text) => {
+    return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+  };
+
+  useEffect(() => {
+    // Si no hay texto o la pantalla no está activa, no hacemos nada
+    if (!transcript || !isFocused) return;
+
+    const spoken = normalizeText(transcript);
+    console.log("Comando oído en ExamResult:", spoken);
+
+    // --- Comandos de Acción Principal (Ir a Recomendaciones) ---
+    // Palabras clave: siguiente, recomendaciones, continuar, next, recommendations
+    if (
+        spoken.includes('siguiente') || 
+        spoken.includes('recomendaciones') || 
+        spoken.includes('continuar') || 
+        spoken.includes('next') || 
+        spoken.includes('recommendations')
+    ) {
+        handleContinue();
+        setTranscript('');
+        return;
+    }
+
+    // --- Comandos de Navegación General ---
+    if (spoken.includes('volver') || spoken.includes('atras') || spoken.includes('back')) {
+        if (navigation.canGoBack()) navigation.goBack();
+        setTranscript('');
+        return;
+    }
+
+    if (spoken.includes('inicio') || spoken.includes('home') || spoken.includes('casa')) {
+        navigation.navigate('Home');
+        setTranscript('');
+        return;
+    }
+
+  }, [transcript, isFocused, navigation]);
 
   return (
     <View style={styles.container}>

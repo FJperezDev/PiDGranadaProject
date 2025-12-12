@@ -1,12 +1,16 @@
 import { Image, View, Text, StyleSheet, Platform } from "react-native";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StyledButton } from "../components/StyledButton";
 import { useLanguage } from "../context/LanguageContext";
 import { GAME_SOLUTION } from "../constants/game";
 import { useMemo } from "react";
+import { useVoiceControl } from "../context/VoiceContext";
+import { useIsFocused } from "@react-navigation/native";
 
 export const GameResultScreen = ({ route }) => {
   const { t, language } = useLanguage();
+  const isFocused = useIsFocused();
+  const { transcript, setTranscript } = useVoiceControl();
   const [imageVisible, setImageVisible] = useState(false);
   const [nameVisible, setNameVisible] = useState(false);
   const { codeCounts } = route.params;
@@ -29,6 +33,61 @@ export const GameResultScreen = ({ route }) => {
     const freq = sorted.slice(0, 3).map(x => x.code);
     return freq.join("");
   }, [codeCounts]);
+
+  const normalizeText = (text) => {
+    return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+  };
+
+  useEffect(() => {
+    if (!transcript || !isFocused) return;
+
+    const spoken = normalizeText(transcript);
+    console.log("Comando oído en GameResult:", spoken);
+
+    // --- A. Revelar Imagen ---
+    // Palabras clave: imagen, foto, ver, revelar, image, photo, show
+    if (
+        spoken.includes('imagen') || 
+        spoken.includes('foto') || 
+        spoken.includes('ver') || 
+        spoken.includes('revelar') ||
+        spoken.includes('image') ||
+        spoken.includes('show')
+    ) {
+        setImageVisible(true);
+        setTranscript('');
+        return;
+    }
+
+    // --- B. Revelar Nombre/Resultado ---
+    // Palabras clave: nombre, texto, resultado, solución, name, text, result
+    if (
+        spoken.includes('nombre') || 
+        spoken.includes('texto') || 
+        spoken.includes('resultado') || 
+        spoken.includes('solucion') ||
+        spoken.includes('name') ||
+        spoken.includes('text')
+    ) {
+        setNameVisible(true);
+        setTranscript('');
+        return;
+    }
+
+    // --- C. Navegación General ---
+    if (spoken.includes('inicio') || spoken.includes('home') || spoken.includes('salir')) {
+        navigation.navigate('Home');
+        setTranscript('');
+        return;
+    }
+
+    if (spoken.includes('volver') || spoken.includes('atras') || spoken.includes('back')) {
+        if (navigation.canGoBack()) navigation.goBack();
+        setTranscript('');
+        return;
+    }
+
+  }, [transcript, isFocused, navigation]);
 
   return (
     <View style={styles.container}>

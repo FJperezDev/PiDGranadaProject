@@ -7,12 +7,17 @@ import { StyledButton } from "../components/StyledButton";
 import { View, Text, StyleSheet, ScrollView, Platform, ActivityIndicator } from "react-native";
 import { COLORS } from "../constants/colors";
 import { Ionicons } from '@expo/vector-icons'; 
+import { useVoiceControl } from "../context/VoiceContext";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 
 export const TopicDetailScreen = ({ route }) => {
   const { t, language } = useLanguage();
+  const isFocused = useIsFocused();
+  const { transcript, setTranscript } = useVoiceControl();
   const [conceptData, setConceptData] = useState(null); 
   const [topicData, setTopicData] = useState(null); 
   const [isLoading, setIsLoading] = useState(true);
+  const navigation = useNavigation();
 
   // Modales
   const [epigraphModalVisible, setEpigraphModalVisible] = useState(false);
@@ -36,6 +41,77 @@ export const TopicDetailScreen = ({ route }) => {
       setIsLoading(false);
     }
   };
+
+  const normalizeText = (text) => {
+    return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+  };
+
+  useEffect(() => {
+    if (!transcript || !isFocused) return;
+
+    const spoken = normalizeText(transcript);
+    console.log("Comando oído en TopicDetail:", spoken);
+
+    // --- A. Cerrar Modales ---
+    if (spoken.includes('cerrar') || spoken.includes('close')) {
+        setEpigraphModalVisible(false);
+        setConceptModalVisible(false);
+        setTranscript('');
+        return;
+    }
+
+    // --- B. Navegación General (Solo si no hay modales abiertos, opcionalmente) ---
+    if (spoken.includes('volver') || spoken.includes('atras') || spoken.includes('back')) {
+        // 1. Prioridad: Si hay modal abierto, lo cerramos
+        if (epigraphModalVisible || conceptModalVisible) {
+            setEpigraphModalVisible(false);
+            setConceptModalVisible(false);
+            setTranscript('');
+            return; // Detenemos aquí, no navegamos atrás
+        }
+
+        // 2. Si no hay modales, navegamos atrás en la app
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        } else {
+            navigation.navigate('Home');
+        }
+        setTranscript('');
+        return;
+    }
+
+    // --- C. Abrir Conceptos o Epígrafes por Voz ---
+    if (topicData) {
+        // 1. Buscar en Conceptos
+        if (topicData.concepts) {
+            const foundConcept = topicData.concepts.find(c => {
+                const normName = normalizeText(c.name);
+                return spoken.includes(normName) || normName.includes(spoken);
+            });
+
+            if (foundConcept) {
+                handleConceptPress(foundConcept);
+                setTranscript('');
+                return;
+            }
+        }
+
+        // 2. Buscar en Epígrafes
+        if (topicData.epigraphs) {
+            const foundEpigraph = topicData.epigraphs.find(e => {
+                const normName = normalizeText(e.name);
+                return spoken.includes(normName) || normName.includes(spoken);
+            });
+
+            if (foundEpigraph) {
+                handleEpigraphPress(foundEpigraph);
+                setTranscript('');
+                return;
+            }
+        }
+    }
+
+  }, [transcript, isFocused, topicData, epigraphModalVisible, conceptModalVisible, navigation]);
 
   useEffect(() => {
     fetchTopicDetails();
