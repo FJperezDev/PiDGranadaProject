@@ -5,6 +5,7 @@ import { StyledButton } from "../components/StyledButton";
 import { Hexagon, Clipboard } from 'lucide-react-native';
 import { useEffect, useState } from "react";
 import { mockApi } from "../services/api";
+import { useVoiceControl } from "../context/VoiceContext";
 
 export const SubjectScreen = ({ route }) => {
   const navigation = useNavigation();
@@ -12,6 +13,67 @@ export const SubjectScreen = ({ route }) => {
   const [subjectData, setSubjectData] =  useState();
   const [topicsData, setTopicsData] = useState();
   const { code } = route.params;
+  const { transcript, setTranscript } = useVoiceControl();
+
+  const normalizeText = (text) => {
+    return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
+  };
+
+  useEffect(() => {
+    if (!transcript) return;
+
+    const spoken = normalizeText(transcript);
+    console.log("Comando oído en SubjectScreen:", spoken);
+
+    // --- A. Comandos de Navegación General ---
+    if (spoken.includes('volver') || spoken.includes('atras') || spoken.includes('back')) {
+        if (navigation.canGoBack()) navigation.goBack();
+        else navigation.navigate('Home');
+        setTranscript('');
+        return;
+    }
+
+    if (spoken.includes('inicio') || spoken.includes('home') || spoken.includes('casa')) {
+        navigation.navigate('Home');
+        setTranscript('');
+        return;
+    }
+
+    // --- B. Acciones Específicas de esta Pantalla ---
+    
+    // 1. Ir al Examen
+    if (spoken.includes('examen') || spoken.includes('exam')) {
+        if (topicsData) {
+            navigation.navigate('ExamSetup', { topics: topicsData, nQuestions: 10, code: code });
+            setTranscript('');
+        }
+        return;
+    }
+
+    // 2. Ir al Juego
+    if (spoken.includes('juego') || spoken.includes('game') || spoken.includes('hexagono')) {
+        navigation.navigate('Game');
+        setTranscript('');
+        return;
+    }
+
+    // --- C. Selección de Temas (Magic ✨) ---
+    // Si el usuario dice el nombre de un tema, entramos en él.
+    if (topicsData && topicsData.length > 0) {
+        // Buscamos si lo que se dijo coincide con algún título de tema
+        const matchedTopic = topicsData.find(topic => {
+            const normalizedTitle = normalizeText(topic.title);
+            // Comprobamos si el título está en lo hablado O lo hablado está en el título
+            return spoken.includes(normalizedTitle) || normalizedTitle.includes(spoken);
+        });
+
+        if (matchedTopic) {
+            navigation.navigate('TopicDetail', { topic: matchedTopic });
+            setTranscript('');
+        }
+    }
+
+  }, [transcript, topicsData, code, navigation]);
 
   useEffect(() => {
     const fetchData = async () => {
