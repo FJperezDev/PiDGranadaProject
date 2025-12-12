@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Modal, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Modal, StyleSheet, ScrollView, Alert } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { Check, X } from 'lucide-react-native';
 import { getConceptInfo, getTopicInfo } from '../api/contentRequests'
@@ -10,7 +10,7 @@ const MultiSelect = ({ items, selectedIds, onToggle, labelKey = 'name' }) => (
     {items.map((item) => {
       const isSelected = selectedIds.includes(item.id);
       return (
-        <TouchableOpacity
+        <StyledButton
           key={item.id}
           style={[styles.chip, isSelected && styles.chipSelected]}
           onPress={() => onToggle(item.id)}
@@ -19,7 +19,7 @@ const MultiSelect = ({ items, selectedIds, onToggle, labelKey = 'name' }) => (
             {item[labelKey] || item.title || item.name_es} 
           </Text>
           {isSelected && <Check size={14} color="white" style={{ marginLeft: 4 }} />}
-        </TouchableOpacity>
+        </StyledButton>
       );
     })}
   </View>
@@ -188,8 +188,8 @@ export const ConceptModal = ({ visible, onClose, onSubmit, editingConcept, allCo
           </ScrollView>
 
           <View style={styles.buttonRow}>
-            <Button title="Cancelar" onPress={onClose} color={COLORS.danger || 'red'} />
-            <Button title="Guardar" onPress={handleSubmit} color={COLORS.primary} />
+            <StyledButton title="Cancelar" onPress={onClose} variant='danger' />
+            <StyledButton title="Guardar" onPress={handleSubmit}  />
           </View>
         </View>
       </View>
@@ -277,8 +277,8 @@ export const EpigraphModal = ({ visible, onClose, onSubmit, editingEpigraph }) =
           </ScrollView>
           
           <View style={styles.buttonRow}>
-            <Button title="Cancelar" onPress={onClose} color={COLORS.danger || 'red'} />
-            <Button title="Guardar" onPress={handleSubmit} color={COLORS.primary} />
+            <StyledButton title="Cancelar" onPress={onClose} variant='danger' />
+            <StyledButton title="Guardar" onPress={handleSubmit} />
           </View>
         </View>
       </View>
