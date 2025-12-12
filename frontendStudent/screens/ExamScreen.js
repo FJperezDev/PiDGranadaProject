@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 700,
     alignSelf: "center",
-    backgroundColor: COLORS.background || "#fff",
+    backgroundColor: COLORS.background,
   },
   loadingContainer: {
     flex: 1,
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     color: "#64748b", // slate-500
   },
   timerText: {
-    color: "#b91c1c", // red-700
+    color: COLORS.errorDark, // red-700
     fontWeight: "bold",
     fontSize: 18,
   },
@@ -297,12 +297,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   optionDefault: {
-    backgroundColor: "#fff",
-    borderColor: "#cbd5e1", // slate-300
+    backgroundColor: COLORS.surface,
+    borderColor: COLORS.border, // slate-300
   },
   optionSelected: {
-    backgroundColor: "#cffafe", // cyan-100
-    borderColor: "#a5f3fc", // cyan-300
+    backgroundColor: COLORS.primaryVeryLight, // cyan-100
+    borderColor: COLORS.primaryLight, // cyan-300
   },
   navContainer: {
     flexDirection: "row",
@@ -311,9 +311,9 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   nextButton: {
-    backgroundColor: "#a5f3fc", // cyan-200
+    backgroundColor: COLORS.primaryLight, // cyan-200
   },
   finishButton: {
-    backgroundColor: "#22c55e", // green-500
+    backgroundColor: COLORS.success, // green-500
   },
 });

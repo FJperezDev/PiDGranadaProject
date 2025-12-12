@@ -1,6 +1,7 @@
-import { Modal, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Modal, View, Text, StyleSheet } from 'react-native';
 import { X } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
+import { StyledButton } from '../components/StyledButton';
 
 export const ContentModal = ({ visible, onClose, title, content }) => {
   return (
@@ -14,9 +15,9 @@ export const ContentModal = ({ visible, onClose, title, content }) => {
         <View style={styles.modalContainer}>
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <StyledButton onPress={onClose} style={styles.closeButton}>
               <X size={24} color={COLORS.black} />
-            </TouchableOpacity>
+            </StyledButton>
           </View>
 
           <View style={styles.content}>
@@ -41,7 +42,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     elevation: 10, // sombra en Android
-    shadowColor: '#000', // sombra en iOS
+    shadowColor: COLORS.shadow, // sombra en iOS
     shadowOpacity: 0.25,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },

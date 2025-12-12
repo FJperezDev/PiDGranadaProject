@@ -42,6 +42,7 @@ export const STRINGS = {
     examples: 'Examples',
     related_concepts: 'Related Concepts',
     description: 'Description',
+    no_headings: 'No headings available for this topic.',
   },
   es: {
     appName: 'Student_iOrg',
@@ -86,5 +87,6 @@ export const STRINGS = {
     examples: 'Ejemplos',
     related_concepts: 'Conceptos Relacionados',
     description: 'Descripción',
+    no_headings: 'No hay epígrafes disponibles para este tema.',
   },
 };

@@ -1,61 +1,76 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal } from 'react-native';
+import { View, Text, StyleSheet, Modal, Platform } from 'react-native';
 import { StyledButton } from './StyledButton';
+import { COLORS } from '../constants/colors';
 
 export const AlertModal = ({ visible, onClose, title, message }) => {
-  if (!visible) return null;
-
   return (
-    <View style={styles.overlay}>
-      <View style={styles.modal}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.message}>{message}</Text>
-        <StyledButton
-          title="OK"
-          onPress={onClose}
-          style={styles.button}
-        />
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.modal}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.message}>{message}</Text>
+          <StyledButton
+            title="OK"
+            onPress={onClose}
+            style={styles.button}
+            textStyle={styles.buttonText}
+          />
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
   overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 50,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 16,
+    backgroundColor: COLORS.overlay,
+    padding: 20, // Padding para evitar bordes en móviles pequeños
   },
   modal: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
     width: '100%',
-    maxWidth: 400, // equivalente a max-w-md
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    maxWidth: 400, // Responsivo: Máximo ancho en tablet/web
+    borderRadius: 16,
     padding: 24,
+    ...Platform.select({
+      ios: {
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+      },
+      android: { elevation: 8 },
+      web: { boxShadow: '0px 10px 25px rgba(0,0,0,0.1)' }
+    }),
   },
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 16,
+    color: COLORS.text,
+    marginBottom: 12,
   },
   message: {
     fontSize: 16,
+    color: COLORS.textSecondary,
     marginBottom: 24,
+    lineHeight: 22,
   },
   button: {
     alignSelf: 'flex-end',
-    backgroundColor: '#a5f3fc', // cyan-200
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
   },
+  buttonText: {
+    color: COLORS.text, // Asegura contraste
+  }
 });

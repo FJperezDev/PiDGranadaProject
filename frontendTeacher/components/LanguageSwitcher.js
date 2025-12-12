@@ -1,7 +1,8 @@
 import { useLanguage } from '../context/LanguageContext';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Languages } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
+import { StyledButton } from './StyledButton';
 
 export const LanguageSwitcher = () => {
   const { language, toggleLanguage } = useLanguage();
@@ -12,10 +13,10 @@ export const LanguageSwitcher = () => {
   };
 
   return (
-    <TouchableOpacity
+    <StyledButton
       onPress={handleToggle}
       style={styles.button}
-      activeOpacity={0.7}
+      variant='ghost'
     >
       <View style={styles.iconContainer}>
         <Languages size={18} color={COLORS.black} />
@@ -26,7 +27,7 @@ export const LanguageSwitcher = () => {
           {language === 'es' ? 'ES' : 'EN'}
         </Text>
       </View>
-    </TouchableOpacity>
+    </StyledButton>
   );
 };
 
@@ -38,18 +39,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderColor: COLORS.secondary,
     borderWidth: 1.5,
-    borderRadius: 999, 
+    borderRadius: 8, 
     paddingVertical: 10,
     paddingHorizontal: 16,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 1px 2px rgba(0,0,0,0.1)' }
-      : {
-          shadowColor: COLORS.black,
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.1,
-          shadowRadius: 2,
-          elevation: 2,
-        }),
+    ...Platform.select({
+      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+      android: { elevation: 5 },
+      web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' }
+    }),
   },
   iconContainer: {
     flex: 1,

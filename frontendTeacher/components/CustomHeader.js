@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Platform, Modal, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BookMarked, ChevronLeft, Settings, LogOut, Globe, Lock, X, Save, ArrowLeft } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
@@ -7,6 +7,7 @@ import { AuthContext } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { changePassword } from '../api/authRequests'; 
+import { StyledButton } from './StyledButton';
 
 export const CustomHeader = ({ routeName }) => {
   const { loggedUser, logout } = useContext(AuthContext);
@@ -70,9 +71,8 @@ export const CustomHeader = ({ routeName }) => {
           isHome ? (
             <View style={styles.iconButton}><BookMarked size={28} color={COLORS.black} /></View>
           ) : (
-            <TouchableOpacity onPress={handleGoBack} activeOpacity={0.7} style={styles.iconButton}>
-              <ChevronLeft size={28} color={COLORS.black} />
-            </TouchableOpacity>
+            <StyledButton onPress={handleGoBack} activeOpacity={0.7} style={styles.iconButton} icon={<ChevronLeft size={28} color={COLORS.black} />} />
+
           )
         ) : (
           <View style={styles.iconButton}><BookMarked size={28} color={COLORS.black} /></View>
@@ -87,9 +87,13 @@ export const CustomHeader = ({ routeName }) => {
 
       <View style={styles.rightSection}>
         {loggedUser.username ? (
-          <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.settingsButton}>
-            <Settings size={26} color={COLORS.black} />
-          </TouchableOpacity>
+          
+          <StyledButton 
+            onPress={() => setModalVisible(true)} 
+            style={styles.settingsButton} 
+            icon={<Settings size={26} color={COLORS.black} />
+          }/>
+
         ) : (
           <LanguageSwitcher />
         )}
@@ -107,15 +111,20 @@ export const CustomHeader = ({ routeName }) => {
             
             <View style={styles.modalHeader}>
               {isPasswordMode ? (
-                <TouchableOpacity onPress={() => setIsPasswordMode(false)} style={{flexDirection:'row', alignItems:'center'}}>
-                   <ArrowLeft size={24} color={COLORS.text} />
+                <StyledButton 
+                  onPress={() => setIsPasswordMode(false)} 
+                  icon={<ArrowLeft size={24} color={COLORS.text} />} 
+                  style={{flexDirection:'row', alignItems:'center'}}
+                >
                    <Text style={{marginLeft: 5, fontSize:16, color: COLORS.text}}>{t('back') || 'Volver'}</Text>
-                </TouchableOpacity>
+                </StyledButton>
               ) : (
                 <Text style={styles.modalTitle}>{t('settings') || 'Ajustes'}</Text>
               )}
-              <TouchableOpacity onPress={handleCloseModal}><X size={24} color={COLORS.text} /></TouchableOpacity>
-            </View>
+              <StyledButton 
+                onPress={handleCloseModal}
+                icon={<X size={24} color={COLORS.text} />}
+              />
 
             {!isPasswordMode ? (
               <>
@@ -127,17 +136,26 @@ export const CustomHeader = ({ routeName }) => {
                   <LanguageSwitcher /> 
                 </View>
 
-                <TouchableOpacity style={styles.modalButton} onPress={() => setIsPasswordMode(true)}>
-                  <Lock size={20} color={COLORS.text} />
+                <StyledButton 
+                  style={styles.modalButton} 
+                  onPress={() => setIsPasswordMode(true)}
+                  icon={<Lock size={20} color={COLORS.text} />}
+                >
                   <Text style={styles.modalButtonText}>{t('changePassword') || 'Cambiar Contraseña'}</Text>
-                </TouchableOpacity>
+                </StyledButton>
 
                 <View style={styles.divider} />
 
-                <TouchableOpacity style={[styles.modalButton, styles.logoutButton]} onPress={() => { handleCloseModal(); logout(); }}>
-                  <LogOut size={20} color={COLORS.danger || 'red'} />
-                  <Text style={[styles.modalButtonText, {color: COLORS.danger || 'red'}]}>{t('logout') || 'Cerrar Sesión'}</Text>
-                </TouchableOpacity>
+                <StyledButton
+                  style={[styles.modalButton, styles.logoutButton]} 
+                  onPress={() => { handleCloseModal(); logout(); }}
+                  // Cierra la llave } aquí mismo:
+                  icon={<LogOut size={20} color={COLORS.danger} />} 
+                >
+                  <Text style={[styles.modalButtonText, {color: COLORS.danger}]}>
+                    {t('logout') || 'Cerrar Sesión'}
+                  </Text>
+                </StyledButton>
               </>
             ) : (
               <View style={styles.formContainer}>
@@ -178,25 +196,26 @@ export const CustomHeader = ({ routeName }) => {
                   </Text>
                 )}
 
-                <TouchableOpacity 
+                <StyledButton 
                   style={[
                     styles.saveButton, 
-                    (loading || showMismatchError) && {opacity: 0.5, backgroundColor: '#999'}
+                    (loading || showMismatchError) && {opacity: 0.5, backgroundColor: COLORS.lightGray}
                   ]} 
                   onPress={handlePasswordChange}
                   disabled={loading || showMismatchError} 
                 >
                   {loading ? (
-                    <ActivityIndicator color="white" />
+                    <ActivityIndicator color={COLORS.surface} />
                   ) : (
                     <>
-                      <Save size={20} color="white" />
+                      <Save size={20} color={COLORS.surface} />
                       <Text style={styles.saveButtonText}>{t('save') || 'Guardar'}</Text>
                     </>
                   )}
-                </TouchableOpacity>
+                </StyledButton>
               </View>
             )}
+            </View>
           </View>
         </View>
       </Modal>
@@ -205,30 +224,156 @@ export const CustomHeader = ({ routeName }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.primary, padding: 16, borderBottomWidth: 1, borderBottomColor: COLORS.secondary, ...(Platform.OS === 'web' ? { boxShadow: '0px 1px 2px rgba(0,0,0,0.05)' } : { elevation: 2 }) },
-  leftSection: { flex: 1, alignItems: 'flex-start' },
-  centerSection: { flex: 2, alignItems: 'center', justifyContent: 'center' },
-  rightSection: { flex: 1, alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end' },
-  title: { fontSize: 20, fontWeight: 'bold', color: COLORS.text },
-  iconButton: { backgroundColor: COLORS.white, borderColor: COLORS.secondary, borderWidth: 1, borderRadius: 999, padding: 6, elevation: 2 },
+  container: { 
+    width: '100%', 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    backgroundColor: COLORS.primary, 
+    padding: 16, 
+    borderBottomWidth: 1, 
+    borderBottomColor: COLORS.secondary, 
+    ...Platform.select({
+      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+      android: { elevation: 5 },
+      web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' }
+    }),
+  },
+
+  leftSection: { 
+    flex: 1, 
+    alignItems: 'flex-start' 
+  },
+
+  centerSection: { 
+    flex: 2, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+
+  rightSection: { 
+    flex: 1, 
+    alignItems: 'flex-end', 
+    flexDirection: 'row', 
+    justifyContent: 'flex-end' 
+  },
+
+  title: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: COLORS.text 
+  },
+
+  iconButton: { 
+    backgroundColor: COLORS.white, 
+    borderColor: COLORS.secondary, 
+    borderWidth: 1, 
+    borderRadius: 8, 
+    padding: 6, 
+    elevation: 2 
+  },
+  
   settingsButton: { padding: 8 },
-  centeredView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalView: { width: '85%', backgroundColor: 'white', borderRadius: 20, padding: 25, alignItems: 'stretch', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, height: 30 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.text },
-  modalItem: { marginBottom: 20 },
-  modalItemHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  modalLabel: { fontSize: 16, fontWeight: '600', color: COLORS.text },
-  modalButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 10, borderRadius: 8, backgroundColor: '#f5f5f5', marginBottom: 10 },
-  modalButtonText: { marginLeft: 10, fontSize: 16, fontWeight: '500', color: COLORS.text },
-  logoutButton: { backgroundColor: '#ffebee', marginTop: 10 },
-  divider: { height: 1, backgroundColor: '#e0e0e0', marginVertical: 10 },
+
+  centeredView: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: COLORS.background
+  },
+
+  modalView: { 
+    width: '85%', 
+    backgroundColor: COLORS.surface, 
+    borderRadius: 20, 
+    padding: 25, 
+    alignItems: 'stretch', 
+    ...Platform.select({
+      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+      android: { elevation: 5 },
+      web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' }
+    }),
+    elevation: 5 
+  },
+
+  modalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    marginBottom: 20, 
+    height: 30 
+  },
+
+  modalTitle: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    color: COLORS.text 
+  },
+
+  modalItem: { 
+    marginBottom: 20 
+  },
+
+  modalItemHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginBottom: 10 
+  },
+
+  modalLabel: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: COLORS.text 
+  },
+
+  modalButton: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingVertical: 12, 
+    paddingHorizontal: 10, 
+    borderRadius: 8, 
+    backgroundColor: COLORS.background, 
+    marginBottom: 10 
+  },
+
+  modalButtonText: { 
+    marginLeft: 10, 
+    fontSize: 16, 
+    fontWeight: '500', 
+    color: COLORS.text 
+  },
+
+  logoutButton: { 
+    backgroundColor: COLORS.background, 
+    marginTop: 10 
+  },
+
+  divider: { 
+    height: 1, 
+    backgroundColor: COLORS.background, 
+    marginVertical: 10 
+  },
 
   formContainer: { marginTop: 10 },
-  inputLabel: { fontSize: 14, fontWeight: '600', color: COLORS.text, marginBottom: 5, marginTop: 10 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10, fontSize: 16, backgroundColor: '#fafafa' },
   
-  inputError: { borderColor: COLORS.danger || 'red', borderWidth: 1 },
+  inputLabel: { 
+    fontSize: 14, 
+    fontWeight: '600', 
+    color: COLORS.text, 
+    marginBottom: 5, 
+    marginTop: 10 
+  },
+  
+  input: { 
+    borderWidth: 1, 
+    borderColor: COLORS.border, 
+    borderRadius: 8, 
+    padding: 10, 
+    fontSize: 16, 
+    backgroundColor: COLORS.input, 
+  },
+  
+  inputError: { borderColor: COLORS.danger, borderWidth: 1 },
   
   errorText: {
     color: COLORS.danger || 'red',
@@ -238,6 +383,19 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
 
-  saveButton: { flexDirection: 'row', backgroundColor: COLORS.primary, padding: 12, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginTop: 20 },
-  saveButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold', marginLeft: 8 }
+  saveButton: { 
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary, 
+    padding: 12, 
+    borderRadius: 8, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginTop: 20 
+  },
+
+  saveButtonText: { 
+    color: COLORS.surface, 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    marginLeft: 8 }
 });

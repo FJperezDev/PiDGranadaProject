@@ -1,7 +1,8 @@
 import { useLanguage } from '../context/LanguageContext';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Languages } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
+import { StyledButton } from '../components/StyledButton';
 
 export const LanguageSwitcher = () => {
   const { language, toggleLanguage } = useLanguage();
@@ -12,7 +13,7 @@ export const LanguageSwitcher = () => {
   };
 
   return (
-    <TouchableOpacity
+    <StyledButton
       onPress={handleToggle}
       style={styles.button}
       activeOpacity={0.7}
@@ -26,7 +27,7 @@ export const LanguageSwitcher = () => {
           {language === 'es' ? 'ES' : 'EN'}
         </Text>
       </View>
-    </TouchableOpacity>
+    </StyledButton>
   );
 };
 

@@ -159,9 +159,9 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
               style={styles.topicButton}
             >
               {selectedTopics[topic.id] ? (
-                <CheckSquare size={24} color="#06b6d4" /> // cyan-500
+                <CheckSquare size={24} color={COLORS.primary} /> // cyan-500
               ) : (
-                <Square size={24} color="#94a3b8" /> // slate-400
+                <Square size={24} color={COLORS.textLight} /> // slate-400
               )}
               <Text style={styles.topicText}>{topic.title}</Text>
             </StyledButton>
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     maxWidth: 700,
     alignSelf: "center",
     padding: 20,
-    backgroundColor: "#f9fafb",
+    backgroundColor: COLORS.background,
   },
   scrollArea: {
     flex: 1,
@@ -207,21 +207,21 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginVertical: 16,
-    color: "#000",
+    color: COLORS.text,
   },
   topicButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: "#e2e8f0", // slate-200
+    borderColor: COLORS.borderLight, // slate-200
     borderRadius: 8,
     padding: 16,
     marginBottom: 10,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.05)' }
       : {
-          shadowColor: "#000",
+          shadowColor: COLORS.shadow,
           shadowOpacity: 0.05,
           shadowRadius: 3,
           elevation: 1,
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   topicText: {
     fontSize: 16,
     marginLeft: 12,
-    color: "#000",
+    color: COLORS.text,
   },
   input: {
     width: "100%",
@@ -240,11 +240,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "#cbd5e1", // slate-300
+    borderTopColor: COLORS.borderLight,
     paddingTop: 16,
     marginTop: 20,
   },
   generateButton: {
-    backgroundColor: "#a5f3fc", // cyan-200
+    backgroundColor: COLORS.primaryLight,
   },
 });

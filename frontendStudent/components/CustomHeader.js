@@ -2,9 +2,10 @@ import { useLanguage } from '../context/LanguageContext';
 import { useVoiceControl } from '../context/VoiceContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ChevronLeft, BookMarked, LogOutIcon, Mic, MicOff } from 'lucide-react-native';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { COLORS } from '../constants/colors';
+import { StyledButton } from '../components/StyledButton';
 
 export const CustomHeader = ({routeName}) => {
   const { t } = useLanguage();
@@ -29,14 +30,14 @@ export const CustomHeader = ({routeName}) => {
       <View style={styles.leftSection}>
         
         {!hideBack && isHome ? (
-          <TouchableOpacity
+          <StyledButton
             activeOpacity={0.7}
             style={styles.iconButton}
           >
             <BookMarked size={28} color={COLORS.black} />
-          </TouchableOpacity>
+          </StyledButton>
         ): !hideBack && (
-          <TouchableOpacity
+          <StyledButton
             onPress={() => (logout ? navigation.navigate('Home') : handleGoBack())}
             activeOpacity={0.7}
             style={styles.iconButton}
@@ -53,7 +54,7 @@ export const CustomHeader = ({routeName}) => {
               <ChevronLeft size={28} color={COLORS.black} />
             )
             }
-          </TouchableOpacity>
+          </StyledButton>
           
         )}
       </View>
@@ -65,7 +66,7 @@ export const CustomHeader = ({routeName}) => {
 
       {/* Right Section */}
       <View style={styles.rightSection}>
-        <TouchableOpacity 
+        <StyledButton 
           onPress={toggleListening}
           style={[
               styles.micButton, 
@@ -77,7 +78,7 @@ export const CustomHeader = ({routeName}) => {
           ) : (
               <MicOff size={20} color={COLORS.text} />
           )}
-        </TouchableOpacity>
+        </StyledButton>
         
         <LanguageSwitcher />
       </View>

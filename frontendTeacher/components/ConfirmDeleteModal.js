@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, Button, Modal, StyleSheet, Platform } from 'react-native';
+import { View, Text, Modal, StyleSheet, Platform } from 'react-native';
 import { COLORS } from '../constants/colors';
+import { StyledButton } from './StyledButton';
 
 export default function ConfirmDeleteModal({ visible, onClose, onConfirm }) {
   return (
@@ -17,8 +18,8 @@ export default function ConfirmDeleteModal({ visible, onClose, onConfirm }) {
             ¿Estás seguro de que quieres eliminar este grupo? Esta acción no se puede deshacer.
           </Text>
           <View style={styles.buttonRow}>
-            <Button title="Cancelar" onPress={onClose} color={COLORS.gray || 'gray'} />
-            <Button title="Eliminar" onPress={onConfirm} color={COLORS.danger || 'red'} />
+            <StyledButton title="Cancelar" onPress={onClose} variant='ghost' style={{ marginRight: 10 }} />
+            <StyledButton title="Eliminar" onPress={onConfirm} variant='danger' />
           </View>
         </View>
       </View>
@@ -31,38 +32,38 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: COLORS.overlay,
   },
   modalView: {
     width: '90%',
     maxWidth: 400,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
+    backgroundColor: COLORS.surface,
+    borderRadius: 12,
+    padding: 24,
     alignItems: 'center',
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 2px 4px rgba(0,0,0,0.25)' }
-      : {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 4,
-          elevation: 5,
-        }),
+    ...Platform.select({
+      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+      android: { elevation: 5 },
+      web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' }
+    }),
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 15,
+    marginBottom: 10,
+    color: COLORS.text,
   },
   modalText: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 25,
+    color: COLORS.textSecondary,
+    lineHeight: 22,
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'flex-end',
     width: '100%',
+    gap: 10,
   },
 });

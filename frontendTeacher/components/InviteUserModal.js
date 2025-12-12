@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, Modal, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Modal, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { COLORS } from '../constants/colors';
+import { StyledButton } from './StyledButton';
 
 export default function InviteUserModal({ visible, onClose, onSubmit }) {
   const [name, setName] = useState('');
@@ -79,11 +80,11 @@ export default function InviteUserModal({ visible, onClose, onSubmit }) {
           </View>
 
           <View style={styles.buttonRow}>
-            <Button title="Cancelar" onPress={onClose} color={COLORS.danger || 'red'} />
+            <StyledButton title="Cancelar" onPress={onClose} variant='danger' />
             {submitting ? (
-              <ActivityIndicator color={COLORS.primary || 'blue'} />
+              <ActivityIndicator color={COLORS.primary} />
             ) : (
-              <Button title="Enviar Invitación" onPress={handleSubmit} color={COLORS.primary || 'blue'} />
+              <StyledButton title="Enviar Invitación" onPress={handleSubmit} />
             )}
           </View>
         </View>
@@ -97,24 +98,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: COLORS.background,
   },
   modalView: {
     width: '90%',
     maxWidth: 400,
-    backgroundColor: 'white',
+    backgroundColor: COLORS.surface,
     borderRadius: 10,
     padding: 20,
     alignItems: 'stretch',
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 2px 4px rgba(0,0,0,0.25)' }
-      : {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 4,
-          elevation: 5,
-        }),
+    ...Platform.select({
+      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
+      android: { elevation: 5 },
+      web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' }
+    }),
   },
   modalTitle: {
     fontSize: 22,
@@ -124,7 +121,7 @@ const styles = StyleSheet.create({
   },
   subTitle: {
     fontSize: 14,
-    color: COLORS.gray || 'gray',
+    color: COLORS.gray,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -132,11 +129,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 5,
     fontWeight: '600',
-    color: COLORS.text || 'black',
+    color: COLORS.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: COLORS.border,
     borderRadius: 5,
     padding: 10,
     marginBottom: 15,
@@ -144,7 +141,7 @@ const styles = StyleSheet.create({
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: COLORS.border,
     borderRadius: 5,
     marginBottom: 25,
   },

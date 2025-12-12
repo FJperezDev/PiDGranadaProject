@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, Modal, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, Modal, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { Check, X } from 'lucide-react-native';
 import { getConceptInfo, getTopicInfo } from '../api/contentRequests'
+import { StyledButton } from './StyledButton';
 
-// --- COMPONENTE AUXILIAR PARA SELECCIÓN MÚLTIPLE ---
 const MultiSelect = ({ items, selectedIds, onToggle, labelKey = 'name' }) => (
   <View style={styles.multiSelectContainer}>
     {items.map((item) => {
@@ -110,8 +110,8 @@ export const TopicModal = ({ visible, onClose, onSubmit, editingTopic, allSubjec
           </ScrollView>
           
           <View style={styles.buttonRow}>
-            <Button title="Cancelar" onPress={onClose} color={COLORS.danger || 'red'} />
-            <Button title="Guardar" onPress={handleSubmit} color={COLORS.primary} />
+            <StyledButton title="Cancelar" onPress={onClose} variant='danger' />
+            <StyledButton title="Guardar" onPress={handleSubmit} />
           </View>
         </View>
       </View>
@@ -287,16 +287,89 @@ export const EpigraphModal = ({ visible, onClose, onSubmit, editingEpigraph }) =
 };
 
 const styles = StyleSheet.create({
-  centeredView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalView: { width: '90%', maxHeight: '85%', backgroundColor: 'white', borderRadius: 10, padding: 20, elevation: 5 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, textAlign: 'center', color: COLORS.text },
-  label: { fontSize: 14, fontWeight: 'bold', marginTop: 10, marginBottom: 5, color: '#555' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, marginBottom: 10 },
-  buttonRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 20 },
-  multiSelectContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
-  chip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, borderWidth: 1, borderColor: '#ccc', backgroundColor: '#f9f9f9', flexDirection: 'row', alignItems: 'center' },
-  chipSelected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  chipText: { fontSize: 12, color: '#333' },
-  chipTextSelected: { color: 'white', fontWeight: 'bold' },
-  hint: { fontStyle: 'italic', color: 'gray', fontSize: 12 }
+
+  centeredView: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(0,0,0,0.5)' 
+  },
+
+  modalView: { 
+    width: '90%', 
+    maxHeight: '85%', 
+    backgroundColor: COLORS.surface,
+    borderRadius: 10, 
+    padding: 20, 
+    elevation: 5 
+  },
+
+  modalTitle: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    marginBottom: 15, 
+    textAlign: 'center', 
+    color: COLORS.text 
+  },
+
+  label: { 
+    fontSize: 14, 
+    fontWeight: 'bold', 
+    marginTop: 10, 
+    marginBottom: 5, 
+    color: COLORS.text 
+  },
+
+  input: { 
+    borderWidth: 1, 
+    borderColor: COLORS.borderColor,
+    borderRadius: 5, 
+    padding: 10, 
+    marginBottom: 10 
+  },
+
+  buttonRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-around', 
+    marginTop: 20 
+  },
+
+  multiSelectContainer: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 8, 
+    marginBottom: 10 
+  },
+
+  chip: { 
+    paddingHorizontal: 10, 
+    paddingVertical: 5, 
+    borderRadius: 15, 
+    borderWidth: 1, 
+    borderColor: COLORS.borderColor, 
+    backgroundColor: COLORS.background, 
+    flexDirection: 'row', 
+    alignItems: 'center' 
+  },
+
+  chipSelected: { 
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary 
+  },
+  
+  chipText: { 
+    fontSize: 12, 
+    color: COLORS.text 
+  },
+
+  chipTextSelected: { 
+    color: COLORS.surface, 
+    fontWeight: 'bold' 
+  },
+
+  hint: { 
+    fontStyle: 'italic', 
+    color: COLORS.gray, 
+    fontSize: 12 
+  }
 });

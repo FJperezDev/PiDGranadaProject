@@ -1,20 +1,24 @@
-import { useLanguage } from "../context/LanguageContext";
+import { useEffect, useState } from "react";
+import { View, Text, FlatList, Platform, StyleSheet, ActivityIndicator } from 'react-native';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
-import { View, Text, FlatList, TouchableOpacity, Platform } from 'react-native';
+
+import { useLanguage } from "../context/LanguageContext";
+import { useVoiceControl } from "../context/VoiceContext";
+import { mockApi } from "../services/api";
+
 import { StyledButton } from "../components/StyledButton";
 import { Hexagon, Clipboard } from 'lucide-react-native';
-import { useEffect, useState } from "react";
-import { mockApi } from "../services/api";
-import { useVoiceControl } from "../context/VoiceContext";
+import { COLORS } from "../constants/colors";
 
 export const SubjectScreen = ({ route }) => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const { t, language } = useLanguage();
+  const { transcript, setTranscript } = useVoiceControl();
+
   const [subjectData, setSubjectData] =  useState();
   const [topicsData, setTopicsData] = useState();
   const { code } = route.params;
-  const { transcript, setTranscript } = useVoiceControl();
 
   const normalizeText = (text) => {
     return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
@@ -92,80 +96,166 @@ export const SubjectScreen = ({ route }) => {
   }, [language]);
 
   const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={{
-        backgroundColor: 'white',
-        padding: 16,
-        borderRadius: 10,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: '#e0f7fa',
-        ...(Platform.OS === 'web'
-          ? { boxShadow: '0px 1px 5px rgba(0,0,0,0.1)' }
-          : {
-              shadowColor: '#000',
-              shadowOpacity: 0.1,
-              shadowRadius: 5,
-              elevation: 2,
-            }),
-      }}
-      
-      onPress={() => {
-        navigation.navigate('TopicDetail', { topic: item });
-      }}
+    <StyledButton
+      // Sobreescribimos estilos para que parezca una Card y no un botón redondo
+      style={styles.topicCard}
+      onPress={() => navigation.navigate('TopicDetail', { topic: item })}
     >
-      <Text style={{ fontSize: 18, fontWeight: '600', color: '#000' }}>
-        {item.title}
-      </Text>
-      <Text style={{ fontSize: 14, color: '#555', marginTop: 4 }}>
-        {item.description}
-      </Text>
-    </TouchableOpacity>
+      <View style={styles.topicContent}>
+        <Text style={styles.topicTitle}>
+          {item.order_id + ". " + item.title}
+        </Text>
+        <Text style={styles.topicDescription} numberOfLines={2}>
+          {item.description}
+        </Text>
+      </View>
+    </StyledButton>
   );
 
   if (!subjectData || !topicsData) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Cargando asignatura...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.loadingText}>{t('loading')}</Text>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1, width: '100%', maxWidth: 800, alignSelf: 'center', padding: 20 }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#000', textAlign: 'center', marginVertical: 20 }}>
-        {subjectData.name}
-      </Text>
+    <View style={styles.mainContainer}>
+      <View style={styles.contentContainer}>
+        
+        <Text style={styles.headerTitle}>
+          {subjectData.name}
+        </Text>
 
-      <FlatList
-        data={topicsData}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.order_id}
-        showsVerticalScrollIndicator={false}
-      />
+        <FlatList
+          data={topicsData}
+          renderItem={renderItem}
+          keyExtractor={(item) => String(item.order_id)}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+        />
 
-      {/* Botones inferiores */}
-      <View style={styles.container}>
-        <StyledButton title={t('hexagonGame')} icon={<Hexagon size={20} />} onPress={() => navigation.navigate('Game')} style={styles.leftButton} />
-        <StyledButton title={t('exam')} icon={<Clipboard size={20} />} onPress={() => navigation.navigate('ExamSetup', { topics: topicsData, nQuestions: 10, code: code })} style={styles.rightButton} />
+        {/* Botones inferiores */}
+        <View style={styles.footerContainer}>
+          <StyledButton 
+            title={t('hexagonGame')} 
+            icon={<Hexagon size={20} color={COLORS.text} />} 
+            onPress={() => navigation.navigate('Game')} 
+            style={[styles.footerButton, styles.buttonGame]} 
+            textStyle={{ color: COLORS.text }}
+          />
+          
+          <StyledButton 
+            title={t('exam')} 
+            icon={<Clipboard size={20} color={COLORS.text} />} 
+            onPress={() => navigation.navigate('ExamSetup', { topics: topicsData, nQuestions: 10, code: code })} 
+            style={[styles.footerButton, styles.buttonExam]}
+            textStyle={{ color: COLORS.text }}
+          />
+        </View>
+
       </View>
     </View>
   );
 };
 
-const styles = {
-  container: {
+const styles = StyleSheet.create({
+  // Contenedor principal (Fondo completo)
+  mainContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  // Contenedor de contenido (Limitado en ancho para Web/Tablet)
+  contentContainer: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 800,
+    alignSelf: 'center',
+    padding: 20,
+  },
+  // Pantalla de Carga
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: COLORS.textSecondary,
+    fontSize: 16,
+  },
+  // Título
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginVertical: 24,
+  },
+  // Lista
+  listContent: {
+    paddingBottom: 20,
+  },
+  // Tarjeta de Tema (StyledButton modificado)
+  topicCard: {
+    backgroundColor: COLORS.surface,
+    marginBottom: 12,
+    borderRadius: 12, // Menos redondeado que el botón estándar
+    borderWidth: 1,
+    borderColor: COLORS.borderLight, // Borde sutil
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    alignItems: 'stretch', // Para que el texto ocupe el ancho
+    justifyContent: 'flex-start',
+    // Sombras
+    ...Platform.select({
+      ios: {
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: { elevation: 3 },
+      web: { boxShadow: '0px 2px 8px rgba(0,0,0,0.05)' }
+    }),
+  },
+  topicContent: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  topicTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  topicDescription: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
+  },
+  // Footer
+  footerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 10,
+    gap: 12, // Espacio entre botones
   },
-  leftButton: {
+  footerButton: {
     flex: 1,
-    marginRight: 10,
+    // Aseguramos altura consistente
+    height: 50,
   },
-  rightButton: {
-    flex: 1,
-    marginLeft: 10,
+  buttonGame: {
+    backgroundColor: COLORS.primaryVeryLight, // Un tono más claro para diferenciar
+    borderColor: COLORS.primaryLight,
+    borderWidth: 1,
   },
-};
+  buttonExam: {
+    backgroundColor: COLORS.primary, // Color principal
+  }
+});

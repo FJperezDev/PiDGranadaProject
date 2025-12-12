@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, Modal, StyleSheet, ScrollView, Alert, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, TextInput, Modal, StyleSheet, ScrollView, Alert, Switch } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { COLORS } from '../constants/colors';
 import { 
@@ -13,6 +13,7 @@ import {
 } from '../api/evaluationRequests';
 import { getSubjects } from '../api/coursesRequests';
 import { Trash2, Plus, Save, ArrowRight, ArrowLeft, Check } from 'lucide-react-native';
+import { StyledButton } from './StyledButton';
 
 export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, editingQuestion }) {
   const [step, setStep] = useState(1);
@@ -279,10 +280,14 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                     const topicTitle = t.title || t.name; 
                     const isSelected = selectedTopicTitles.includes(topicTitle);
                     return (
-                        <TouchableOpacity key={i} style={[styles.topicChip, isSelected && styles.topicChipSelected]} onPress={() => toggleTopic(topicTitle)}>
-                            <Text style={[styles.topicText, isSelected && styles.topicTextSelected]}>{topicTitle}</Text>
-                            {isSelected && <Check size={16} color="white" style={{marginLeft: 5}}/>}
-                        </TouchableOpacity>
+                        <StyledButton 
+                          key={i} 
+                          style={[styles.topicChip, isSelected && styles.topicChipSelected]} 
+                          onPress={() => toggleTopic(topicTitle)}
+                        >
+                          <Text style={[styles.topicText, isSelected && styles.topicTextSelected]}>{topicTitle}</Text>
+                          {isSelected && <Check size={16} color={COLORS.surface} style={{marginLeft: 5}}/>}
+                        </StyledButton>
                     );
                 })}
             </View>
@@ -299,10 +304,14 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                             const cName = c.name || c.title; 
                             const isSelected = selectedConceptNames.includes(cName);
                             return (
-                                <TouchableOpacity key={i} style={[styles.conceptChip, isSelected && styles.conceptChipSelected]} onPress={() => toggleConcept(cName)}>
-                                    <Text style={[styles.topicText, isSelected && styles.topicTextSelected]}>{cName}</Text>
-                                    {isSelected && <Check size={14} color="white" style={{marginLeft: 5}}/>}
-                                </TouchableOpacity>
+                                <StyledButton 
+                                  key={i} 
+                                  style={[styles.conceptChip, isSelected && styles.conceptChipSelected]} 
+                                  onPress={() => toggleConcept(cName)}
+                                >
+                                  <Text style={[styles.topicText, isSelected && styles.topicTextSelected]}>{cName}</Text>
+                                  {isSelected && <Check size={14} color={COLORS.surface} style={{marginLeft: 5}}/>}
+                                </StyledButton>
                             );
                         })}
                     </View>
@@ -331,17 +340,21 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                     <Switch value={ans.is_correct} onValueChange={() => handleCorrectChange(index)} trackColor={{false:"#767577", true:COLORS.success}} />
                     <TextInput style={styles.answerInput} placeholder={`Opción ${index + 1}`} value={ans.text_es} onChangeText={(text) => handleAnswerChangeES(text, index)} />
                     {questionType === 'multiple' && (
-                        <TouchableOpacity onPress={() => handleRemoveAnswer(index)}>
-                            <Trash2 size={20} color={COLORS.danger || 'red'} />
-                        </TouchableOpacity>
+                        <StyledButton 
+                          onPress={() => handleRemoveAnswer(index)}
+                          icon={<Trash2 size={20} color={COLORS.danger} />}
+                        />
                     )}
             </View>
         ))}
         {questionType === 'multiple' && (
-            <TouchableOpacity style={styles.addAnswerBtn} onPress={handleAddAnswer}>
-                <Plus size={20} color="white" />
-                <Text style={{color:'white', marginLeft:5}}>Añadir Opción</Text>
-            </TouchableOpacity>
+            <StyledButton 
+              style={styles.addAnswerBtn} 
+              onPress={handleAddAnswer}
+              icon={<Plus size={20} color={COLORS.surface} />}
+            >  
+              <Text style={{color:COLORS.text, marginLeft:5}}>Añadir Opción</Text>
+            </StyledButton>
         )}
     </ScrollView>
   );
@@ -374,13 +387,31 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
           <View style={styles.buttonRow}>
-            <Button title="Cancelar" color={COLORS.danger || "red"} onPress={onClose} />
+            <StyledButton title="Cancelar" variant='danger' onPress={onClose} />
             <View style={{flexDirection: 'row', gap: 10}}>
-                {step > 1 && <TouchableOpacity style={styles.backBtn} onPress={() => setStep(step - 1)}><ArrowLeft size={20} color="white" /></TouchableOpacity>}
+                {step > 1 && 
+                  <StyledButton 
+                    style={styles.backBtn} 
+                    onPress={() => setStep(step - 1)}
+                    icon={<ArrowLeft size={20} color={COLORS.surface} />}
+                  />}
                 {step < 3 ? (
-                    <TouchableOpacity style={styles.nextBtn} onPress={handleNext}><Text style={styles.nextBtnText}>Siguiente</Text><ArrowRight size={20} color="white" /></TouchableOpacity>
+                    <StyledButton 
+                      style={styles.nextBtn} 
+                      onPress={handleNext}
+                      icon={<ArrowRight size={20} color={COLORS.surface} />}
+                    >
+                      <Text style={styles.nextBtnText}>Siguiente</Text>
+                    </StyledButton>
                 ) : (
-                    <TouchableOpacity style={styles.saveBtn} onPress={handleSubmit} disabled={loading}><Save size={20} color="white" /><Text style={styles.nextBtnText}>Guardar</Text></TouchableOpacity>
+                    <StyledButton 
+                      style={styles.saveBtn} 
+                      onPress={handleSubmit} 
+                      disabled={loading}
+                      icon={<Save size={20} color="white" />}
+                    >
+                      <Text style={styles.nextBtnText}>Guardar</Text>
+                    </StyledButton>
                 )}
             </View>
           </View>

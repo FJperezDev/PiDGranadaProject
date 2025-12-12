@@ -11,6 +11,13 @@ export const ExamResultScreen = ({ route, navigation }) => {
   const isFocused = useIsFocused();
   const { transcript, setTranscript } = useVoiceControl();
 
+  const getOptionStyle = (isSelected, isCorrectOption) => {
+    if (isSelected && isCorrectOption) return styles.optionCorrect;
+    if (isSelected && !isCorrectOption) return styles.optionWrong;
+    if (!isSelected && isCorrectOption) return styles.optionMissedCorrect;
+    return styles.optionDefault;
+  };
+
   const { 
     code, 
     score, 
@@ -178,19 +185,19 @@ const styles = StyleSheet.create({
   scoreText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#0284c7', 
+    color: COLORS.primary, 
   },
   scrollContainer: {
     width: '100%',
     flex: 1,
   },
   questionCard: {
-    backgroundColor: 'white',
+    backgroundColor: COLORS.surface,
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: COLORS.borderLight,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.05)' }
       : { elevation: 2 }),
@@ -209,22 +216,23 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
   },
   optionDefault: {
     backgroundColor: '#fff',
   },
   optionCorrect: { // Usuario acertó
-    backgroundColor: '#dcfce7', 
-    borderColor: '#22c55e', 
+    backgroundColor: COLORS.successLight, 
+    borderColor: COLORS.successBorder, 
   },
   optionWrong: { // Usuario falló
-    backgroundColor: '#fee2e2', 
-    borderColor: '#ef4444', 
+    backgroundColor: COLORS.errorLight, 
+    borderColor: COLORS.error, 
   },
   optionMissedCorrect: { // Era la correcta pero no la marcó
-    backgroundColor: '#f0fdf4', 
-    borderColor: '#22c55e',
+    backgroundColor: COLORS.successLight, 
+    borderColor: COLORS.successBorder,
     borderStyle: 'dashed', 
   },
   optionTextDefault: {
@@ -234,19 +242,19 @@ const styles = StyleSheet.create({
   explanationContainer: {
     marginTop: 10,
     padding: 12,
-    backgroundColor: '#fff7ed', 
+    backgroundColor: COLORS.warningLight, 
     borderLeftWidth: 4,
-    borderLeftColor: '#f97316', 
+    borderLeftColor: COLORS.warning, 
     borderRadius: 4,
   },
   explanationLabel: {
     fontWeight: 'bold',
-    color: '#c2410c',
+    color: COLORS.warningText,
     marginBottom: 4,
   },
   explanationText: {
     fontSize: 15,
-    color: '#431407',
+    color: COLORS.warningDark,
     lineHeight: 22,
   },
   footer: {
@@ -254,7 +262,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   nextButton: {
-    backgroundColor: '#0ea5e9', 
+    backgroundColor: COLORS.primary, 
     padding: 16,
     borderRadius: 10,
   },

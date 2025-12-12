@@ -1,15 +1,14 @@
-import React from 'react';
 import { 
   Modal, 
   View, 
   Text, 
   StyleSheet, 
   ScrollView, 
-  TouchableOpacity, 
   Platform 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; 
 import { COLORS } from '../constants/colors';
+import { StyledButton } from '../components/StyledButton';
 
 export const ConceptModal = ({ visible, onClose, concept, onRelatedPress, t }) => {
   if (!concept) return null;
@@ -31,12 +30,12 @@ export const ConceptModal = ({ visible, onClose, concept, onRelatedPress, t }) =
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitleContainer}>
-              <Ionicons name="bulb" size={24} color={COLORS.primary || '#007bff'} />
+              <Ionicons name="bulb" size={24} color={COLORS.primary} />
               <Text style={styles.title}>{concept.name}</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close-circle" size={30} color={COLORS.secondary || '#999'} />
-            </TouchableOpacity>
+            <StyledButton onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close-circle" size={30} color={COLORS.secondaryLight} />
+            </StyledButton>
           </View>
 
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -67,7 +66,6 @@ export const ConceptModal = ({ visible, onClose, concept, onRelatedPress, t }) =
               </View>
             )}
 
-            {/* 3. Relaciones (MODIFICADO A TOUCHABLE) */}
             {concept.related_concepts && concept.related_concepts.length > 0 && (
               <View style={styles.section}>
                 <View style={styles.divider} />
@@ -87,7 +85,7 @@ export const ConceptModal = ({ visible, onClose, concept, onRelatedPress, t }) =
                     : { name: relation.concept_to }; // Fallback si es string
 
                   return (
-                    <TouchableOpacity 
+                    <StyledButton 
                       key={index} 
                       style={styles.relationCard}
                       activeOpacity={0.7}
@@ -95,10 +93,10 @@ export const ConceptModal = ({ visible, onClose, concept, onRelatedPress, t }) =
                       onPress={() => onRelatedPress(targetObj)}
                     >
                       <View style={styles.relationHeader}>
-                        <Ionicons name="link" size={16} color={COLORS.primary || '#007bff'} />
+                        <Ionicons name="link" size={16} color={COLORS.primary} />
                         <Text style={styles.relationTarget}>{targetName}</Text>
                         {/* Flechita indicando navegación */}
-                        <Ionicons name="chevron-forward" size={16} color="#ccc" style={{marginLeft: 'auto'}}/>
+                        <Ionicons name="chevron-forward" size={16} color={COLORS.primary} style={{marginLeft: 'auto'}}/>
                       </View>
                       
                       {relation.description ? (
@@ -106,7 +104,7 @@ export const ConceptModal = ({ visible, onClose, concept, onRelatedPress, t }) =
                           "{relation.description}"
                         </Text>
                       ) : null}
-                    </TouchableOpacity>
+                    </StyledButton>
                   );
                 })}
               </View>
@@ -129,11 +127,11 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: '100%',
     maxWidth: 500,
-    backgroundColor: COLORS.background || '#fff',
+    backgroundColor: COLORS.background,
     borderRadius: 24,
     maxHeight: '90%',
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
       android: { elevation: 10 },
       web: { boxShadow: '0px 10px 30px rgba(0,0,0,0.2)' }
     }),
@@ -144,7 +142,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: COLORS.borderBottomColor,
   },
   headerTitleContainer: {
     flexDirection: 'row',
@@ -155,11 +153,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: COLORS.text || '#222',
+    color: COLORS.text ,
     flex: 1,
   },
   closeButton: {
     padding: 5,
+    backgroundColor: COLORS.primaryLight,
   },
   scrollContent: {
     padding: 24,
@@ -171,7 +170,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '800',
-    color: COLORS.secondary || '#888',
+    color: COLORS.secondary,
     marginBottom: 12,
     letterSpacing: 1,
     marginTop: 8,
@@ -179,41 +178,41 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 17,
     lineHeight: 26,
-    color: COLORS.text || '#444',
+    color: COLORS.text,
   },
   divider: {
     height: 1,
-    backgroundColor: '#eee',
+    backgroundColor: COLORS.borderColor,
     marginVertical: 10,
   },
   // Estilos para Ejemplos
   exampleCard: {
     flexDirection: 'row',
-    backgroundColor: '#f0fff4', // Un verde muy suave
+    backgroundColor: COLORS.example, // Un verde muy suave
     padding: 12,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#c6f6d5',
+    borderColor: COLORS.exampleBorder,
     gap: 10,
   },
   exampleText: {
     fontSize: 15,
-    color: '#2f855a',
+    color: COLORS.exampleText,
     flex: 1,
     fontStyle: 'italic',
   },
   // Estilos para Relaciones (Ahora botones)
   relationCard: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: COLORS.borderLight,
     // Sombra suave para indicar que es un botón
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
       android: { elevation: 2 },
     }),
   },
@@ -226,11 +225,11 @@ const styles = StyleSheet.create({
   relationTarget: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.primary || '#007bff',
+    color: COLORS.primary,
   },
   relationDescription: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textSecondary,
     marginLeft: 24, 
     lineHeight: 20,
   },

@@ -63,10 +63,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: COLORS.background || '#fff',
+    backgroundColor: COLORS.background,
   },
   errorText: {
-    color: 'red',
+    color: COLORS.error,
     marginTop: 16,
     textAlign: 'center',
     fontSize: 14,
@@ -75,16 +75,15 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   input: {
-    backgroundColor: '#ffffff',     // bg-white
-    width: '100%',                  // w-full
-    maxWidth: 384,                  // max-w-sm (~24rem)
-    padding: 20,                    // p-4
-    borderRadius: 12,               // rounded-lg
-    borderWidth: 1,                 // border
-    borderColor: '#cbd5e1',         // border-slate-300
-    fontSize: 14,                   // text-lg
-    color: '#000000',               // text-black
-    // textAlign: 'center',            // centra el texto horizontalmente
-    textAlignVertical: 'center',    // centra el texto verticalmente (Android)
+    backgroundColor: COLORS.surface,
+    width: '100%',                  
+    maxWidth: 384,                  
+    padding: 20,                    
+    borderRadius: 12,               
+    borderWidth: 1,                 
+    borderColor: COLORS.border,         
+    fontSize: 14,                  
+    color: COLORS.text,       
+    textAlignVertical: 'center',  
   },
 });
