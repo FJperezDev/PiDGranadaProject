@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { 
   View, 
   Text, 
@@ -10,8 +10,7 @@ import {
   ActivityIndicator, 
   ScrollView, 
   KeyboardAvoidingView,
-  TouchableWithoutFeedback,
-  Keyboard
+  TouchableWithoutFeedback
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BookMarked, ChevronLeft, Settings, LogOut, Globe, Lock, X, Save, ArrowLeft } from 'lucide-react-native';
@@ -21,22 +20,27 @@ import { useLanguage } from '../context/LanguageContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { changePassword } from '../api/authRequests'; 
 import { StyledButton } from './StyledButton';
+import { encryptPassword } from '../utils/encryption';
 
 export const CustomHeader = ({ routeName }) => {
-  const { loggedUser, logout } = useContext(AuthContext); //
-  const { t } = useLanguage(); //
+  const { loggedUser, logout } = useContext(AuthContext);
+  const { t } = useLanguage();
   const navigation = useNavigation();
   
   const [modalVisible, setModalVisible] = useState(false);
   const [isPasswordMode, setIsPasswordMode] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Estados del formulario
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState(''); 
+  
+  // Estado para el mensaje de error del servidor
+  const [serverError, setServerError] = useState(''); 
 
-  const passwordsMatch = newPassword === confirmPassword; //
-  const showMismatchError = newPassword.length > 0 && confirmPassword.length > 0 && !passwordsMatch; //
+  const passwordsMatch = newPassword === confirmPassword;
+  const showMismatchError = newPassword.length > 0 && confirmPassword.length > 0 && !passwordsMatch;
 
   const isHome = routeName === 'Home';
   
@@ -51,29 +55,73 @@ export const CustomHeader = ({ routeName }) => {
     setOldPassword('');
     setNewPassword('');
     setConfirmPassword(''); 
+    setServerError(''); // Limpiar errores
     setLoading(false);
   };
 
+  // Función auxiliar para limpiar errores al escribir
+  const handleInputChange = (setter) => (text) => {
+      setter(text);
+      if (serverError) setServerError(''); // Ocultar error si el usuario edita
+  };
+
   const handlePasswordChange = async () => {
+    // 1. Validaciones locales
     if (!oldPassword || !newPassword || !confirmPassword) {
-      Alert.alert('Error', t('fillAllFields') || 'Por favor rellena todos los campos');
+      setServerError(t('fillAllFields') || 'Por favor rellena todos los campos');
       return;
     }
 
     if (!passwordsMatch) {
-      Alert.alert('Error', t('passwordsDoNotMatch') || 'Las contraseñas no coinciden');
+      setServerError(t('passwordsDoNotMatch') || 'Las contraseñas no coinciden');
       return;
     }
 
     setLoading(true);
-    const result = await changePassword(oldPassword, newPassword); //
+    setServerError(''); // Limpiar errores previos
+
+    // 2. Llamada a API
+    const encryptedOld = await encryptPassword(oldPassword);
+    const encryptedNew = await encryptPassword(newPassword);
+
+    const result = await changePassword(encryptedOld, encryptedNew); 
     setLoading(false);
 
-    if (result) {
+    // 3. Manejo de Respuesta
+    if (result.success) {
       Alert.alert('Éxito', t('passwordChanged') || 'Contraseña actualizada correctamente');
       handleCloseModal();
     } else {
-      Alert.alert('Error', t('passwordChangeError') || 'No se pudo cambiar la contraseña. Verifica tu contraseña actual.');
+      // --- LOGICA DE EXTRACCIÓN LIMPIA ---
+      let errorMessage = 'Error al cambiar la contraseña';
+      const errData = result.error;
+
+      if (errData) {
+          // A. Error específico de Django en la contraseña NUEVA (ej: muy común, muy corta)
+          if (errData.new_password && Array.isArray(errData.new_password)) {
+              errorMessage = errData.new_password[0]; 
+          } 
+          // B. Error específico en la contraseña ANTIGUA (ej: incorrecta)
+          else if (errData.old_password && Array.isArray(errData.old_password)) {
+              errorMessage = errData.old_password[0];
+          } 
+          // C. Error genérico (detail)
+          else if (errData.detail) {
+              errorMessage = errData.detail;
+          }
+          // D. Si devuelve un mensaje directo
+          else if (typeof errData.message === 'string') {
+              errorMessage = errData.message;
+          }
+      }
+      
+      // Traducción manual de errores comunes de Django (Opcional, para que quede más bonito)
+      if (errorMessage.includes("too common")) errorMessage = "La contraseña es demasiado común.";
+      if (errorMessage.includes("too short")) errorMessage = "La contraseña es muy corta.";
+      if (errorMessage.includes("entirely numeric")) errorMessage = "La contraseña no puede ser solo números.";
+
+      // Seteamos el estado
+      setServerError(errorMessage);
     }
   };
 
@@ -81,7 +129,7 @@ export const CustomHeader = ({ routeName }) => {
     <View style={styles.container}>
       {/* SECCIÓN IZQUIERDA */}
       <View style={styles.leftSection}>
-        {loggedUser.username ? ( //
+        {loggedUser.username ? (
           isHome ? (
             <View style={styles.iconButton}><BookMarked size={28} color={COLORS.black} /></View>
           ) : (
@@ -101,7 +149,7 @@ export const CustomHeader = ({ routeName }) => {
 
       {/* SECCIÓN DERECHA */}
       <View style={styles.rightSection}>
-        {loggedUser.username ? ( //
+        {loggedUser.username ? (
           <StyledButton 
             onPress={() => setModalVisible(true)} 
             style={styles.settingsButton} 
@@ -112,28 +160,24 @@ export const CustomHeader = ({ routeName }) => {
         )}
       </View>
 
-      {/* --- MODAL DE AJUSTES MEJORADO --- */}
+      {/* --- MODAL DE AJUSTES --- */}
       <Modal
         animationType="fade"
         transparent={true}
         visible={modalVisible}
         onRequestClose={handleCloseModal}
       >
-        {/* 1. KeyboardAvoidingView como contenedor principal para mover todo */}
         <KeyboardAvoidingView 
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalOverlay} 
         >
-          
-          {/* 2. Touchable para cerrar al tocar fuera (solo el fondo) */}
           <TouchableWithoutFeedback onPress={handleCloseModal}>
             <View style={styles.touchableBackground} /> 
           </TouchableWithoutFeedback>
 
-          {/* 3. Contenido del Modal (NO envuelto en TouchableWithoutFeedback) */}
           <View style={styles.modalContent}>
             
-            {/* HEADER DEL MODAL */}
+            {/* HEADER MODAL */}
             <View style={styles.modalHeader}>
               {isPasswordMode ? (
                 <StyledButton 
@@ -156,10 +200,10 @@ export const CustomHeader = ({ routeName }) => {
             <ScrollView 
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 20 }}
-              keyboardShouldPersistTaps="handled" // IMPORTANTE: Permite tocar inputs
+              keyboardShouldPersistTaps="handled"
             >
               {!isPasswordMode ? (
-                // ... (VISTA MENÚ PRINCIPAL - IGUAL QUE ANTES) ...
+                // --- MENÚ PRINCIPAL ---
                 <View style={styles.menuContainer}>
                   <View style={styles.cardItem}>
                     <View style={styles.rowLabel}>
@@ -197,43 +241,55 @@ export const CustomHeader = ({ routeName }) => {
                   </StyledButton>
                 </View>
               ) : (
-                // ... (VISTA FORMULARIO - IGUAL QUE ANTES) ...
+                // --- FORMULARIO CAMBIO PASSWORD ---
                 <View style={styles.formContainer}>
+                  
+                  {/* Password Actual */}
                   <Text style={styles.inputLabel}>{t('currentPassword') || 'Contraseña Actual'}</Text>
                   <TextInput 
                     style={styles.input}
                     secureTextEntry
                     value={oldPassword}
-                    onChangeText={setOldPassword}
+                    onChangeText={handleInputChange(setOldPassword)}
                     placeholder="******"
                     placeholderTextColor="#999"
                   />
 
+                  {/* Password Nueva */}
                   <Text style={styles.inputLabel}>{t('newPassword') || 'Nueva Contraseña'}</Text>
                   <TextInput 
                     style={styles.input}
                     secureTextEntry
                     value={newPassword}
-                    onChangeText={setNewPassword}
+                    onChangeText={handleInputChange(setNewPassword)}
                     placeholder="******"
                     placeholderTextColor="#999"
                   />
 
+                  {/* Confirmar Password */}
                   <Text style={styles.inputLabel}>{t('confirmPassword') || 'Confirmar Nueva Contraseña'}</Text>
                   <TextInput 
                     style={[styles.input, showMismatchError && styles.inputError]} 
                     secureTextEntry
                     value={confirmPassword}
-                    onChangeText={setConfirmPassword}
+                    onChangeText={handleInputChange(setConfirmPassword)}
                     placeholder="******"
                     placeholderTextColor="#999"
                   />
 
+                  {/* Error de coincidencia (local) */}
                   {showMismatchError && (
                     <Text style={styles.errorText}>
                       {t('passwordsDoNotMatch') || 'Las contraseñas no coinciden'}
                     </Text>
                   )}
+
+                  {/* ERROR DEL SERVIDOR (Aquí mostramos "Password too common") */}
+                  {serverError ? (
+                    <View style={styles.serverErrorBox}>
+                         <Text style={styles.serverErrorText}>{serverError}</Text>
+                    </View>
+                  ) : null}
 
                   <StyledButton 
                     style={[
@@ -263,7 +319,7 @@ export const CustomHeader = ({ routeName }) => {
 };
 
 const styles = StyleSheet.create({
-  // ... (Header styles iguales) ...
+  // ... Tus estilos existentes ...
   container: { 
     width: '100%', 
     flexDirection: 'row', 
@@ -293,22 +349,13 @@ const styles = StyleSheet.create({
   },
   settingsButton: { padding: 8 },
 
-  // --- ESTILOS DEL MODAL NUEVOS ---
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)', 
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-  touchableBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-
+  touchableBackground: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   modalContent: {
     width: '90%',
     maxWidth: 450, 
@@ -319,7 +366,6 @@ const styles = StyleSheet.create({
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
       android: { elevation: 10 },
-      web: { boxShadow: '0px 8px 24px rgba(0,0,0,0.2)' }
     }),
   },
   modalHeader: {
@@ -331,133 +377,56 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
     paddingBottom: 15,
   },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    marginLeft: 8,
-    fontSize: 16,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  closeButton: {
-    padding: 4,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 20,
-  },
+  modalTitle: { fontSize: 22, fontWeight: '800', color: COLORS.text },
+  backButton: { flexDirection: 'row', alignItems: 'center' },
+  backButtonText: { marginLeft: 8, fontSize: 16, color: COLORS.text, fontWeight: '600' },
+  closeButton: { padding: 4, backgroundColor: '#f5f5f5', borderRadius: 20 },
   
-  // Menu Styles
-  menuContainer: {
-    gap: 12,
-  },
+  menuContainer: { gap: 12 },
   cardItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FAFAFA', // Fondo muy suave
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#FAFAFA', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#EEEEEE',
   },
   menuButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: '#FAFAFA',
-    borderWidth: 1,
-    borderColor: '#EEEEEE',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 16, borderRadius: 16, backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EEEEEE',
   },
-  logoutButton: {
-    backgroundColor: '#FFF5F5', // Rojo muy suave
-    borderColor: '#FFE0E0',
-    marginTop: 8,
+  logoutButton: { backgroundColor: '#FFF5F5', borderColor: '#FFE0E0', marginTop: 8 },
+  rowLabel: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  modalLabel: { fontSize: 16, fontWeight: '600', color: COLORS.text },
+  modalButtonText: { fontSize: 16, fontWeight: '500', color: COLORS.text },
+  divider: { height: 1, backgroundColor: '#EEEEEE', marginVertical: 5 },
+
+  formContainer: { gap: 16, paddingTop: 5 },
+  inputLabel: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginLeft: 4, marginBottom: -8 },
+  input: {
+    borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12,
+    fontSize: 16, backgroundColor: '#FAFAFA', color: COLORS.text,
   },
-  rowLabel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  inputError: { borderColor: COLORS.danger, backgroundColor: '#FFF5F5' },
+  errorText: { color: COLORS.danger, fontSize: 13, fontWeight: '600', marginLeft: 4 },
+  
+  // ESTILOS NUEVOS PARA EL ERROR DEL SERVIDOR
+  serverErrorBox: {
+      backgroundColor: '#FEF2F2',
+      borderWidth: 1,
+      borderColor: '#F87171',
+      borderRadius: 8,
+      padding: 10,
+      marginTop: 5,
   },
-  modalLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.text,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#EEEEEE',
-    marginVertical: 5,
+  serverErrorText: {
+      color: '#B91C1C',
+      fontSize: 14,
+      textAlign: 'center',
+      fontWeight: '500',
   },
 
-  // Form Styles
-  formContainer: {
-    gap: 16,
-    paddingTop: 5,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginLeft: 4,
-    marginBottom: -8, // Acercar label al input
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12, // Más alto para dedos grandes
-    fontSize: 16,
-    backgroundColor: '#FAFAFA',
-    color: COLORS.text,
-  },
-  inputError: {
-    borderColor: COLORS.danger,
-    backgroundColor: '#FFF5F5',
-  },
-  errorText: {
-    color: COLORS.danger,
-    fontSize: 13,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
   saveButton: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 4,
+    flexDirection: 'row', backgroundColor: COLORS.primary, paddingVertical: 14, borderRadius: 12,
+    justifyContent: 'center', alignItems: 'center', marginTop: 10,
+    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4,
   },
-  disabledButton: {
-    opacity: 0.6,
-    backgroundColor: '#A0A0A0',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  saveButtonText: {
-    color: COLORS.surface,
-    fontSize: 17,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
+  disabledButton: { opacity: 0.6, backgroundColor: '#A0A0A0', shadowOpacity: 0, elevation: 0 },
+  saveButtonText: { color: COLORS.surface, fontSize: 17, fontWeight: 'bold', marginLeft: 8 },
 });

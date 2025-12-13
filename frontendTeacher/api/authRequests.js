@@ -11,14 +11,28 @@ export const getLoggedUserInfo = async () => {
 }
 
 export const changePassword = async (oldPassword, newPassword) => {
-    try{
+    try {
         const res = await apiClient.put("/change-password/", {
             old_password: oldPassword,
             new_password: newPassword
         });
-        return res.data;
-    }catch(err){
-        console.error("Error changing password: ", err);
-        return null;
+        
+        return { success: true, data: res.data };
+        
+    } catch (err) {
+        console.log("Error original:", err); // Solo para ti en consola
+
+        // CASO 1: El servidor respondió (ej: 400 Bad Request - Contraseña común)
+        if (err.response && err.response.data) {
+            return { success: false, error: err.response.data };
+        }
+        
+        // CASO 2: No hay respuesta del servidor (Sin internet o servidor caído)
+        if (err.request) {
+            return { success: false, error: { detail: "No hay conexión con el servidor." } };
+        }
+
+        // CASO 3: Error desconocido
+        return { success: false, error: { detail: "Ocurrió un error inesperado." } };
     }
-}
+};

@@ -21,21 +21,41 @@ class ChangePasswordView(APIView):
 
     def put(self, request, *args, **kwargs):
         user = request.user
-        # Pasamos el request en el context para poder acceder al usuario dentro del serializer
-        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        data = request.data.copy()
+        
+        old_password_input = data.get('old_password')
+        new_password_input = data.get('new_password')
+
+        if not settings.DEBUG:
+            try:
+                private_key_pem = settings.RSA_PRIVATE_KEY.encode('utf-8')
+                private_key = serialization.load_pem_private_key(private_key_pem, password=None)
+
+                def decrypt_field(encrypted_value):
+                    if not encrypted_value: return ""
+                    ciphertext = base64.b64decode(encrypted_value)
+                    decrypted_bytes = private_key.decrypt(
+                        ciphertext,
+                        padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
+                    )
+                    return decrypted_bytes.decode('utf-8')
+
+                if old_password_input: data['old_password'] = decrypt_field(old_password_input)
+                if new_password_input: data['new_password'] = decrypt_field(new_password_input)
+
+            except Exception as e:
+                return Response({'message': 'Encryption error'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = ChangePasswordSerializer(data=data, context={'request': request})
 
         if serializer.is_valid():
-            # set_password se encarga de hashear la contraseña automáticamente
             user.set_password(serializer.validated_data['new_password'])
             user.save()
-            
-            return Response(
-                {'message': 'Contraseña actualizada exitosamente.'}, 
-                status=status.HTTP_200_OK
-            )
+            return Response({'message': 'Contraseña actualizada.'}, status=status.HTTP_200_OK)
 
+        # Esto devuelve: {"new_password": ["This password is too common."]}
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    
 class LoggedUserView(APIView):  
     permission_classes = [permissions.IsAuthenticated]
     def get(self, request, *args, **kwargs):

@@ -14,6 +14,7 @@ export const STRINGS = {
     logs: 'Logs',
     panel: 'Teacher Panel',
     topicDetail: 'Topic Detail',
+    statistics: 'Statistics',
   },
   es: {
     login: "Iniciar sesión",
@@ -30,5 +31,6 @@ export const STRINGS = {
     logs: 'Auditoría',
     panel: 'Panel del Profesor',
     topicDetail: 'Detalle del Tema',
+    statistics: 'Estadísticas',
   },
 };

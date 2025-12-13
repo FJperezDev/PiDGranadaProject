@@ -30,7 +30,7 @@ RSA_PRIVATE_KEY = base64.b64decode(RSA_PRIVATE_KEY_B64).decode('utf-8') if RSA_P
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-default-key')
 
-ALLOWED_HOSTS = ['localhost', 'api.franjpg.com']
+ALLOWED_HOSTS = ['localhost', 'api.franjpg.com', '10.76.38.52']
 
 # Development only: CORS settings
 CORS_ALLOW_ALL_ORIGINS = DEBUG
