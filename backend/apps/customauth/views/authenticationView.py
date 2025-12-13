@@ -10,6 +10,12 @@ from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, Bl
 from ..serializers import CustomTeacherSerializer, ChangePasswordSerializer
 from ..models import CustomTeacher
 
+import base64
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
+from django.conf import settings
+
 class ChangePasswordView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -42,10 +48,35 @@ class LoginView(TokenObtainPairView):
 
         username = request.data.get("username") 
         email = request.data.get("email")
-        password = request.data.get("password")
+        encrypted_password = request.data.get("password")
         
-        if not password and not (username or email):
+        if not encrypted_password and not (username or email):
             return Response({'message': 'Email or username and password are required'}, status=400)
+
+        try:
+            private_key_pem = settings.RSA_PRIVATE_KEY.encode('utf-8') 
+            
+            private_key = serialization.load_pem_private_key(
+                private_key_pem,
+                password=None
+            )
+
+            # El frontend envía base64, decodificamos a bytes
+            ciphertext = base64.b64decode(encrypted_password)
+
+            decrypted_password_bytes = private_key.decrypt(
+                ciphertext,
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None
+                )
+            )
+            password = decrypted_password_bytes.decode('utf-8')
+            
+        except Exception as e:
+            print(f"Error decrypting: {e}")
+            return Response({'message': 'Encryption error or invalid payload'}, status=400)
 
         user = None            
         if username:

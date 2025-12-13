@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getLanguage } from '../context/LanguageContext';
 
 export const apiClient = axios.create({
-  baseURL: 'http://localhost:8000', // o la IP de tu PC si estás en emulador o dispositivo real
+  baseURL: 'https://api.franjpg.com', // o la IP de tu PC si estás en emulador o dispositivo real
   headers: {
     'Content-Type': 'application/json',
   },

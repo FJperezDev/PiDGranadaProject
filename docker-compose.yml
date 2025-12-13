@@ -4,10 +4,8 @@ services:
     image: postgres:16
     container_name: django_db
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: django_db
-      POSTGRES_USER: django
-      POSTGRES_PASSWORD: django123
+    env_file:
+      - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -17,6 +15,8 @@ services:
     build: ./backend
     container_name: django_backend
     restart: unless-stopped
+    env_file:
+      - .env
     depends_on:
       - db
     environment:
@@ -42,6 +42,8 @@ services:
   # --- FRONTEND 2 (Profesor/Admin) ---
   frontend_teacher:
     build: ./frontendTeacher
+    args:
+        - EXPO_PUBLIC_KEY_B64=${RSA_PUBLIC_KEY_B64}
     networks:
       - proxy
     labels:

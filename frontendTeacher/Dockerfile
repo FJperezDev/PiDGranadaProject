@@ -9,6 +9,14 @@ COPY package.json package-lock.json ./
 # Instalamos dependencias
 RUN npm ci
 
+# --- AQUÍ ESTÁ LA MAGIA ---
+# 1. Declaramos que esperamos este argumento desde el docker-compose
+ARG EXPO_PUBLIC_KEY_B64 
+
+# 2. Lo establecemos como variable de entorno persistente para el build
+ENV EXPO_PUBLIC_KEY_B64=$EXPO_PUBLIC_KEY_B64
+# --------------------------
+
 # Copiamos el código fuente
 COPY . .
 

@@ -13,11 +13,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import dj_database_url
 import os
+import base64
 from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+RSA_PRIVATE_KEY_B64 = os.environ.get('RSA_PRIVATE_KEY_B64')
+RSA_PRIVATE_KEY = base64.b64decode(RSA_PRIVATE_KEY_B64).decode('utf-8') if RSA_PRIVATE_KEY_B64 else None
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -28,7 +30,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-default-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = 'RENDER' not in os.environ
 
-ALLOWED_HOSTS = ['localhost', 'api.franjpg.com', '192.168.0.14']
+ALLOWED_HOSTS = ['localhost', 'api.franjpg.com']
 
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME') 
 if RENDER_EXTERNAL_HOSTNAME:

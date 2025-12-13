@@ -8,6 +8,7 @@ import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
 import { StyledButton } from '../components/StyledButton'; // Importar
 import { Eye, EyeOff } from 'lucide-react-native'; // Usar iconos de Lucide
+import { encryptPassword } from '../utils/encryption';
 
 export default function LoginScreen({ navigation }) {
   const { login, isAuthenticated } = useContext(AuthContext);
@@ -19,8 +20,15 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     setLoading(true);
-    await login(email, password);
-    setLoading(false);
+    try {
+      const securePassword = encryptPassword(password);
+      await login(email, securePassword);
+      
+    } catch (error) {
+      console.error("Login failed", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
