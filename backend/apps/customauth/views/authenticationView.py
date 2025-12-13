@@ -109,6 +109,8 @@ class LoginView(TokenObtainPairView):
         # (Tu código anterior convertía username -> email, eso era el error).
 
         # Autenticamos usando el USERNAME real
+        print("Cago en dios: " + real_username + ", " + password)
+
         user = authenticate(request, username=real_username, password=password)
 
         if user is None:
