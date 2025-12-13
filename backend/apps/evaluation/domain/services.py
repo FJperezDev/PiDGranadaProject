@@ -98,13 +98,28 @@ def update_question(teacher: Teacher, question: Question, type: str = None, stat
             concept = content_selectors.get_concept_by_name(name)
             QuestionRelatedToConcept.objects.create(question=question, concept=concept)
     question.save()
-    old_question.save()
+    # old_question.save()
     makeChanges(teacher, old_object=old_question, new_object=question)
     return question
 
 def delete_question(teacher: Teacher, question: Question) -> None:
-    """Elimina una pregunta dada."""
-    makeChanges(teacher, old_object=question, new_object=None)
+    """
+    Elimina una pregunta y limpia todas sus dependencias:
+    1. Respuestas asociadas (Answers).
+    2. Relaciones con Temas (QuestionBelongsToTopic).
+    3. Relaciones con Conceptos (QuestionRelatedToConcept).
+    4. Datos estadísticos de evaluación (QuestionEvaluationGroup).
+    """
+    
+    # 1. Borrar Respuestas asociadas (y generar auditoría para cada una)
+    answers = question.answers.all()
+    for answer in answers:
+        makeChanges(user=teacher, old_object=answer, new_object=None)
+    answers.delete()
+    QuestionBelongsToTopic.objects.filter(question=question).delete()
+    QuestionRelatedToConcept.objects.filter(question=question).delete()
+    QuestionEvaluationGroup.objects.filter(question=question).delete()
+    makeChanges(user=teacher, old_object=question, new_object=None)
     question.delete()
 
 # --- Answer Services ---
@@ -134,7 +149,7 @@ def update_answer(teacher: Teacher, answer: Answer, text_es: str = None, text_en
     if is_correct is not None:
         answer.is_correct = is_correct
     answer.save()
-    old_answer.save()
+    # old_answer.save()
     makeChanges(teacher, old_object=old_answer, new_object=answer)
     return answer
 

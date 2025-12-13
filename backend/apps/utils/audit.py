@@ -80,26 +80,26 @@ def removeEpigraphChangesUpTo(datetime):
     TeacherMakeChangeEpigraph.objects.filter(created_at__lte=datetime).delete()
 
 def makeChanges(user, old_object=None, new_object=None):
-    
-    from apps.evaluation.api.models import Question, Answer
-    from apps.courses.api.models import Subject, StudentGroup
-    from apps.content.api.models import Topic, Concept, Epigraph
-    if isinstance(old_object, Question) or isinstance(new_object, Question):
-        makeChangesQuestion(user, old_object, new_object)
-    elif isinstance(old_object, Answer) or isinstance(new_object, Answer):
-        makeChangesAnswer(user, old_object, new_object)
-    elif isinstance(old_object, Subject) or isinstance(new_object, Subject):
-        makeChangesSubject(user, old_object, new_object)
-    elif isinstance(old_object, StudentGroup) or isinstance(new_object, StudentGroup):
-        makeChangesStudentGroup(user, old_object, new_object)
-    elif isinstance(old_object, Topic) or isinstance(new_object, Topic):
-        makeChangesTopic(user, old_object, new_object)
-    elif isinstance(old_object, Concept) or isinstance(new_object, Concept):
-        makeChangesConcept(user, old_object, new_object)
-    elif isinstance(old_object, Epigraph) or isinstance(new_object, Epigraph):
-        makeChangesEpigraph(user, old_object, new_object)
-    else:
-        raise ValueError(f"Unsupported object type: {type(object)}")
+    return
+    # from apps.evaluation.api.models import Question, Answer
+    # from apps.courses.api.models import Subject, StudentGroup
+    # from apps.content.api.models import Topic, Concept, Epigraph
+    # if isinstance(old_object, Question) or isinstance(new_object, Question):
+    #     makeChangesQuestion(user, old_object, new_object)
+    # elif isinstance(old_object, Answer) or isinstance(new_object, Answer):
+    #     makeChangesAnswer(user, old_object, new_object)
+    # elif isinstance(old_object, Subject) or isinstance(new_object, Subject):
+    #     makeChangesSubject(user, old_object, new_object)
+    # elif isinstance(old_object, StudentGroup) or isinstance(new_object, StudentGroup):
+    #     makeChangesStudentGroup(user, old_object, new_object)
+    # elif isinstance(old_object, Topic) or isinstance(new_object, Topic):
+    #     makeChangesTopic(user, old_object, new_object)
+    # elif isinstance(old_object, Concept) or isinstance(new_object, Concept):
+    #     makeChangesConcept(user, old_object, new_object)
+    # elif isinstance(old_object, Epigraph) or isinstance(new_object, Epigraph):
+    #     makeChangesEpigraph(user, old_object, new_object)
+    # else:
+    #     raise ValueError(f"Unsupported object type: {type(object)}")
 
 def makeChangesQuestion(user, old_object, new_object):
     from apps.evaluation.api.models import TeacherMakeChangeQuestion

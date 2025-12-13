@@ -1,375 +1,465 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Modal, StyleSheet, ScrollView, Alert } from 'react-native';
+import { 
+  View, Text, TextInput, Modal, StyleSheet, ScrollView, 
+  Alert, TouchableOpacity, KeyboardAvoidingView, Platform, LayoutAnimation, UIManager
+} from 'react-native';
 import { COLORS } from '../constants/colors';
-import { Check, X } from 'lucide-react-native';
-import { getConceptInfo, getTopicInfo } from '../api/contentRequests'
+import { Check, X, ChevronDown, ChevronUp, Trash2 } from 'lucide-react-native';
+import { getConceptInfo, getTopicInfo } from '../api/contentRequests';
 import { StyledButton } from './StyledButton';
 
+// Habilitar animaciones para Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const CollapsibleSection = ({ title, count, children, defaultExpanded = false }) => {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  const toggleExpand = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded(!expanded);
+  };
+
+  return (
+    <View style={styles.collapsibleContainer}>
+      <TouchableOpacity onPress={toggleExpand} style={styles.collapsibleHeader} activeOpacity={0.7}>
+        <Text style={styles.collapsibleTitle}>
+          {title} {count > 0 && <Text style={{color: COLORS.primary}}>({count})</Text>}
+        </Text>
+        {expanded ? <ChevronUp size={20} color={COLORS.textSecondary} /> : <ChevronDown size={20} color={COLORS.textSecondary} />}
+      </TouchableOpacity>
+      {expanded && <View style={styles.collapsibleContent}>{children}</View>}
+    </View>
+  );
+};
+
+// --- MULTI SELECT CHIPS ---
 const MultiSelect = ({ items, selectedIds, onToggle, labelKey = 'name' }) => (
   <View style={styles.multiSelectContainer}>
     {items.map((item) => {
       const isSelected = selectedIds.includes(item.id);
       return (
-        <StyledButton
+        <TouchableOpacity
           key={item.id}
           style={[styles.chip, isSelected && styles.chipSelected]}
           onPress={() => onToggle(item.id)}
+          activeOpacity={0.7}
         >
           <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
             {item[labelKey] || item.title || item.name_es} 
           </Text>
           {isSelected && <Check size={14} color="white" style={{ marginLeft: 4 }} />}
-        </StyledButton>
+        </TouchableOpacity>
       );
     })}
   </View>
 );
 
-// --- TOPIC MODAL (Crear / Editar) ---
+// --- WRAPPER GENÉRICO DE MODAL (Para estilo unificado) ---
+const ModalWrapper = ({ visible, title, onClose, children, onSave }) => (
+  <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.centeredView}
+    >
+      <View style={styles.modalView}>
+        {/* Header */}
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>{title}</Text>
+          <TouchableOpacity onPress={onClose} style={styles.closeIcon}>
+            <X size={24} color={COLORS.text} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Content */}
+        <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+          {children}
+        </ScrollView>
+
+        {/* Footer */}
+        <View style={styles.buttonRow}>
+          <StyledButton title="Cancelar" onPress={onClose} variant='secondary' style={{flex: 1, marginRight: 8}} />
+          <StyledButton title="Guardar" onPress={onSave} style={{flex: 1, marginLeft: 8}} />
+        </View>
+      </View>
+    </KeyboardAvoidingView>
+  </Modal>
+);
+
+// --- TOPIC MODAL ---
 export const TopicModal = ({ visible, onClose, onSubmit, editingTopic, allSubjects = [], allConcepts = [] }) => {
   const [data, setData] = useState({ 
     title_es: '', title_en: '', description_es: '', description_en: '', 
     subject_ids: [], concept_ids: [] 
   });
-
   const [originalSubjectIds, setOriginalSubjectIds] = useState([]);
   const [originalConceptIds, setOriginalConceptIds] = useState([]);
 
   useEffect(() => {
-    const loadTopicData = async () => {
-      if (editingTopic) {
-        try{
-          const detailedTopic = await getTopicInfo(editingTopic.id);
-          const existingSubjectIds = detailedTopic.subjects ? detailedTopic.subjects.map(s => s.id) : [];
-          const existingConceptIds = detailedTopic.concepts ? detailedTopic.concepts.map(c => c.id) : [];
-
-          setData({
-            title_es: detailedTopic.title_es || detailedTopic.title || '',
-            title_en: detailedTopic.title_en || '',
-            description_es: detailedTopic.description_es || detailedTopic.description || '',
-            description_en: detailedTopic.description_en || '',
-            subject_ids: existingSubjectIds,
-            concept_ids: existingConceptIds
-          });
-          setOriginalSubjectIds(existingSubjectIds);
-          setOriginalConceptIds(existingConceptIds);
-        } catch (err){
-          console.error("Error: ", err);
-        }
-      } else {
-        setData({ title_es: '', title_en: '', description_es: '', description_en: '', subject_ids: [], concept_ids: [] });
-        setOriginalSubjectIds([]);
-        setOriginalConceptIds([]);
-      }
+    if (visible && editingTopic) {
+      getTopicInfo(editingTopic.id).then(detailedTopic => {
+        const existingSubjectIds = detailedTopic.subjects ? detailedTopic.subjects.map(s => s.id) : [];
+        const existingConceptIds = detailedTopic.concepts ? detailedTopic.concepts.map(c => c.id) : [];
+        
+        setData({
+          title_es: detailedTopic.title_es || detailedTopic.title || '',
+          title_en: detailedTopic.title_en || '',
+          description_es: detailedTopic.description_es || detailedTopic.description || '',
+          description_en: detailedTopic.description_en || '',
+          subject_ids: existingSubjectIds,
+          concept_ids: existingConceptIds
+        });
+        setOriginalSubjectIds(existingSubjectIds);
+        setOriginalConceptIds(existingConceptIds);
+      }).catch(err => console.error(err));
+    } else if (visible) {
+      setData({ title_es: '', title_en: '', description_es: '', description_en: '', subject_ids: [], concept_ids: [] });
     }
-    if(visible)
-      loadTopicData();
-    
-  }, [editingTopic, visible]);
+  }, [visible, editingTopic]);
 
-  const toggleSubject = (id) => {
+  const toggleSelection = (key, id) => {
     setData(prev => ({
       ...prev,
-      subject_ids: prev.subject_ids.includes(id) 
-        ? prev.subject_ids.filter(sid => sid !== id) 
-        : [...prev.subject_ids, id]
-    }));
-  };
-
-  const toggleConcept = (id) => {
-    setData(prev => ({
-      ...prev,
-      concept_ids: prev.concept_ids.includes(id)
-        ? prev.concept_ids.filter(cid => cid !== id)
-        : [...prev.concept_ids, id]
+      [key]: prev[key].includes(id) ? prev[key].filter(x => x !== id) : [...prev[key], id]
     }));
   };
 
   const handleSubmit = () => {
-    if (!data.title_es) { Alert.alert('Error', 'El título en español es obligatorio'); return; }
+    if (!data.title_es) return Alert.alert('Falta información', 'El título en español es obligatorio');
     onSubmit(data, originalSubjectIds, originalConceptIds);
   };
 
   return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>{editingTopic ? 'Editar Tema' : 'Nuevo Tema'}</Text>
-          <ScrollView>
-            <Text style={styles.label}>Información Básica</Text>
-            <TextInput style={styles.input} placeholder="Título (ES)" value={data.title_es} onChangeText={t => setData({...data, title_es: t})} />
-            <TextInput style={styles.input} placeholder="Title (EN)" value={data.title_en} onChangeText={t => setData({...data, title_en: t})} />
-            <TextInput style={styles.input} placeholder="Descripción (ES)" multiline value={data.description_es} onChangeText={t => setData({...data, description_es: t})} />
-            <TextInput style={styles.input} placeholder="Description (EN)" multiline value={data.description_en} onChangeText={t => setData({...data, description_en: t})} />
-            
-            <Text style={styles.label}>Vincular Asignaturas</Text>
-            <MultiSelect items={allSubjects} selectedIds={data.subject_ids} onToggle={toggleSubject} labelKey="name" />
+    <ModalWrapper visible={visible} onClose={onClose} onSave={handleSubmit} title={editingTopic ? 'Editar Tema' : 'Nuevo Tema'}>
+      <Text style={styles.sectionLabel}>Datos Generales</Text>
+      <TextInput style={styles.input} placeholder="Título (Español)" value={data.title_es} onChangeText={t => setData({...data, title_es: t})} />
+      <TextInput style={styles.input} placeholder="Title (English)" value={data.title_en} onChangeText={t => setData({...data, title_en: t})} />
+      <TextInput style={[styles.input, styles.textArea]} placeholder="Descripción (Español)" multiline value={data.description_es} onChangeText={t => setData({...data, description_es: t})} />
+      <TextInput style={[styles.input, styles.textArea]} placeholder="Description (English)" multiline value={data.description_en} onChangeText={t => setData({...data, description_en: t})} />
+      
+      <View style={{height: 10}} />
 
-            <Text style={styles.label}>Vincular Conceptos</Text>
-            <MultiSelect items={allConcepts} selectedIds={data.concept_ids} onToggle={toggleConcept} labelKey="name" />
-          </ScrollView>
-          
-          <View style={styles.buttonRow}>
-            <StyledButton title="Cancelar" onPress={onClose} variant='danger' />
-            <StyledButton title="Guardar" onPress={handleSubmit} />
-          </View>
-        </View>
-      </View>
-    </Modal>
+      <CollapsibleSection title="Vincular Asignaturas" count={data.subject_ids.length}>
+        <MultiSelect items={allSubjects} selectedIds={data.subject_ids} onToggle={(id) => toggleSelection('subject_ids', id)} labelKey="name" />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Vincular Conceptos" count={data.concept_ids.length}>
+        <MultiSelect items={allConcepts} selectedIds={data.concept_ids} onToggle={(id) => toggleSelection('concept_ids', id)} labelKey="name" />
+      </CollapsibleSection>
+    </ModalWrapper>
   );
 };
 
+// --- CONCEPT MODAL (Con Relaciones y Explicación) ---
 export const ConceptModal = ({ visible, onClose, onSubmit, editingConcept, allConcepts = [] }) => {
-  const [data, setData] = useState({ name_es: '', name_en: '', description_es:'', description_en:'', related_concept_ids: [] });
+  const [data, setData] = useState({ name_es: '', name_en: '', description_es:'', description_en:'' });
+  
+  // Ahora relatedConcepts es un array de objetos: { id, name, relationship_comment }
+  const [relatedConcepts, setRelatedConcepts] = useState([]); 
   const [originalRelatedIds, setOriginalRelatedIds] = useState([]);
 
   useEffect(() => {
-    const loadConceptData = async () => {
-      if (editingConcept) {
-        try{
-          const detailedConcept = await getConceptInfo(editingConcept.id)
-          const existingRelatedIds = detailedConcept.related_concepts ? detailedConcept.related_concepts.map(c => c.id) : [];
-
-          setData({
-            name_es: detailedConcept.name_es || '',
-            name_en: detailedConcept.name_en || '',
-            description_es: detailedConcept.description_es || '',
-            description_en: detailedConcept.description_en || '',
-            related_concept_ids: existingRelatedIds,
-          });
-          setOriginalRelatedIds(existingRelatedIds);
-        } catch (err){
-          console.error("Error: ", err);
-        }
+    if (visible && editingConcept) {
+      getConceptInfo(editingConcept.id).then(detailed => {
+        setData({
+          name_es: detailed.name_es || '',
+          name_en: detailed.name_en || '',
+          description_es: detailed.description_es || '',
+          description_en: detailed.description_en || '',
+        });
         
-      } else {
-        setData({ name_es: '', name_en: '', description_es: '', description_en: '', related_concept_ids: [] });
-        setOriginalRelatedIds([]);
-      }
+        // Mapeamos los existentes
+        const related = detailed.related_concepts ? detailed.related_concepts.map(c => ({
+          id: c.id,
+          name: c.name,
+          relationship_comment: c.pivot?.relationship_comment || '' // Asumiendo que el backend te devuelve esto
+        })) : [];
+        
+        setRelatedConcepts(related);
+        setOriginalRelatedIds(related.map(r => r.id));
+      }).catch(err => console.error(err));
+    } else if (visible) {
+      setData({ name_es: '', name_en: '', description_es: '', description_en: '' });
+      setRelatedConcepts([]);
+      setOriginalRelatedIds([]);
     }
-    if(visible)
-      loadConceptData();
-  }, [editingConcept, visible]);
+  }, [visible, editingConcept]);
 
-  const toggleRelated = (id) => {
-    setData(prev => ({
-      ...prev,
-      related_concept_ids: prev.related_concept_ids.includes(id)
-        ? prev.related_concept_ids.filter(cid => cid !== id)
-        : [...prev.related_concept_ids, id]
-    }));
+  const toggleRelated = (item) => {
+    // Si ya existe, lo eliminamos
+    if (relatedConcepts.find(r => r.id === item.id)) {
+      setRelatedConcepts(prev => prev.filter(r => r.id !== item.id));
+    } else {
+      // Si no existe, lo añadimos con comentario vacío
+      setRelatedConcepts(prev => [...prev, { id: item.id, name: item.name || item.name_es, relationship_comment: '' }]);
+    }
+  };
+
+  const updateRelationshipComment = (id, text) => {
+    setRelatedConcepts(prev => prev.map(r => r.id === id ? { ...r, relationship_comment: text } : r));
   };
 
   const availableConceptsToLink = allConcepts.filter(c => !editingConcept || c.id !== editingConcept.id);
+  const selectedIds = relatedConcepts.map(r => r.id);
 
   const handleSubmit = () => {
-    if (!data.name_es) { Alert.alert('Error', 'El nombre es obligatorio'); return; }
-    onSubmit(data, originalRelatedIds);
+    if (!data.name_es) return Alert.alert('Falta información', 'El nombre en español es obligatorio');
+    
+    // Pasamos data y el array de objetos con comentarios
+    onSubmit({ ...data, related_concepts: relatedConcepts }, originalRelatedIds);
   };
 
   return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>{editingConcept ? 'Editar Concepto' : 'Nuevo Concepto'}</Text>
-          <ScrollView>
-            <Text style={styles.label}>Información</Text>
-            <TextInput style={styles.input} placeholder="Nombre (ES)" value={data.name_es} onChangeText={t => setData({...data, name_es: t})} />
-            <TextInput style={styles.input} placeholder="Name (EN)" value={data.name_en} onChangeText={t => setData({...data, name_en: t})} />
-            <TextInput style={styles.input} placeholder="Descripcion (ES)" value={data.description_es} onChangeText={t => setData({...data, description_es: t})} />
-            <TextInput style={styles.input} placeholder="Description (EN)" value={data.description_en} onChangeText={t => setData({...data, description_en: t})} />
-            
-            <Text style={styles.label}>Conceptos Relacionados</Text>
-            {availableConceptsToLink.length === 0 ? (
-               <Text style={styles.hint}>No hay otros conceptos disponibles.</Text>
-            ) : (
-               <MultiSelect items={availableConceptsToLink} selectedIds={data.related_concept_ids} onToggle={toggleRelated} labelKey="name" />
-            )}
-          </ScrollView>
+    <ModalWrapper visible={visible} onClose={onClose} onSave={handleSubmit} title={editingConcept ? 'Editar Concepto' : 'Nuevo Concepto'}>
+      <Text style={styles.sectionLabel}>Definición</Text>
+      <TextInput style={styles.input} placeholder="Nombre (ES)" value={data.name_es} onChangeText={t => setData({...data, name_es: t})} />
+      <TextInput style={styles.input} placeholder="Name (EN)" value={data.name_en} onChangeText={t => setData({...data, name_en: t})} />
+      <TextInput style={[styles.input, styles.textArea]} placeholder="Descripción (ES)" multiline value={data.description_es} onChangeText={t => setData({...data, description_es: t})} />
+      <TextInput style={[styles.input, styles.textArea]} placeholder="Description (EN)" multiline value={data.description_en} onChangeText={t => setData({...data, description_en: t})} />
 
-          <View style={styles.buttonRow}>
-            <StyledButton title="Cancelar" onPress={onClose} variant='danger' />
-            <StyledButton title="Guardar" onPress={handleSubmit}  />
-          </View>
+      <View style={styles.separator} />
+
+      <CollapsibleSection title="Seleccionar Relaciones" count={relatedConcepts.length}>
+        <MultiSelect items={availableConceptsToLink} selectedIds={selectedIds} onToggle={(id) => {
+          const item = availableConceptsToLink.find(i => i.id === id);
+          toggleRelated(item);
+        }} labelKey="name" />
+      </CollapsibleSection>
+
+      {/* LISTA PARA AÑADIR EXPLICACIÓN */}
+      {relatedConcepts.length > 0 && (
+        <View style={{ marginTop: 15 }}>
+          <Text style={styles.sectionLabel}>Detallar Relaciones</Text>
+          {relatedConcepts.map(relation => (
+            <View key={relation.id} style={styles.relationCard}>
+              <View style={styles.relationHeader}>
+                <Text style={styles.relationTitle}>{relation.name}</Text>
+                <TouchableOpacity onPress={() => toggleRelated(relation)}>
+                  <Trash2 size={18} color={COLORS.danger} />
+                </TouchableOpacity>
+              </View>
+              <TextInput 
+                style={styles.relationInput} 
+                placeholder="Explicar relación (ej: 'Es un tipo de...')" 
+                value={relation.relationship_comment}
+                onChangeText={(t) => updateRelationshipComment(relation.id, t)}
+              />
+            </View>
+          ))}
         </View>
-      </View>
-    </Modal>
+      )}
+    </ModalWrapper>
   );
 };
 
+// --- EPIGRAPH MODAL ---
 export const EpigraphModal = ({ visible, onClose, onSubmit, editingEpigraph }) => {
-  const [data, setData] = useState({ 
-    order_id: '', 
-    name_es: '', 
-    name_en: '', 
-    description_es: '', 
-    description_en: '' 
-  });
+  const [data, setData] = useState({ order_id: '', name_es: '', name_en: '', description_es: '', description_en: '' });
 
-  // Efecto para cargar datos si estamos editando
   useEffect(() => {
-    if (editingEpigraph) {
-      setData({
-        order_id: editingEpigraph.order_id ? String(editingEpigraph.order_id) : '', 
-        name_es: editingEpigraph.name_es || editingEpigraph.name || '',
-        name_en: editingEpigraph.name_en || '',
-        description_es: editingEpigraph.description_es || '',
-        description_en: editingEpigraph.description_en || ''
-      });
-    } else {
-      // Limpiar si es creación
-      setData({ order_id: '', name_es: '', name_en: '', description_es: '', description_en: '' });
+    if (visible) {
+      if (editingEpigraph) {
+        setData({
+          order_id: editingEpigraph.order_id != null ? String(editingEpigraph.order_id) : '',
+          name_es: editingEpigraph.name_es || '',
+          name_en: editingEpigraph.name_en || '',
+          description_es: editingEpigraph.description_es || '',
+          description_en: editingEpigraph.description_en || ''
+        });
+      } else {
+        setData({ order_id: '', name_es: '', name_en: '', description_es: '', description_en: '' });
+      }
     }
-  }, [editingEpigraph, visible]);
+  }, [visible, editingEpigraph]);
 
   const handleSubmit = () => {
-    if (!data.name_es || !data.order_id) { 
-        Alert.alert('Error', 'El Nombre (ES) y el ID de Orden son obligatorios'); 
-        return; 
-    }
+    if (!data.name_es || !data.order_id) return Alert.alert('Error', 'El Nombre (ES) y el ID de Orden son obligatorios');
     onSubmit(data);
   };
 
   return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
-      <View style={styles.centeredView}>
-        <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>
-            {editingEpigraph ? 'Editar Epígrafe' : 'Nuevo Epígrafe'}
-          </Text>
-          <ScrollView>
-            <Text style={styles.label}>Orden y Nombres</Text>
-            <TextInput 
-                style={styles.input} 
-                placeholder="ID Orden (ej: 1, 1.1)" 
-                value={data.order_id} 
-                onChangeText={t => setData({...data, order_id: t})} 
-                keyboardType="numeric"
-            />
-            <TextInput 
-                style={styles.input} 
-                placeholder="Nombre (ES)" 
-                value={data.name_es} 
-                onChangeText={t => setData({...data, name_es: t})} 
-            />
-            <TextInput 
-                style={styles.input} 
-                placeholder="Name (EN)" 
-                value={data.name_en} 
-                onChangeText={t => setData({...data, name_en: t})} 
-            />
-            
-            <Text style={styles.label}>Descripciones</Text>
-            <TextInput 
-                style={styles.input} 
-                placeholder="Descripción (ES)" 
-                multiline 
-                value={data.description_es} 
-                onChangeText={t => setData({...data, description_es: t})} 
-            />
-            <TextInput 
-                style={styles.input} 
-                placeholder="Description (EN)" 
-                multiline 
-                value={data.description_en} 
-                onChangeText={t => setData({...data, description_en: t})} 
-            />
-          </ScrollView>
-          
-          <View style={styles.buttonRow}>
-            <StyledButton title="Cancelar" onPress={onClose} variant='danger' />
-            <StyledButton title="Guardar" onPress={handleSubmit} />
-          </View>
+    <ModalWrapper visible={visible} onClose={onClose} onSave={handleSubmit} title={editingEpigraph ? 'Editar Epígrafe' : 'Nuevo Epígrafe'}>
+      <View style={{flexDirection: 'row', gap: 10}}>
+        <View style={{flex: 1}}>
+          <Text style={styles.labelSmall}>Orden</Text>
+          <TextInput style={styles.input} placeholder="Ej: 1.1" value={data.order_id} onChangeText={t => setData({...data, order_id: t})} keyboardType="numeric" />
+        </View>
+        <View style={{flex: 3}}>
+          <Text style={styles.labelSmall}>Nombre</Text>
+          <TextInput style={styles.input} placeholder="Nombre (ES)" value={data.name_es} onChangeText={t => setData({...data, name_es: t})} />
         </View>
       </View>
-    </Modal>
+      
+      <TextInput style={styles.input} placeholder="Name (EN)" value={data.name_en} onChangeText={t => setData({...data, name_en: t})} />
+      <Text style={styles.sectionLabel}>Contenido</Text>
+      <TextInput style={[styles.input, styles.textArea]} placeholder="Texto del epígrafe (ES)" multiline value={data.description_es} onChangeText={t => setData({...data, description_es: t})} />
+      <TextInput style={[styles.input, styles.textArea]} placeholder="Text of heading (EN)" multiline value={data.description_en} onChangeText={t => setData({...data, description_en: t})} />
+    </ModalWrapper>
   );
 };
 
+// --- STYLES "BONICOS" ---
 const styles = StyleSheet.create({
-
   centeredView: { 
     flex: 1, 
     justifyContent: 'center', 
     alignItems: 'center', 
-    backgroundColor: 'rgba(0,0,0,0.5)' 
+    backgroundColor: 'rgba(0,0,0,0.6)' 
   },
-
   modalView: { 
     width: '90%', 
     maxHeight: '85%', 
-    backgroundColor: COLORS.surface,
-    borderRadius: 10, 
-    padding: 20, 
-    elevation: 5 
+    backgroundColor: COLORS.surface || '#FFFFFF', 
+    borderRadius: 20, 
+    padding: 0, 
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    overflow: 'hidden'
   },
-
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+    backgroundColor: COLORS.background || '#F9F9F9',
+  },
   modalTitle: { 
     fontSize: 20, 
     fontWeight: 'bold', 
-    marginBottom: 15, 
-    textAlign: 'center', 
-    color: COLORS.text 
+    color: COLORS.text,
+    flex: 1 
   },
-
-  label: { 
-    fontSize: 14, 
-    fontWeight: 'bold', 
-    marginTop: 10, 
-    marginBottom: 5, 
-    color: COLORS.text 
+  closeIcon: {
+    padding: 5,
   },
-
+  modalScroll: {
+    padding: 20,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginBottom: 10,
+    marginTop: 5,
+  },
+  labelSmall: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+    fontWeight: 'bold'
+  },
   input: { 
+    backgroundColor: '#F5F5F5',
     borderWidth: 1, 
-    borderColor: COLORS.borderColor,
-    borderRadius: 5, 
-    padding: 10, 
-    marginBottom: 10 
+    borderColor: 'transparent', 
+    borderRadius: 12, 
+    padding: 12, 
+    marginBottom: 12,
+    fontSize: 15,
+    color: COLORS.text
   },
-
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top'
+  },
   buttonRow: { 
     flexDirection: 'row', 
-    justifyContent: 'space-around', 
-    marginTop: 20 
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#EEEEEE',
+    backgroundColor: COLORS.background || '#F9F9F9'
+  },
+  
+  // Collapsible Styles
+  collapsibleContainer: {
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    backgroundColor: '#FAFAFA',
+  },
+  collapsibleTitle: {
+    fontWeight: '600',
+    color: COLORS.text,
+    fontSize: 15
+  },
+  collapsibleContent: {
+    padding: 15,
+    backgroundColor: '#FFFFFF'
   },
 
+  // Chips
   multiSelectContainer: { 
     flexDirection: 'row', 
     flexWrap: 'wrap', 
     gap: 8, 
-    marginBottom: 10 
   },
-
   chip: { 
-    paddingHorizontal: 10, 
-    paddingVertical: 5, 
-    borderRadius: 15, 
+    paddingHorizontal: 12, 
+    paddingVertical: 8, 
+    borderRadius: 20, 
     borderWidth: 1, 
     borderColor: COLORS.borderColor, 
-    backgroundColor: COLORS.background, 
+    backgroundColor: '#FFFFFF', 
     flexDirection: 'row', 
     alignItems: 'center' 
   },
-
   chipSelected: { 
     backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary 
+    borderColor: COLORS.primary,
+    elevation: 2
   },
-  
   chipText: { 
-    fontSize: 12, 
-    color: COLORS.text 
+    fontSize: 13, 
+    color: COLORS.textSecondary 
   },
-
   chipTextSelected: { 
-    color: COLORS.surface, 
-    fontWeight: 'bold' 
+    color: '#FFFFFF', 
+    fontWeight: '600' 
   },
 
-  hint: { 
-    fontStyle: 'italic', 
-    color: COLORS.gray, 
-    fontSize: 12 
+  // Relaciones cards
+  separator: {
+    height: 1,
+    backgroundColor: '#EEEEEE',
+    marginVertical: 15
+  },
+  relationCard: {
+    backgroundColor: '#F9F9F9',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#EEEEEE'
+  },
+  relationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5
+  },
+  relationTitle: {
+    fontWeight: 'bold',
+    color: COLORS.text
+  },
+  relationInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 13
   }
 });

@@ -3,6 +3,18 @@ from .models import ConceptIsRelatedToConcept, Topic, Concept, Epigraph
 from apps.utils.mixins import LanguageSerializerMixin
 from apps.content.domain import selectors
 
+class LongEpigraphSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Epigraph
+        fields = [
+            'id',
+            'order_id',
+            'name_es',
+            'name_en',
+            'description_es',
+            'description_en',
+        ]
+
 # Epigraph serializer
 class EpigraphSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField()

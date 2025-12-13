@@ -28,6 +28,7 @@ export const topicIsNotAboutConcept = async (topicId, conceptName) => (await api
 
 export const getTopicEpigraphs = async (topicId) => (await apiClient.get(`/topics/${topicId}/epigraphs/`)).data;
 export const createEpigraph = async (topicId, data) => (await apiClient.post(`/topics/${topicId}/epigraphs/`, data)).data;
+export const getEpigraphDetail = async (topicId, orderId) => (await apiClient.get(`/topics/${topicId}/epigraphs/${orderId}/`)).data;
 export const deleteEpigraph = async (topicId, orderId) => (await apiClient.delete(`/topics/${topicId}/epigraphs/${orderId}/`)).data;
 export const updateEpigraph = async (topicId, orderId, data) => (await apiClient.put(`/topics/${topicId}/epigraphs/${orderId}/`, data)).data;
 

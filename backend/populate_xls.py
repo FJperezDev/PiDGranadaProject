@@ -4,13 +4,13 @@ import json
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-BASE_URL = "https://api.franjpg.com"
+BASE_URL = "http://localhost:8000"
 TEACHER_EMAIL = "admin@admin.com"
 TEACHER_PASSWORD = "admin123"
 EXCEL_FILE = "Prueba.xlsx"
 
 # Número de peticiones simultáneas (ajustar si el servidor se satura)
-MAX_WORKERS = 20
+MAX_WORKERS = 5
 
 def clean_str(val):
     if pd.isna(val) or val == "":

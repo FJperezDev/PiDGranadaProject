@@ -40,7 +40,7 @@ def update_subject(subject: Subject, teacher: Teacher, name_es: str = None, name
     if description_en is not None:
         subject.description_en = description_en
     subject.save()
-    old_subject.save()
+    # old_subject.save()
     makeChanges(user=teacher, old_object=old_subject, new_object=subject)
 
     return subject

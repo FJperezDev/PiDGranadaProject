@@ -1,9 +1,9 @@
 import React, { useState, useContext, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { getTopicEpigraphs, createEpigraph, updateEpigraph, deleteEpigraph } from '../api/contentRequests';
+import { getTopicEpigraphs, createEpigraph, updateEpigraph, deleteEpigraph, getEpigraphDetail } from '../api/contentRequests';
 import { EpigraphModal } from '../components/ContentModals';
-import { List, Plus, Trash2, Edit } from 'lucide-react-native';
+import { Plus, Trash2, Edit } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
 
 export default function TopicDetailScreen({ route, navigation }) {
@@ -21,6 +21,7 @@ export default function TopicDetailScreen({ route, navigation }) {
       setLoading(true);
       const data = await getTopicEpigraphs(topic.id);
       const sorted = data.sort((a, b) => parseFloat(a.order_id) - parseFloat(b.order_id));
+      console.log(sorted);
       setEpigraphs(sorted);
     } catch (e) {
       console.error(e);
@@ -36,7 +37,6 @@ export default function TopicDetailScreen({ route, navigation }) {
       if (editingEpigraph) {
         await updateEpigraph(topic.id, editingEpigraph.order_id, data);
       } else {
-        // CREAR
         await createEpigraph(topic.id, data);
       }
       setModalVisible(false);
@@ -82,16 +82,23 @@ export default function TopicDetailScreen({ route, navigation }) {
     setModalVisible(true);
   };
 
-  const openEditModal = (item) => {
-    setEditingEpigraph(item);
-    setModalVisible(true);
+  const openEditModal = async (item) => {
+    try {
+      const detailedData = await getEpigraphDetail(topic.id, item.order_id);
+      console.log(detailedData);
+      setEditingEpigraph(detailedData);
+      setModalVisible(true);
+    } catch (error) {
+      console.error("Error fetching details:", error);
+      Alert.alert("Error", "No se pudieron cargar los detalles del epígrafe.");
+    }
   };
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.info}>
         <View style={{flex: 1}}>
-          <Text style={styles.name}>{item.name || item.name_es}</Text>
+          <Text style={styles.name}>{item.order_id + ". " + item.name}</Text>
           {item.description_es && <Text style={styles.desc} numberOfLines={2}>{item.description_es}</Text>}
         </View>
       </View>

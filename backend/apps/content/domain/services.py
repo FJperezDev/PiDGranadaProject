@@ -1,9 +1,10 @@
 # apps/content/domain/services.py
-from ..api.models import Topic, Concept, Epigraph, TopicIsAboutConcept, ConceptIsRelatedToConcept
+from ..api.models import Topic, Concept, Epigraph, TopicIsAboutConcept, ConceptIsRelatedToConcept, SubjectIsAboutTopic
 from django.core.exceptions import ValidationError
 from apps.utils.audit import makeChanges
 from apps.customauth.models import CustomTeacher
 from apps.content.domain import selectors
+from django.db.models import Q
 
 # --- Topic Services ---
 def create_topic(title_es: str, title_en: str, teacher: CustomTeacher, description_es=None, description_en=None) -> Topic:
@@ -35,14 +36,28 @@ def update_topic(topic: Topic, teacher: CustomTeacher, title_es: str = None, tit
     if description_en is not None:
         topic.description_en = description_en
     topic.save()
-    old_topic.save()
+    # old_topic.save()
     makeChanges(user=teacher, old_object=old_topic, new_object=topic)
 
     return topic
 
 def delete_topic(topic: Topic, teacher: CustomTeacher):
+    delete_epigraphs_by_topic(topic, teacher)
+    SubjectIsAboutTopic.objects.filter(topic=topic).delete()
+    TopicIsAboutConcept.objects.filter(topic=topic).delete()
     makeChanges(user=teacher, old_object=topic, new_object=None)
     return topic.delete()
+
+def delete_epigraphs_by_topic(topic: Topic, teacher: CustomTeacher):
+    """
+    Auxiliar: Borra los epígrafes y registra el cambio.
+    """
+    epigraphs = selectors.get_epigraphs_by_topic(topic)
+    # Primero registramos el cambio para cada uno
+    for epigraph in epigraphs:
+        makeChanges(user=teacher, old_object=epigraph, new_object=None)
+    # Luego borramos en lote (más eficiente)
+    epigraphs.delete()
 
 def get_next_order_id_for_topic(topic: Topic) -> int:
     """Obtiene el siguiente order_id disponible para un Concept en un topic dado."""
@@ -84,11 +99,23 @@ def update_concept(concept: Concept, teacher: CustomTeacher, **kwargs) -> Concep
             setattr(concept, field, value)
 
     concept.save()
-    old_concept.save()
+    # old_concept.save()
     makeChanges(user=teacher, old_object=old_concept, new_object=concept)
     return concept
 
 def delete_concept(concept: Concept, teacher: CustomTeacher):
+    """
+    Elimina un concepto y todas las relaciones donde participa:
+    1. Concept <-> Concept (bidireccional)
+    2. Topic <-> Concept
+    """
+
+    ConceptIsRelatedToConcept.objects.filter(
+        Q(concept_from=concept) | Q(concept_to=concept)
+    ).delete()
+
+    TopicIsAboutConcept.objects.filter(concept=concept).delete()
+
     makeChanges(user=teacher, old_object=concept, new_object=None)
     return concept.delete()
 
@@ -129,7 +156,7 @@ def update_epigraph(epigraph: Epigraph, teacher: CustomTeacher, name_es: str = N
     if description_en is not None:
         epigraph.description_en = description_en
     epigraph.save()
-    old_epigraph.save()
+    # old_epigraph.save()
     makeChanges(user=teacher, old_object=old_epigraph, new_object=epigraph)
 
     return epigraph

@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from apps.utils.permissions import BaseContentViewSet
-from .serializers import ConceptSerializer, TopicSerializer, EpigraphSerializer, ShortConceptSerializer, ShortEpigraphSerializer, ShortTopicSerializer
+from .serializers import ConceptSerializer, TopicSerializer, LongEpigraphSerializer, EpigraphSerializer, ShortConceptSerializer, ShortEpigraphSerializer, ShortTopicSerializer
 from apps.content.domain import services, selectors
 
 # Create your views here.
@@ -94,11 +94,11 @@ class TopicViewSet(BaseContentViewSet):
             return Response({'detail': 'Epigraph not found in this topic'}, status=status.HTTP_404_NOT_FOUND)
 
         if request.method == 'GET':
-            serializer = EpigraphSerializer(epigraph, context={'request': request})
+            serializer = LongEpigraphSerializer(epigraph, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         elif request.method == 'PUT':
             epigraph = services.update_epigraph(epigraph, teacher=request.user, **request.data)
-            serializer = EpigraphSerializer(epigraph, context={'request': request})
+            serializer = LongEpigraphSerializer(epigraph, context={'request': request})
             return Response(serializer.data, status=status.HTTP_200_OK)
         elif request.method == 'DELETE':
             services.delete_epigraph(epigraph, teacher=request.user)
