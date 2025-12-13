@@ -7,6 +7,7 @@ import ManageGroupsScreen from '../screens/ManageGroupsScreen'
 import GroupDetailScreen from '../screens/GroupDetailScreen'
 import TopicDetailScreen from '../screens/TopicDetailScreen';
 import ManageQuestionsScreen from '../screens/ManageQuestionsScreen'
+import SubjectTopicsScreen from '../screens/SubjectTopicScreen';
 import ManageUsersScreen from '../screens/ManageUsersScreen'
 import ManageContentScreen from '../screens/ManageContentScreen'
 import AnalyticsScreen from '../screens/AnalyticsScreen'
@@ -29,6 +30,7 @@ export default function AppNavigator() {
         <>
           <Stack.Screen name="Home" component={UserHomeScreen} options={{ title: t('home') }}/>
           <Stack.Screen name="ManageGroups" component={ManageGroupsScreen} options={{ title: t('manageGroups') }} />
+          <Stack.Screen name="SubjectTopics" component={SubjectTopicsScreen} options={{ title: t('subjectTopics') }} />
           <Stack.Screen name="GroupDetail" component={GroupDetailScreen} options={({ route }) => ({ title: route.params.group.name_es || t('groupDetail') })}/>
           <Stack.Screen name="ManageQuestions" component={ManageQuestionsScreen} options={{ title: t('manageQuestions') }} />
           <Stack.Screen name="ManageContent" component={ManageContentScreen} options={{ title: t('manageContent') }} />

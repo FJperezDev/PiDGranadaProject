@@ -8,6 +8,16 @@ export const createTopic = async (data) => (await apiClient.post('/topics/', dat
 export const deleteTopic = async (id) => (await apiClient.delete(`/topics/${id}/`)).data;
 export const updateTopic = async (id, data) => (await apiClient.put(`/topics/${id}/`, data)).data;
 
+export const getSubjectTopics = async (subjectId) => 
+  (await apiClient.get(`/subjects/${subjectId}/topics/`)).data;
+
+export const swapTopicOrder = async (subjectId, topicA_Title, topicB_Title) => {
+  return (await apiClient.put(`/subjects/${subjectId}/topics/`, {
+    topicA: topicA_Title,
+    topicB: topicB_Title
+  })).data;
+};
+
 export const subjectIsAboutTopic = async (subjectId, topicName) => (await apiClient.post(`/subjects/${subjectId}/topics/`, {topic_name: topicName})).data;
 export const subjectIsNotAboutTopic = async (subjectId, topicName) => (await apiClient.delete(`/subjects/${subjectId}/topics/`, {topic_name: topicName})).data;
 

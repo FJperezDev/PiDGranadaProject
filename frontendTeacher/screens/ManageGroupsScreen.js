@@ -1,14 +1,13 @@
 import React, { useState, useContext, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext'; 
 import { getMyGroups, getOtherGroups, getSubjects, createGroup } from '../api/coursesRequests'; 
 import CreateGroupModal from '../components/CreateGroupModal';
-import { PlusCircle } from 'lucide-react-native';
+import { PlusCircle, BookOpen } from 'lucide-react-native'; // Asegúrate de tener BookOpen
 import { COLORS } from '../constants/colors';
 
 export default function ManageGroupsScreen({ navigation }) {
-  // const { t } = useContext(LanguageContext); // Asumo que tienes algo así
   const { loggedUser, isSuper } = useContext(AuthContext);
 
   const [myGroups, setMyGroups] = useState([]);
@@ -39,11 +38,10 @@ export default function ManageGroupsScreen({ navigation }) {
     }
   };
 
-  // useFocusEffect se ejecuta cada vez que la pantalla entra en foco
   useFocusEffect(
     useCallback(() => {
       fetchData();
-    }, [isSuper]) // Se vuelve a ejecutar si cambia el rol del usuario
+    }, [isSuper])
   );
 
   const handleRefresh = () => {
@@ -70,13 +68,26 @@ export default function ManageGroupsScreen({ navigation }) {
     }
   };
 
+  // Render para Grupos
   const renderGroup = ({ item }) => (
     <TouchableOpacity
       style={styles.groupButton}
       onPress={() => navigation.navigate('GroupDetail', { group: item })}
     >
       <Text style={styles.groupButtonText}>{item.name}</Text>
-      {/* Podrías mostrar la asignatura aquí si la API la devuelve */}
+    </TouchableOpacity>
+  );
+
+  // Render para Asignaturas (NUEVO)
+  const renderSubject = ({ item }) => (
+    <TouchableOpacity
+      style={[styles.groupButton, { borderLeftWidth: 5, borderLeftColor: COLORS.primary }]}
+      onPress={() => navigation.navigate('SubjectTopics', { subject: item })} // <--- NOMBRE CORREGIDO AQUÍ
+    >
+      <View style={{flexDirection: 'row', alignItems: 'center'}}>
+        <BookOpen size={24} color={COLORS.primary} style={{marginRight: 10}}/>
+        <Text style={styles.groupButtonText}>{item.name_es || item.name}</Text>
+      </View>
     </TouchableOpacity>
   );
 
@@ -86,39 +97,54 @@ export default function ManageGroupsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Mis Grupos</Text>
-        <TouchableOpacity onPress={handleOpenModal}>
-          <PlusCircle size={30} color={COLORS.secondary || 'blue'} />
-        </TouchableOpacity>
-      </View>
+      {/* Usamos ScrollView general en lugar de FlatList anidados */}
+      <ScrollView 
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>Gestión Docente</Text>
+          <TouchableOpacity onPress={handleOpenModal}>
+            <PlusCircle size={30} color={COLORS.secondary || 'blue'} />
+          </TouchableOpacity>
+        </View>
 
-      <FlatList
-        data={myGroups}
-        renderItem={renderGroup}
-        keyExtractor={(item) => item.id.toString()}
-        style={styles.list}
-        ListEmptyComponent={<Text style={styles.emptyText}>No has creado ningún grupo.</Text>}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-      />
+        {/* --- SECCIÓN ASIGNATURAS --- */}
+        <Text style={styles.sectionTitle}>Asignaturas</Text>
+        <Text style={styles.subtitle}>Toca para ordenar temas</Text>
+        
+        {subjects.length > 0 ? (
+          subjects.map((subject) => (
+            <View key={subject.id}>
+                {renderSubject({ item: subject })}
+            </View>
+          ))
+        ) : (
+            <Text style={styles.emptyText}>No hay asignaturas disponibles.</Text>
+        )}
 
-      {isSuper && (
-        <>
-          <Text style={styles.title}>Otros Grupos</Text>
-          <FlatList
-            data={otherGroups}
-            renderItem={renderGroup}
-            keyExtractor={(item) => item.id.toString()}
-            style={styles.list}
-            ListEmptyComponent={<Text style={styles.emptyText}>No hay otros grupos disponibles.</Text>}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-            }
-          />
-        </>
-      )}
+        <View style={styles.divider} />
+
+        {/* --- SECCIÓN GRUPOS --- */}
+        <Text style={styles.sectionTitle}>Mis Grupos</Text>
+        {myGroups.length > 0 ? (
+             myGroups.map((group) => (
+                <View key={group.id}>{renderGroup({ item: group })}</View>
+             ))
+        ) : (
+            <Text style={styles.emptyText}>No has creado ningún grupo.</Text>
+        )}
+
+        {isSuper && (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.sectionTitle}>Otros Grupos</Text>
+            {otherGroups.map((group) => (
+                <View key={group.id}>{renderGroup({ item: group })}</View>
+            ))}
+          </>
+        )}
+      </ScrollView>
 
       {subjects.length > 0 && (
         <CreateGroupModal
@@ -154,9 +180,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.text,
   },
-  list: {
-    width: '100%',
-  },
   groupButton: {
     backgroundColor: COLORS.white || 'white',
     padding: 20,
@@ -179,8 +202,27 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    marginTop: 50,
+    marginTop: 20,
+    marginBottom: 20,
     fontSize: 16,
-    color: COLORS.gray || 'gray',
+    color: 'gray',
   },
+  // Estilos nuevos
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: 'gray',
+    marginBottom: 15,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e0e0e0',
+    marginVertical: 15,
+  }
 });
