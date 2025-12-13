@@ -4,7 +4,7 @@ import { mockApi } from "../services/api";
 import { ContentModal } from "../components/ContentModal";
 import { ConceptModal } from "../components/ConceptModal"; 
 import { StyledButton } from "../components/StyledButton";
-import { View, Text, StyleSheet, ScrollView, Platform, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Platform, ActivityIndicator, useWindowDimensions } from "react-native";
 import { COLORS } from "../constants/colors";
 import { Ionicons } from '@expo/vector-icons'; 
 import { useVoiceControl } from "../context/VoiceContext";
@@ -19,15 +19,18 @@ export const TopicDetailScreen = ({ route }) => {
   const [isLoading, setIsLoading] = useState(true);
   const navigation = useNavigation();
 
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width > 850;
+
   // Modales
   const [epigraphModalVisible, setEpigraphModalVisible] = useState(false);
   const [epigraphContent, setEpigraphContent] = useState({ title: "", content: "" });
-
   const [conceptModalVisible, setConceptModalVisible] = useState(false);
   const [selectedConcept, setSelectedConcept] = useState(null);
 
   const { topic } = route.params; 
 
+  // Obtener detalles
   const fetchTopicDetails = async () => {
     try {
       setIsLoading(true);
@@ -42,14 +45,20 @@ export const TopicDetailScreen = ({ route }) => {
     }
   };
 
+  // --- Voice Control Logic ---
+
   const normalizeText = (text) => {
     return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
   };
 
   useEffect(() => {
-    if (!transcript || !isFocused) return;
+    if (isFocused) setTranscript('');
+  }, [isFocused]);
 
+  useEffect(() => {
+    if (!transcript || !isFocused) return;
     const spoken = normalizeText(transcript);
+    if (!spoken || spoken.length < 2) return;
 
     if (spoken.includes('cerrar') || spoken.includes('close')) {
         setEpigraphModalVisible(false);
@@ -65,12 +74,8 @@ export const TopicDetailScreen = ({ route }) => {
             setTranscript('');
             return;
         }
-
-        if (navigation.canGoBack()) {
-            navigation.goBack();
-        } else {
-            navigation.navigate('Home');
-        }
+        if (navigation.canGoBack()) navigation.goBack();
+        else navigation.navigate('Home');
         setTranscript('');
         return;
     }
@@ -79,7 +84,7 @@ export const TopicDetailScreen = ({ route }) => {
         if (topicData.concepts) {
             const foundConcept = topicData.concepts.find(c => {
                 const normName = normalizeText(c.name);
-                return spoken.includes(normName) || normName.includes(spoken);
+                return normName && (spoken.includes(normName) || normName.includes(spoken));
             });
             if (foundConcept) {
                 handleConceptPress(foundConcept);
@@ -90,7 +95,7 @@ export const TopicDetailScreen = ({ route }) => {
         if (topicData.epigraphs) {
             const foundEpigraph = topicData.epigraphs.find(e => {
                 const normName = normalizeText(e.name);
-                return spoken.includes(normName) || normName.includes(spoken);
+                return normName && (spoken.includes(normName) || normName.includes(spoken));
             });
             if (foundEpigraph) {
                 handleEpigraphPress(foundEpigraph);
@@ -99,12 +104,13 @@ export const TopicDetailScreen = ({ route }) => {
             }
         }
     }
-
   }, [transcript, isFocused, topicData, epigraphModalVisible, conceptModalVisible, navigation]);
 
   useEffect(() => {
     fetchTopicDetails();
   }, [topic, language]);
+
+  // Manejadores
 
   const handleEpigraphPress = (item) => {
     setEpigraphContent({ title: item.name, content: item.description });
@@ -118,19 +124,27 @@ export const TopicDetailScreen = ({ route }) => {
 
   const handleRelatedConceptNavigation = (target) => {
     if (!topicData || !topicData.concepts) return;
-
     let foundConcept = null;
-    if (typeof target === 'object' && target.id) {
-       foundConcept = conceptData.find(c => c.id === target.id);
-    } else if (typeof target === 'object' && target.name) {
-       foundConcept = conceptData.find(c => c.name === target.name);
-    } else if (typeof target === 'string') {
-       foundConcept = conceptData.find(c => c.name === target);
-    }
+    if (typeof target === 'object' && target.id) foundConcept = conceptData.find(c => c.id === target.id);
+    else if (typeof target === 'object' && target.name) foundConcept = conceptData.find(c => c.name === target.name);
+    else if (typeof target === 'string') foundConcept = conceptData.find(c => c.name === target);
 
-    if (foundConcept) {
-      setSelectedConcept(foundConcept);
+    if (foundConcept) setSelectedConcept(foundConcept);
+  };
+
+  const ListWrapper = ({ children }) => {
+    if (isLargeScreen) {
+        return (
+            <ScrollView 
+                style={{ flex: 1, width: '100%' }}
+                contentContainerStyle={{ paddingBottom: 20, paddingRight: 10 }}
+                showsVerticalScrollIndicator={true}
+            >
+                {children}
+            </ScrollView>
+        );
     }
+    return <View style={{ width: '100%' }}>{children}</View>;
   };
 
   if (isLoading) {
@@ -150,80 +164,103 @@ export const TopicDetailScreen = ({ route }) => {
     );
   }
 
+  const MainContent = () => (
+    <>
+        <View style={styles.header}>
+            <Text style={styles.headerTitle}>{topicData.topic.title}</Text>
+            <Text style={styles.headerDescription}>{topicData.topic.description}</Text>
+        </View>
+        
+        <View style={[
+            styles.contentLayout, 
+            isLargeScreen ? styles.rowLayout : styles.columnLayout
+        ]}>
+            {/* --- SECCIÓN 1: EPÍGRAFES --- */}
+            {/* CORRECCIÓN: Aquí es donde aplicamos el estilo condicional para quitar el flex:1 en móvil */}
+            <View style={[styles.sectionContainer, isLargeScreen && styles.sectionContainerWeb]}>
+                <View style={styles.sectionHeader}>
+                    <View style={styles.iconBox}>
+                        <Ionicons name="list" size={20} color={COLORS.primary} />
+                    </View>
+                    <Text style={styles.sectionTitle}>{t("headings")}</Text>
+                </View>
+
+                <ListWrapper>
+                    {topicData.epigraphs && topicData.epigraphs.length > 0 ? (
+                        topicData.epigraphs.map((item) => (
+                        <StyledButton 
+                            style={styles.epigraphCard} 
+                            key={`epigraph-${item.id}`} 
+                            onPress={() => handleEpigraphPress(item)}
+                        >
+                            <Text style={styles.epigraphTitle}>{item.name}</Text>
+                            <Ionicons name="chevron-forward-circle" size={24} color={COLORS.primary} style={{ opacity: 0.6 }} />
+                        </StyledButton>
+                        ))
+                    ) : (
+                        <Text style={styles.emptyText}>{t("no_headings")}</Text>
+                    )}
+                </ListWrapper>
+            </View>
+
+            {/* --- SECCIÓN 2: CONCEPTOS --- */}
+            <View style={[styles.sectionContainer, isLargeScreen && styles.sectionContainerWeb]}>
+                <View style={styles.sectionHeader}>
+                    <View style={styles.iconBox}>
+                        <Ionicons name="bulb" size={20} color={COLORS.primary} />
+                    </View>
+                    <Text style={styles.sectionTitle}>{t("concepts")}</Text>
+                </View>
+                
+                <ListWrapper>
+                    {topicData.concepts && topicData.concepts.length > 0 ? (
+                        topicData.concepts.map((item) => (
+                        <StyledButton 
+                            style={styles.conceptCard} 
+                            key={`concept-${item.id}`} 
+                            onPress={() => handleConceptPress(item)}
+                        >
+                            <View style={styles.cardHeader}>
+                                <Text style={styles.itemTitle}>{item.name}</Text>
+                                {item.related_concepts && item.related_concepts.length > 0 && (
+                                    <View style={styles.badge}>
+                                        <Text style={styles.badgeText}>{item.related_concepts.length}</Text>
+                                    </View>
+                                )}
+                            </View>
+                            <Text style={styles.itemSubtitle} numberOfLines={3}>
+                                {item.description}
+                            </Text>
+                        </StyledButton>
+                        ))
+                    ) : (
+                        <Text style={styles.emptyText}>{t("no_concepts")}</Text>
+                    )}
+                </ListWrapper>
+            </View>
+        </View>
+    </>
+  );
+
   return (
     <View style={styles.mainContainer}>
-      <ScrollView 
-        style={styles.scrollView} 
-        contentContainerStyle={styles.scrollContentContainer} 
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.responsiveContainer}>
-            
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>{topicData.topic.title}</Text>
-              <Text style={styles.headerDescription}>{topicData.topic.description}</Text>
+        {isLargeScreen ? (
+            <View style={styles.webContainer}>
+                <View style={styles.centeredWrapperWeb}>
+                    <MainContent />
+                </View>
             </View>
-            
-            {/* SECCIÓN CONCEPTOS */}
-            <View style={styles.sectionHeader}>
-              <Ionicons name="bulb" size={20} color={COLORS.primary} />
-              <Text style={styles.sectionTitle}>{t("concepts")}</Text>
-            </View>
-            
-            {topicData.concepts && topicData.concepts.length > 0 ? (
-              topicData.concepts.map((item) => (
-                <StyledButton 
-                  // AQUÍ ESTÁ LA CORRECCIÓN CLAVE: Sobreescribimos el layout del botón
-                  style={styles.cardButton} 
-                  key={`concept-${item.id}`} 
-                  onPress={() => handleConceptPress(item)}
-                >
-                  <View style={styles.cardContent}>
-                    <View style={styles.cardTextContainer}>
-                      <Text style={styles.itemTitle}>{item.name}</Text>
-                      <Text style={styles.itemSubtitle} numberOfLines={2}>
-                        {item.description}
-                      </Text>
-                    </View>
-                    {item.related_concepts && item.related_concepts.length > 0 && (
-                      <View style={styles.badge}>
-                        <Ionicons name="git-network-outline" size={14} color={COLORS.surface} />
-                        <Text style={styles.badgeText}>{item.related_concepts.length}</Text>
-                      </View>
-                    )}
-                  </View>
-                </StyledButton>
-              ))
-            ) : (
-              <Text style={styles.emptyText}>{t("no_concepts")}</Text>
-            )}
-
-            {/* SECCIÓN EPÍGRAFES */}
-            <View style={styles.sectionHeader}>
-              <Ionicons name="list" size={20} color={COLORS.primary} />
-              <Text style={styles.sectionTitle}>{t("headings")}</Text>
-            </View>
-
-            {topicData.epigraphs && topicData.epigraphs.length > 0 ? (
-              topicData.epigraphs.map((item) => (
-                <StyledButton 
-                  style={[styles.cardButton, styles.epigraphCard]} 
-                  key={`epigraph-${item.id}`} 
-                  onPress={() => handleEpigraphPress(item)}
-                >
-                  <Text style={styles.epigraphTitle}>
-                    {item.name}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={18} color={COLORS.secondary} />
-                </StyledButton>
-              ))
-            ) : (
-              <Text style={styles.emptyText}>{t("no_headings")}</Text>
-            )}
-
-        </View>
-      </ScrollView>
+        ) : (
+            <ScrollView 
+                style={{ flex: 1, width: '100%' }}
+                contentContainerStyle={styles.scrollContentMobile}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.centeredWrapperMobile}> 
+                    <MainContent />
+                </View>
+            </ScrollView>
+        )}
 
       <ContentModal
         visible={epigraphModalVisible}
@@ -231,7 +268,6 @@ export const TopicDetailScreen = ({ route }) => {
         title={epigraphContent.title}
         content={epigraphContent.content}
       />
-
       <ConceptModal
         visible={conceptModalVisible}
         onClose={() => setConceptModalVisible(false)}
@@ -248,150 +284,206 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  scrollView: {
+  
+  webContainer: {
+    flex: 1,
+    height: '100%', 
+    overflow: 'hidden', 
+  },
+  centeredWrapperWeb: {
     flex: 1,
     width: '100%',
+    maxWidth: 1200, 
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingBottom: 20, 
+    alignSelf: 'center',
+    minHeight: 0, 
   },
-  scrollContentContainer: {
-    flexGrow: 1,
-    alignItems: 'center', 
+  
+  sectionContainerWeb: {
+     flex: 1,
+     height: '100%', 
+     overflow: 'hidden',
+  },
+
+  centeredWrapperMobile: {
+    width: '100%',
+    maxWidth: 600, 
+    alignSelf: 'center',
+  },
+  scrollContentMobile: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 40,
-  },
-  responsiveContainer: {
-    width: '100%',
-    maxWidth: 800, 
-    padding: 20,
-    alignItems: 'stretch', // Asegura que los hijos ocupen el ancho disponible
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: COLORS.background,
-  },
-  loadingText: {
-    color: COLORS.secondary,
-  },
-  header: {
-    paddingTop: 10,
-    marginBottom: 10,
     alignItems: 'center',
   },
+  
+  contentLayout: {
+    flex: 1, 
+    width: '100%',
+    minHeight: 0,
+  },
+  columnLayout: {
+    flexDirection: 'column',
+  },
+  rowLayout: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    height: '100%', 
+    gap: 24, 
+  },
+  
+  sectionContainer: {
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 0,
+  },
+
+  header: {
+    marginBottom: 30, 
+    alignItems: 'center',
+    flexShrink: 0, 
+  },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "800",
     color: COLORS.text,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
+    letterSpacing: -0.5,
   },
   headerDescription: {
     fontSize: 16,
-    color: COLORS.textSecondary || COLORS.text,
+    color: COLORS.textSecondary,
     textAlign: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 10,
+    maxWidth: 600,
     lineHeight: 24,
   },
+
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 16,
-    gap: 8,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    alignSelf: 'flex-start', // Alinea el título de sección a la izquierda
-    width: '100%',
+    marginBottom: 15,
+    gap: 12,
+    flexShrink: 0, 
+  },
+  iconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: { elevation: 3 },
+      web: { boxShadow: '0px 2px 8px rgba(0,0,0,0.05)' }
+    }),
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "700",
     color: COLORS.text,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
-  // --- CORRECCIÓN CRÍTICA DE ESTILOS DE TARJETA ---
-  cardButton: {
+
+  epigraphCard: {
     backgroundColor: COLORS.surface,
-    padding: 16,
+    padding: 18,
     borderRadius: 16,
     marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    
-    // ESTAS 3 LÍNEAS ARREGLAN EL DESASTRE VISUAL:
-    width: '100%',            // Ocupa todo el ancho del contenedor
-    alignItems: 'stretch',    // Sobreescribe el 'center' del StyledButton original
-    justifyContent: 'center', // Mantiene contenido centrado verticalmente si es necesario
-
+    borderColor: COLORS.border,
     ...Platform.select({
-      web: { boxShadow: '0px 2px 8px rgba(0,0,0,0.05)' },
-      default: {
+      ios: {
         shadowColor: COLORS.shadow,
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
       },
+      android: { elevation: 3 },
+      web: { boxShadow: '0px 2px 8px rgba(0,0,0,0.05)' }
     }),
   },
-  cardContent: {
+  epigraphTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.text,
+    flex: 1,
+  },
+
+  conceptCard: {
+    backgroundColor: COLORS.surface,
+    padding: 20,
+    borderRadius: 18,
+    marginBottom: 16,
+    width: '100%',
+    alignItems: 'stretch',
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.primary,
+    ...Platform.select({
+      ios: {
+        shadowColor: COLORS.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: { elevation: 3 },
+      web: { boxShadow: '0px 2px 8px rgba(0,0,0,0.05)' }
+    }),
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%', // Asegura que el contenido interno use todo el espacio
-  },
-  cardTextContainer: {
-    flex: 1, // Toma todo el espacio excepto el badge
-    marginRight: 10,
-    alignItems: 'flex-start', // Alinea el texto a la izquierda
+    marginBottom: 8,
   },
   itemTitle: {
     fontSize: 17,
     fontWeight: "700",
     color: COLORS.text,
-    marginBottom: 4,
-    textAlign: 'left', // Fuerza alineación izquierda del texto
+    flex: 1,
   },
   itemSubtitle: {
     fontSize: 14,
-    color: COLORS.textSecondary || COLORS.secondary,
+    color: COLORS.textSecondary,
     lineHeight: 20,
-    textAlign: 'left', // Fuerza alineación izquierda del texto
   },
   badge: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: COLORS.background, 
+    borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    gap: 4,
-    alignSelf: 'flex-start', // Evita que el badge se estire
+    marginLeft: 8,
   },
   badgeText: {
-    color: COLORS.surface,
-    fontSize: 12,
-    fontWeight: 'bold',
+    color: COLORS.secondary,
+    fontSize: 11,
+    fontWeight: '800',
   },
-  epigraphCard: {
-    flexDirection: 'row', // Sobreescribe si cardButton tuviera column
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 18,
-  },
-  epigraphTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: COLORS.text,
+  
+  loadingContainer: {
     flex: 1,
-    textAlign: 'left',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.overlay,
   },
+  loadingText: { marginTop: 10, color: COLORS.textLight },
   emptyText: {
     fontStyle: 'italic',
-    color: COLORS.textSecondary,
+    color: COLORS.textLight,
     textAlign: 'center',
-    marginVertical: 10,
+    marginTop: 20,
   },
 });
