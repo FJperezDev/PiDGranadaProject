@@ -170,10 +170,11 @@ export const ConceptModal = ({ visible, onClose, onSubmit, editingConcept, allCo
         });
         
         // Mapeamos los existentes
-        const related = detailed.related_concepts ? detailed.related_concepts.map(c => ({
-          id: c.id,
-          name: c.name,
-          relationship_comment: c.pivot?.relationship_comment || '' // Asumiendo que el backend te devuelve esto
+        const related = detailed.related_concepts ? detailed.related_concepts.map(r => ({
+          id: r.concept_to.id,
+          name: r.concept_to.name || r.concept_to.name_es,
+          description_es: r.description_es || '',
+          description_en: r.description_en || '',
         })) : [];
         
         setRelatedConcepts(related);
@@ -192,12 +193,16 @@ export const ConceptModal = ({ visible, onClose, onSubmit, editingConcept, allCo
       setRelatedConcepts(prev => prev.filter(r => r.id !== item.id));
     } else {
       // Si no existe, lo añadimos con comentario vacío
-      setRelatedConcepts(prev => [...prev, { id: item.id, name: item.name || item.name_es, relationship_comment: '' }]);
+      setRelatedConcepts(prev => [...prev, { id: item.id, name: item.name || item.name_es, description_es: '', description_en: '' }]);
     }
   };
 
-  const updateRelationshipComment = (id, text) => {
-    setRelatedConcepts(prev => prev.map(r => r.id === id ? { ...r, relationship_comment: text } : r));
+  const updateRelationDescES = (id, text) => {
+    setRelatedConcepts(prev => prev.map(r => r.id === id ? { ...r, description_es: text } : r));
+  };
+
+  const updateRelationDescEN = (id, text) => {
+    setRelatedConcepts(prev => prev.map(r => r.id === id ? { ...r, description_en: text } : r));
   };
 
   const availableConceptsToLink = allConcepts.filter(c => !editingConcept || c.id !== editingConcept.id);
@@ -239,11 +244,23 @@ export const ConceptModal = ({ visible, onClose, onSubmit, editingConcept, allCo
                   <Trash2 size={18} color={COLORS.danger} />
                 </TouchableOpacity>
               </View>
+              
+              {/* Input Español */}
+              <Text style={{fontSize: 10, color: 'gray', marginBottom: 2}}>Explicación (ES)</Text>
+              <TextInput 
+                style={[styles.relationInput, {marginBottom: 8}]} 
+                placeholder="Ej: Es un tipo de..." 
+                value={relation.description_es}
+                onChangeText={(t) => updateRelationDescES(relation.id, t)}
+              />
+
+              {/* Input Inglés */}
+              <Text style={{fontSize: 10, color: 'gray', marginBottom: 2}}>Explanation (EN)</Text>
               <TextInput 
                 style={styles.relationInput} 
-                placeholder="Explicar relación (ej: 'Es un tipo de...')" 
-                value={relation.relationship_comment}
-                onChangeText={(t) => updateRelationshipComment(relation.id, t)}
+                placeholder="Ex: It is a type of..." 
+                value={relation.description_en}
+                onChangeText={(t) => updateRelationDescEN(relation.id, t)}
               />
             </View>
           ))}

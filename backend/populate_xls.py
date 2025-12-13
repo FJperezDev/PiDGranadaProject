@@ -10,7 +10,7 @@ TEACHER_PASSWORD = "admin123"
 EXCEL_FILE = "Prueba.xlsx"
 
 # Número de peticiones simultáneas (ajustar si el servidor se satura)
-MAX_WORKERS = 5
+MAX_WORKERS = 3
 
 def clean_str(val):
     if pd.isna(val) or val == "":
@@ -247,14 +247,24 @@ def main():
             print("⏳ Procesando Respuestas...")
             for _, row in xls["answers"].iterrows():
                 q_code = clean_str(row.get("question_code"))
+                
                 if q_id := questions_map.get(q_code):
-                    payload = row.to_dict()
-                    payload.pop("question_code", None)
-                    if "is_correct" in payload:
-                        payload["is_correct"] = str(payload["is_correct"]).lower() in ['true', '1', 'yes']
+                    # FORZAMOS LA RECOGIDA EXPLÍCITA DE LOS CAMPOS
+                    payload = {
+                        "text_es": clean_str(row.get("text_es")),
+                        "text_en": clean_str(row.get("text_en")),
+                        "is_correct": str(row.get("is_correct")).lower() in ['true', '1', 'yes']
+                    }
                     
-                    # Fuego y olvido (no necesitamos el ID de la respuesta para nada más)
+                    # Validamos que no enviamos respuestas vacías
+                    if not payload["text_es"] and not payload["text_en"]:
+                        log_warning(f"Saltando respuesta para Q{q_code}: Texto vacío")
+                        continue
+
+                    # Fuego y olvido
                     executor.submit(post_task, session, f"{BASE_URL}/questions/{q_id}/answers/", payload, f"Rta Q{q_code}", None)
+                else:
+                    log_warning(f"Saltando respuesta: Pregunta Q{q_code} no encontrada (Mapa tiene {len(questions_map)} preguntas)")
 
         # --- STUDENT GROUPS ---
         if "student_groups" in xls:

@@ -6,7 +6,9 @@ export const getTopics = async () => (await apiClient.get('/topics/')).data;
 export const getTopicInfo = async (id) => (await apiClient.get(`/topics/${id}/`)).data
 export const createTopic = async (data) => (await apiClient.post('/topics/', data)).data;
 export const deleteTopic = async (id) => (await apiClient.delete(`/topics/${id}/`)).data;
-export const updateTopic = async (id, data) => (await apiClient.put(`/topics/${id}/`, data)).data;
+export const updateTopic = async (id, data) => (
+  console.log(data),
+  await apiClient.put(`/topics/${id}/`, data)).data;
 
 export const getSubjectTopics = async (subjectId) => 
   (await apiClient.get(`/subjects/${subjectId}/topics/`)).data;
@@ -41,7 +43,24 @@ export const deleteConcept = async (id) => (await apiClient.delete(`/concepts/${
 export const updateConcept = async (id, data) => (await apiClient.put(`/concepts/${id}/`, data)).data;
 // --- Conceptos (Linked actions) ---
 
+
 export const getTopicConcepts = async (topicId) => (await apiClient.get(`/topics/${topicId}/concepts/`)).data;
-export const linkConceptToConcept = async (parentId, childConceptName) => (await apiClient.post(`/concepts/${parentId}/concepts/`, { concept_name: childConceptName })).data;
-export const unlinkConceptFromConcept = async (parentId, childConceptName) => (await apiClient.delete(`/concepts/${parentId}/concepts/`, { data: { concept_name: childConceptName } })).data;
+
+export const linkConceptToConcept = async (parentId, childId, description_es = '', description_en = '') => {
+  const response = await apiClient.post(`/concepts/${parentId}/concepts/`, { // Verifica tu URL exacta
+    concept_id: childId, 
+    description_es: description_es,
+    description_en: description_en,
+  });
+  return response.data;
+};
+
+// Esta función déjala como la arreglamos antes (usando ID)
+export const unlinkConceptFromConcept = async (parentId, childConceptId) => {
+  return (await apiClient.delete(`/concepts/${parentId}/concepts/`, { 
+    data: { 
+      concept_id: childConceptId 
+    } 
+  })).data;
+};
 

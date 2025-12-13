@@ -1,7 +1,6 @@
 import React, { useState, useContext, useCallback } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, RefreshControl, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { AuthContext } from '../context/AuthContext';
 import { 
   getSubjects 
 } from '../api/coursesRequests';
@@ -179,16 +178,15 @@ export default function ManageContentScreen({ navigation }) {
   const handleSaveConcept = async (data, originalIdsFromModal = []) => {
     setLoading(true);
     try {
-      // 1. Preparar datos
-      const currentSelectedIds = data.related_concept_ids || [];
-      
-      // Quitamos 'related_concept_ids' del objeto data antes de enviarlo a create/update
+      const incomingRelations = data.related_concepts || [];
+      const incomingIds = incomingRelations.map(r => r.id);
+  
       const dataToSave = { ...data };
-      delete dataToSave.related_concept_ids; 
-
+      delete dataToSave.related_concepts;
+      delete dataToSave.related_concept_ids;
+  
       let parentConceptId;
-
-      // 2. Guardar o Actualizar el concepto PADRE para tener su ID
+  
       if (editingItem) {
         await updateConcept(editingItem.id, dataToSave);
         parentConceptId = editingItem.id;
@@ -197,50 +195,25 @@ export default function ManageContentScreen({ navigation }) {
         parentConceptId = newConcept.id;
       }
 
-      // 3. Calcular Deltas (Lógica de conjuntos)
-      
-      // A. QUITAR (Estaban antes, ahora no)
-      const idsToUnlink = originalIdsFromModal.filter(id => !currentSelectedIds.includes(id));
-
-      // B. AÑADIR (No estaban antes, ahora sí)
-      const idsToLink = currentSelectedIds.filter(id => !originalIdsFromModal.includes(id));
-
-      // Helper: Necesitamos el NOMBRE del hijo porque tu backend lo pide en el body
-      const getConceptNameById = (id) => {
-        const found = concepts.find(c => c.id === id);
-        return found ? (found.name_es || found.name) : null;
-      };
-
-      // 4. Ejecutar promesas (Link / Unlink)
-      // CAMBIO IMPORTANTE: Usamos parentConceptId (URL) y childName (Body)
-
-      const unlinkPromises = idsToUnlink.map(childId => {
-        const childName = getConceptNameById(childId);
-        if (childName) {
-          // API: delete /concepts/{parentId}/concepts/ body: { concept_name: childName }
-          return unlinkConceptFromConcept(parentConceptId, childName);
-        }
-        return Promise.resolve();
+      const idsToUnlink = originalIdsFromModal.filter(id => !incomingIds.includes(id));
+      const unlinkPromises = idsToUnlink.map(childId => unlinkConceptFromConcept(parentConceptId, childId));
+  
+      const linkPromises = incomingRelations.map(relation => {
+        return linkConceptToConcept(
+            parentConceptId, 
+            relation.id, 
+            relation.description_es,
+            relation.description_en,
+        );
       });
-
-      const linkPromises = idsToLink.map(childId => {
-        const childName = getConceptNameById(childId);
-        if (childName) {
-          // API: post /concepts/{parentId}/concepts/ body: { concept_name: childName }
-          return linkConceptToConcept(parentConceptId, childName);
-        }
-        return Promise.resolve();
-      });
-
-      // Esperar a que terminen todas las relaciones
+  
       await Promise.all([...unlinkPromises, ...linkPromises]);
-
-      // 5. Finalizar
+  
       setConceptModalVisible(false);
       setEditingItem(null);
-      fetchData(); // Recargar todo
-      Alert.alert('Éxito', 'Concepto y relaciones guardados');
-
+      fetchData(); 
+      Alert.alert('Éxito', 'Concepto y relaciones guardados correctamente');
+  
     } catch (e) { 
       console.error(e);
       Alert.alert('Error', 'Ocurrió un error al guardar'); 

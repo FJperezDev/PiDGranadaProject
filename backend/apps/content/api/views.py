@@ -201,47 +201,58 @@ class ConceptViewSet(BaseContentViewSet):
 
         elif request.method == 'POST':
             concept_from = selectors.get_concept_by_id(pk)
+            
+            # --- CAMBIO: Aceptamos ID o Nombre, priorizando ID ---
+            concept_id = request.data.get('concept_id')
             concept_name = request.data.get('concept_name')
-            description_es = request.data.get('description_es', '')
-            description_en = request.data.get('description_en', '')
             bidirectional = request.data.get('bidirectional', False)
 
-            concept_to = selectors.get_concept_by_name(name=concept_name)
+            concept_to = None
+            if concept_id:
+                try:
+                    concept_to = selectors.get_concept_by_id(concept_id)
+                except:
+                    pass # Si falla el ID, intentará por nombre abajo
+            
+            if not concept_to and concept_name:
+                concept_to = selectors.get_concept_by_name(name=concept_name)
+            
             if not concept_to:
-                return Response({'detail': 'Concept not found'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'detail': 'Concept not found via ID or Name'}, status=status.HTTP_404_NOT_FOUND)
+            # -----------------------------------------------------
 
             try:
-                services.link_concepts(concept_from, concept_to, description_es, description_en, bidirectional)
+                services.link_concepts(concept_from, concept_to, request.data.get('description_es', ''), request.data.get('description_en', ''), bidirectional)
             except ValidationError as e:
+                print(f"ERROR LINKING: {e}") # <--- VERÁS ESTO EN CONSOLA
                 return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response({
-                'message': 'Concepts linked successfully',
-                'from_id': concept_from.id,
-                'to_id': concept_to.id,
-                'bidirectional': bidirectional
-            }, status=status.HTTP_200_OK)
+            return Response({'message': 'Linked successfully'}, status=status.HTTP_200_OK)
 
         elif request.method == 'DELETE':
             concept_from = selectors.get_concept_by_id(pk)
+            
+            # (Esta parte del ID ya la tenías bien, la dejo por seguridad)
+            concept_id = request.data.get('concept_id')
             concept_name = request.data.get('concept_name')
             bidirectional = request.data.get('bidirectional', False)
 
-            concept_to = selectors.get_concept_by_name(name=concept_name)
+            concept_to = None
+            if concept_id:
+                 concept_to = selectors.get_concept_by_id(concept_id)
+            elif concept_name:
+                 concept_to = selectors.get_concept_by_name(name=concept_name)
+            
             if not concept_to:
                 return Response({'detail': 'Concept not found'}, status=status.HTTP_404_NOT_FOUND)
 
             try:
                 services.unlink_concepts(concept_from, concept_to, bidirectional)
             except ValidationError as e:
+                print(f"ERROR UNLINKING: {e}") # <--- IMPORTANTE: VERÁS ESTO EN CONSOLA
                 return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response({
-                'message': 'Concept link removed',
-                'from_id': concept_from.id,
-                'to_id': concept_to.id,
-                'bidirectional': bidirectional
-            }, status=status.HTTP_200_OK)
+            return Response({'message': 'Unlinked successfully'}, status=status.HTTP_200_OK)
 
     def update(self, request, *args, **kwargs):
         concept = selectors.get_concept_by_id(kwargs['pk'])
