@@ -32,8 +32,14 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-default-key')
 
 ALLOWED_HOSTS = ['localhost', 'api.franjpg.com']
 
-# Development only: CORS settings
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        "https://teacher.franjpg.com",  # Tu frontend web
+        "http://localhost:8081",        # Desarrollo local de React Native/Expo
+    ]
 
 # Application definition
 
