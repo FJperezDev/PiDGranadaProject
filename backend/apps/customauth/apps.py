@@ -16,12 +16,14 @@ class ApiConfig(AppConfig):
                     username='admin',
                     email='admin@admin.com',
                     password='admin123',
-                    is_super=True
+                    is_super=True,
+                    is_active=True
                 )
                 CustomTeacher.objects.create_user(
                     username='fran',
                     email='fran@gmail.com',
                     password='fran123',
+                    is_active=True,
                     is_super=False
                 )
         except (OperationalError, ProgrammingError):
