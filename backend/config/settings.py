@@ -37,8 +37,9 @@ if DEBUG:
 else:
     CORS_ALLOW_ALL_ORIGINS = False
     CORS_ALLOWED_ORIGINS = [
-        "https://teacher.franjpg.com",  # Tu frontend web
-        "http://localhost:8081",        # Desarrollo local de React Native/Expo
+        "https://teacher.franjpg.com",  
+        "https://student.franjpg.com", 
+        "http://localhost:8081",       
     ]
 
 # Application definition
