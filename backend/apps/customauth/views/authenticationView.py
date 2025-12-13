@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
+from rest_framework_simplejwt.tokens import RefreshToken 
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -65,63 +66,64 @@ class LoginView(TokenObtainPairView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-
         username = request.data.get("username") 
         email = request.data.get("email")
         encrypted_password = request.data.get("password")
         
         if not encrypted_password and not (username or email):
-            return Response({'message': 'Email or username and password are required'}, status=400)
+            return Response({'message': 'Email/Username and password are required'}, status=400)
         
+        # --- LÓGICA DE DESENCRIPTACIÓN (Igual que tenías) ---
         if not settings.DEBUG:
-            print("Deploy")
+            print("Deploy mode")
             try:
                 private_key_pem = settings.RSA_PRIVATE_KEY.encode('utf-8') 
-                
-                private_key = serialization.load_pem_private_key(
-                    private_key_pem,
-                    password=None
-                )
-
-                # El frontend envía base64, decodificamos a bytes
+                private_key = serialization.load_pem_private_key(private_key_pem, password=None)
                 ciphertext = base64.b64decode(encrypted_password)
-
                 decrypted_password_bytes = private_key.decrypt(
                     ciphertext,
-                    padding.OAEP(
-                        mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                        algorithm=hashes.SHA256(),
-                        label=None
-                    )
+                    padding.OAEP(mgf=padding.MGF1(algorithm=hashes.SHA256()), algorithm=hashes.SHA256(), label=None)
                 )
                 password = decrypted_password_bytes.decode('utf-8')
-                print("Contraseña: " + password)
-                
+                print(f"Contraseña desencriptada: {password}") # Debug
             except Exception as e:
                 print(f"Error decrypting: {e}")
-                return Response({'message': 'Encryption error or invalid payload'}, status=400)
-
+                return Response({'message': 'Encryption error'}, status=400)
         else:
             password = encrypted_password
 
-        user = None            
-        if username:
-            email = CustomTeacher.objects.get(username=username).email
-            request.data["email"] = email
-            
-        user = authenticate(request, username=email, password=password)
+        # --- CORRECCIÓN CLAVE AQUÍ ---
+        # Objetivo: Obtener el USERNAME real, ya que es lo que authenticate necesita.
+        
+        real_username = username # Por defecto asumimos que nos dieron el usuario
+
+        # Si nos dieron email pero no username, buscamos el username asociado
+        if email and not username:
+            try:
+                user_obj = CustomTeacher.objects.get(email=email)
+                real_username = user_obj.username
+            except CustomTeacher.DoesNotExist:
+                return Response({'message': 'User not found'}, status=401)
+
+        # Si nos dieron username, ya lo tenemos en real_username.
+        # (Tu código anterior convertía username -> email, eso era el error).
+
+        # Autenticamos usando el USERNAME real
+        user = authenticate(request, username=real_username, password=password)
+
         if user is None:
-            return Response({'message': 'Invalid credentials'}, status=401)
+            return Response({'message': 'Credenciales inválidas'}, status=401)
 
-        response = super().post(request)
-        if response.status_code == status.HTTP_200_OK:
-            response.data['message'] = 'Logged in successfully'
-            # response.data['user'] = CustomTeacherSerializer(user).data
-        else:
-            response.data['error'] = str(response.status_code)
+        # Generar tokens manualmente (Más seguro que llamar a super().post en casos personalizados)
+        refresh = RefreshToken.for_user(user)
 
-        return response
-
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'message': 'Logged in successfully',
+            'user': CustomTeacherSerializer(user).data
+        }, status=status.HTTP_200_OK)
+    
 class LogoutView(APIView):
     permission_classes= [permissions.AllowAny]
 
