@@ -41,8 +41,9 @@ services:
 
   # --- FRONTEND 2 (Profesor/Admin) ---
   frontend_teacher:
-    build: ./frontendTeacher
-    args:
+    build:
+      context: ./frontendTeacher
+      args:
         - EXPO_PUBLIC_KEY_B64=${RSA_PUBLIC_KEY_B64}
     networks:
       - proxy

@@ -35,4 +35,4 @@ echo "✅ Claves generadas e inyectadas en .env"
 echo "🚀 Levantando Docker Compose..."
 
 # 5. Levantar Docker Compose
-docker compose up -d --build
+docker compose up --build
