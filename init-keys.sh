@@ -1,38 +1,47 @@
 #!/bin/bash
 
+# Detectar el sistema operativo para usar el comando base64 correcto
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # Mac OS
+    B64_CMD="base64 -i -"
+else
+    # Linux / Windows Git Bash
+    B64_CMD="base64 -w0"
+fi
+
 echo "🔐 Generando par de claves RSA..."
 
-# 1. Generar claves temporales
+# 1. Generar claves RSA (Archivos temporales necesarios)
 openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
 openssl rsa -pubout -in private.pem -out public.pem
 
-# 2. Convertir a Base64 para evitar problemas con saltos de línea en Docker
-# La flag -w0 evita saltos de línea en el output base64
-PRIVATE_KEY_B64=$(base64 -w0 private.pem) # En Mac usa: base64 -i private.pem
-PUBLIC_KEY_B64=$(base64 -w0 public.pem)   # En Mac usa: base64 -i public.pem
+# 2. Convertir a Base64 (Para manejar los saltos de línea en el .env)
+# Usamos 'cat' y tubería (|) para que funcione con la detección de OS de arriba
+PRIVATE_KEY_B64=$(cat private.pem | $B64_CMD)
+PUBLIC_KEY_B64=$(cat public.pem | $B64_CMD)
 
-# 3. Guardar en un archivo .env
-# Si ya existe .env, hacemos un backup, si no, lo creamos
-if [ -f .env ]; then
-    # Actualizamos solo las llaves o las añadimos si no existen
-    # (Esto es un método simple, sobreescribe el .env para este ejemplo)
-    echo "⚠️  Sobreescribiendo claves en .env existente..."
-fi
+# 3. Generar DJANGO_SECRET_KEY directa (Sin archivo temporal)
+# Usamos -hex para evitar caracteres raros (+, /, =) que rompen .env a veces
+DJANGO_SECRET_KEY=$(openssl rand -hex 50)
 
-# Creamos el contenido del .env
+# 4. Guardar en .env
+echo "📝 Escribiendo archivo .env..."
+
 cat <<EOF > .env
 POSTGRES_DB=django_db
 POSTGRES_USER=django
 POSTGRES_PASSWORD=django123
 RSA_PRIVATE_KEY_B64=$PRIVATE_KEY_B64
 RSA_PUBLIC_KEY_B64=$PUBLIC_KEY_B64
+DJANGO_SECRET_KEY=$DJANGO_SECRET_KEY
 EOF
 
-# 4. Limpieza
+# 5. Limpieza
 rm private.pem public.pem
+# No hace falta borrar secret.pem porque no lo creamos :)
 
 echo "✅ Claves generadas e inyectadas en .env"
 echo "🚀 Levantando Docker Compose..."
 
-# 5. Levantar Docker Compose
+# 6. Levantar
 docker compose up --build

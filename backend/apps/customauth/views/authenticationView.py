@@ -52,31 +52,35 @@ class LoginView(TokenObtainPairView):
         
         if not encrypted_password and not (username or email):
             return Response({'message': 'Email or username and password are required'}, status=400)
-
-        try:
-            private_key_pem = settings.RSA_PRIVATE_KEY.encode('utf-8') 
-            
-            private_key = serialization.load_pem_private_key(
-                private_key_pem,
-                password=None
-            )
-
-            # El frontend envía base64, decodificamos a bytes
-            ciphertext = base64.b64decode(encrypted_password)
-
-            decrypted_password_bytes = private_key.decrypt(
-                ciphertext,
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                    algorithm=hashes.SHA256(),
-                    label=None
+        
+        if not settings.DEBUG:
+            try:
+                private_key_pem = settings.RSA_PRIVATE_KEY.encode('utf-8') 
+                
+                private_key = serialization.load_pem_private_key(
+                    private_key_pem,
+                    password=None
                 )
-            )
-            password = decrypted_password_bytes.decode('utf-8')
-            
-        except Exception as e:
-            print(f"Error decrypting: {e}")
-            return Response({'message': 'Encryption error or invalid payload'}, status=400)
+
+                # El frontend envía base64, decodificamos a bytes
+                ciphertext = base64.b64decode(encrypted_password)
+
+                decrypted_password_bytes = private_key.decrypt(
+                    ciphertext,
+                    padding.OAEP(
+                        mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                        algorithm=hashes.SHA256(),
+                        label=None
+                    )
+                )
+                password = decrypted_password_bytes.decode('utf-8')
+                
+            except Exception as e:
+                print(f"Error decrypting: {e}")
+                return Response({'message': 'Encryption error or invalid payload'}, status=400)
+
+        else:
+            password = encrypted_password
 
         user = None            
         if username:

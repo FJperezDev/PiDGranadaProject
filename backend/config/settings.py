@@ -16,6 +16,9 @@ import os
 import base64
 from datetime import timedelta
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = 'RSA_PRIVATE_KEY_B64' not in os.environ
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 RSA_PRIVATE_KEY_B64 = os.environ.get('RSA_PRIVATE_KEY_B64')
@@ -27,25 +30,10 @@ RSA_PRIVATE_KEY = base64.b64decode(RSA_PRIVATE_KEY_B64).decode('utf-8') if RSA_P
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-default-key')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = 'RENDER' not in os.environ
-
 ALLOWED_HOSTS = ['localhost', 'api.franjpg.com']
-
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME') 
-if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # Development only: CORS settings
 CORS_ALLOW_ALL_ORIGINS = DEBUG
-
-# Deploy
-EXPO_EXTERNAL_HOSTNAME = os.environ.get('EXPO_EXTERNAL_HOSTNAME') 
-if not DEBUG:
-    CORS_ALLOWED_ORIGINS = [
-        "https://" + RENDER_EXTERNAL_HOSTNAME,
-        "http://localhost:8081",  # Expo React Native
-    ]
 
 # Application definition
 

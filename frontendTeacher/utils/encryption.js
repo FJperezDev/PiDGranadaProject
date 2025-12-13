@@ -5,6 +5,13 @@ import { Buffer } from 'buffer';
 const PUBLIC_KEY_PEM = Buffer.from(process.env.EXPO_PUBLIC_KEY_B64, 'base64').toString('utf-8');
 
 export const encryptPassword = (password) => {
+  if (!password) return null;
+  
+  if (!PUBLIC_KEY_PEM) {
+    console.error("Public key not loaded. Debug Mode");
+    return password;
+  }
+
   try {
     const publicKey = forge.pki.publicKeyFromPem(PUBLIC_KEY_PEM);
     
