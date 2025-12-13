@@ -74,6 +74,7 @@ class LoginView(TokenObtainPairView):
             return Response({'message': 'Email or username and password are required'}, status=400)
         
         if not settings.DEBUG:
+            print("Deploy")
             try:
                 private_key_pem = settings.RSA_PRIVATE_KEY.encode('utf-8') 
                 
@@ -94,6 +95,7 @@ class LoginView(TokenObtainPairView):
                     )
                 )
                 password = decrypted_password_bytes.decode('utf-8')
+                print("Contraseña: " + password)
                 
             except Exception as e:
                 print(f"Error decrypting: {e}")
