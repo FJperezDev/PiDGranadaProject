@@ -7,9 +7,9 @@ let publicKey = process.env.EXPO_PUBLIC_KEY_B64;
 // CAMBIO AQUÍ: 'let' en lugar de 'const' para poder modificarlo abajo
 let PUBLIC_KEY_PEM = null; 
 
-if (publicKey) 
+if (publicKey)
   PUBLIC_KEY_PEM = Buffer.from(process.env.EXPO_PUBLIC_KEY_B64, 'base64').toString('utf-8');
-PUBLIC_KEY_PEM = null; 
+
 export const encryptPassword = (password) => {
   if (!password) return null;
   
