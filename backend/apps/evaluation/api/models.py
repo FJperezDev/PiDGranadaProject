@@ -17,8 +17,8 @@ class Question(models.Model):
     ]
 
     type = models.CharField(max_length=50, choices=QUESTION_TYPES)
-    statement_es = models.TextField(blank=True, null=True)
-    statement_en = models.TextField(blank=True, null=True)
+    statement_es = models.TextField(blank=False, null=True)
+    statement_en = models.TextField(blank=False, null=True)
     explanation_es = models.TextField(blank=True, null=True)
     explanation_en = models.TextField(blank=True, null=True)
     approved = models.BooleanField(default=False)
@@ -26,7 +26,7 @@ class Question(models.Model):
     old = models.BooleanField(default=False)
 
     def __str__(self):
-        return self.statement_es or self.statement_en
+      return self.statement_es or f"Question #{self.pk}"
 
 class TeacherMakeChangeQuestion(models.Model):
     old_object = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)
@@ -39,8 +39,8 @@ class TeacherMakeChangeQuestion(models.Model):
 
 class Answer(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, related_name='answers')
-    text_es = models.TextField(blank=True, null=True)
-    text_en = models.TextField(blank=True, null=True)
+    text_es = models.TextField(blank=False, null=True)
+    text_en = models.TextField(blank=False, null=True)
     is_correct = models.BooleanField(default=False)
     old = models.BooleanField(default=False)
 

@@ -62,7 +62,7 @@ class TopicViewSetTests(APITestCase):
     def test_update_epigraph(self):
         response = self.client.put(f"/topics/{self.topic.id}/epigraphs/{self.epigraph.order_id}/", self.updated_epigraph_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["name"], "Epígrafe Actualizado")
+        self.assertEqual(response.data["name_es"], "Epígrafe Actualizado")
 
     def test_link_concept(self):
         concept = Concept.objects.create(name_es="Concepto", name_en="Concept")

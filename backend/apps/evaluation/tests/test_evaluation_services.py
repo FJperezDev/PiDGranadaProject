@@ -1,5 +1,5 @@
 import pytest
-from django.forms import ValidationError
+from django.core.exceptions import ValidationError
 from unittest.mock import patch
 
 from apps.evaluation.domain import services, selectors
@@ -19,7 +19,7 @@ def subject():
 
 @pytest.fixture
 def teacher():
-    return CustomTeacher.objects.create_teacher(teachername="testteacher", password="password")
+    return CustomTeacher.objects.create_user(username="testteacher", password="password")
 
 @pytest.fixture
 def topic1(teacher):
@@ -184,8 +184,10 @@ def test_create_answer(teacher, answer_data):
     assert answer.is_correct
 
 def test_create_answer_raises_validation_error_on_missing_text(teacher):
-    with pytest.raises(ValidationError, match="Debe proporcionar el texto de la respuesta en ambos idiomas."):
-        services.create_answer(teacher=teacher, question=Question(), text_es='Solo ES')
+    question = services.create_question(teacher=teacher, type="text", statement_es="Test", statement_en="Test")
+    
+    with pytest.raises(ValidationError, match="Debe proporcionar el texto..."):
+        services.create_answer(teacher=teacher, question=question, text_es='Solo ES') 
 
 def test_update_answer(teacher, answer_data):
     answer = services.create_answer(teacher=teacher, **answer_data)
@@ -310,56 +312,56 @@ def test_evaluate_question_no_existing_evaluation_record(teacher, student_groupA
 
 # --- Evaluation Service Tests (create_exam) ---
 
-def test_create_exam_enough_questions(teacher, topic1, topic2, question_with_answers, question_with_answers_2):
+def test_create_exam_enough_questions(topic1, topic2, question_with_answers, question_with_answers_2):
 
     questions = [question_with_answers, question_with_answers_2]
     
     QuestionBelongsToTopic.objects.create(question=question_with_answers, topic=topic1)
     QuestionBelongsToTopic.objects.create(question=question_with_answers_2, topic=topic2)
 
-    exam_questions = services.create_exam(teacher, [topic1, topic2], 2)
+    exam_questions = services.create_exam( [topic1, topic2], 2)
     assert len(exam_questions) == 2
     assert set(exam_questions) == set(questions)
 
-def test_create_exam_not_enough_questions(teacher, topic1, question_with_answers):
+def test_create_exam_not_enough_questions(topic1, question_with_answers):
 
     QuestionBelongsToTopic.objects.create(question=question_with_answers, topic=topic1)
 
-    exam_questions = services.create_exam(teacher, [topic1], 3)
+    exam_questions = services.create_exam([topic1], 3)
     assert len(exam_questions) == 1
     assert exam_questions[0] == question_with_answers
 
-def test_create_exam_no_questions(teacher, topic1):
+def test_create_exam_no_questions(topic1):
 
-    exam_questions = services.create_exam(teacher, [topic1], 2)
+    exam_questions = services.create_exam([topic1], 2)
     assert len(exam_questions) == 0
 
-def test_create_exam_duplicates_across_topics(teacher, topic1, topic2, question_with_answers):
+def test_create_exam_duplicates_across_topics(topic1, topic2, question_with_answers):
 
     QuestionBelongsToTopic.objects.create(question=question_with_answers, topic=topic1)
     QuestionBelongsToTopic.objects.create(question=question_with_answers, topic=topic2)
 
-    exam_questions = services.create_exam(teacher, [topic1, topic2], 2)
+    exam_questions = services.create_exam([topic1, topic2], 2)
     assert len(exam_questions) == 1
     assert exam_questions[0] == question_with_answers
 
-def test_create_exam_partial_availability(teacher, topic1, topic2, question_with_answers):
+def test_create_exam_partial_availability(topic1, topic2, question_with_answers):
 
     QuestionBelongsToTopic.objects.create(question=question_with_answers, topic=topic1)
 
-    exam_questions = services.create_exam(teacher, [topic1, topic2], 2)
+    exam_questions = services.create_exam([topic1, topic2], 2)
     assert len(exam_questions) == 1
     assert exam_questions[0] == question_with_answers
 
 # --- Evaluation Service Tests (correct_exam) ---
 
-def test_correct_exam_all_correct(teacher, student_groupA, question_with_answers, question_with_answers_2):
+def test_correct_exam_all_correct(student_groupA, question_with_answers, question_with_answers_2):
     questions_and_answers = {
         question_with_answers: question_with_answers.answers.get(is_correct=True),
         question_with_answers_2: question_with_answers_2.answers.get(is_correct=True),
     }
 
-    mark = services.correct_exam(student_groupA, questions_and_answers)
+    mark, explanations, recommendations =services.correct_exam(student_groupA, questions_and_answers)
     assert mark == 2
 
     assert selectors.get_question_evaluation_correct_count(question_with_answers) == 1
@@ -367,13 +369,13 @@ def test_correct_exam_all_correct(teacher, student_groupA, question_with_answers
     assert selectors.get_question_evaluation_ev_count(question_with_answers) == 1
     assert selectors.get_question_evaluation_ev_count(question_with_answers_2) == 1
 
-def test_correct_exam_some_incorrect(teacher, student_groupA, question_with_answers, question_with_answers_2):
+def test_correct_exam_some_incorrect(student_groupA, question_with_answers, question_with_answers_2):
     questions_and_answers = {
         question_with_answers: question_with_answers.answers.get(is_correct=True),
         question_with_answers_2: question_with_answers_2.answers.get(is_correct=False),
     }
 
-    mark = services.correct_exam(student_groupA, questions_and_answers)
+    mark, explanations, recommendations =services.correct_exam(student_groupA, questions_and_answers)
     assert mark == 1
 
     assert selectors.get_question_evaluation_correct_count(question_with_answers) == 1
@@ -381,13 +383,13 @@ def test_correct_exam_some_incorrect(teacher, student_groupA, question_with_answ
     assert selectors.get_question_evaluation_ev_count(question_with_answers) == 1
     assert selectors.get_question_evaluation_ev_count(question_with_answers_2) == 1
 
-def test_correct_exam_all_incorrect(teacher, student_groupA, question_with_answers, question_with_answers_2):
+def test_correct_exam_all_incorrect(student_groupA, question_with_answers, question_with_answers_2):
     questions_and_answers = {
         question_with_answers: question_with_answers.answers.get(is_correct=False),
         question_with_answers_2: question_with_answers_2.answers.get(is_correct=False),
     }
 
-    mark = services.correct_exam(student_groupA, questions_and_answers)
+    mark, explanations, recommendations =services.correct_exam(student_groupA, questions_and_answers)
     assert mark == 0
 
     assert selectors.get_question_evaluation_correct_count(question_with_answers) == 0
@@ -395,12 +397,12 @@ def test_correct_exam_all_incorrect(teacher, student_groupA, question_with_answe
     assert selectors.get_question_evaluation_ev_count(question_with_answers) == 1
     assert selectors.get_question_evaluation_ev_count(question_with_answers_2) == 1
 
-def test_create_and_correct_exam_integration(teacher, topic1, topic2, student_groupA, question_with_answers, question_with_answers_2):
+def test_create_and_correct_exam_integration(topic1, topic2, student_groupA, question_with_answers, question_with_answers_2):
 
     QuestionBelongsToTopic.objects.create(question=question_with_answers, topic=topic1)
     QuestionBelongsToTopic.objects.create(question=question_with_answers_2, topic=topic2)
 
-    exam_questions = services.create_exam(teacher, [topic1, topic2], 2)
+    exam_questions = services.create_exam([topic1, topic2], 2)
     assert len(exam_questions) == 2
 
     questions_and_answers = {
@@ -408,7 +410,7 @@ def test_create_and_correct_exam_integration(teacher, topic1, topic2, student_gr
         exam_questions[1]: exam_questions[1].answers.get(is_correct=False),
     }
 
-    mark = services.correct_exam(student_groupA, questions_and_answers)
+    mark, explanations, recommendations =services.correct_exam(student_groupA, questions_and_answers)
     assert mark == 1
 
     for question in exam_questions:
@@ -418,18 +420,18 @@ def test_create_and_correct_exam_integration(teacher, topic1, topic2, student_gr
         else:
             assert selectors.get_question_evaluation_correct_count(question) == 0
 
-def test_create_exam_with_insufficient_unique_questions(teacher, topic1, question_with_answers):
+def test_create_exam_with_insufficient_unique_questions(topic1, question_with_answers):
 
     QuestionBelongsToTopic.objects.create(question=question_with_answers, topic=topic1)
 
-    exam_questions = services.create_exam(teacher, [topic1], 5)
+    exam_questions = services.create_exam([topic1], 5)
     assert len(exam_questions) == 1
     assert exam_questions[0] == question_with_answers
 
-def test_correct_exam_no_questions(teacher, student_groupA):
+def test_correct_exam_no_questions(student_groupA):
     questions_and_answers = {}
 
-    mark = services.correct_exam(student_groupA, questions_and_answers)
+    mark, explanations, recommendations =services.correct_exam(student_groupA, questions_and_answers)
     assert mark == 0
 
     

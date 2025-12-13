@@ -1,5 +1,5 @@
 from datetime import timezone
-from django.forms import ValidationError
+from django.core.exceptions import ValidationError
 from apps.evaluation.api.models import Question, Answer, QuestionBelongsToTopic, QuestionRelatedToConcept, QuestionEvaluationGroup
 from apps.content.api.models import Topic, Concept
 from apps.content.domain import selectors as content_selectors
@@ -17,7 +17,7 @@ def create_question(teacher: Teacher, type: str, statement_es: str = None, state
                     explanation_es: str = None, explanation_en: str = None) -> Question:
     """Crea una nueva pregunta con validaciones básicas."""
 
-    if not statement_es and not statement_en:
+    if not statement_es or not statement_en:
         raise ValidationError("Debe proporcionar el enunciado en ambos idiomas.")
     question = Question.objects.create(
         type=type,
@@ -125,7 +125,7 @@ def delete_question(teacher: Teacher, question: Question) -> None:
 # --- Answer Services ---
 def create_answer(teacher: Teacher, question: Question, text_es: str = None, text_en: str = None,
                    is_correct: bool = False) -> Answer:
-    if not text_es and not text_en:
+    if not text_es or not text_en:
         raise ValidationError("Debe proporcionar el texto de la respuesta en ambos idiomas.")
     answer = Answer.objects.create(
         question=question,

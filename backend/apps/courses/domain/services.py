@@ -5,6 +5,7 @@ from apps.evaluation.api.models import QuestionEvaluationGroup
 from apps.evaluation.domain import selectors as evaluation_selectors
 from apps.courses.utils import generate_groupCode
 from apps.utils.audit import makeChanges
+from apps.evaluation.api.models import QuestionEvaluationGroup
 
 from django.core.exceptions import ValidationError
 
@@ -46,7 +47,9 @@ def update_subject(subject: Subject, teacher: Teacher, name_es: str = None, name
     return subject
 
 def delete_subject(subject: Subject, teacher: Teacher) -> None:
-    """Elimina una asignatura dado."""
+    """Elimina una asignatura y limpia todas sus dependencias."""
+    delete_student_groups_by_subject(subject=subject, teacher=teacher)
+    SubjectIsAboutTopic.objects.filter(subject=subject).delete()
     makeChanges(user=teacher, old_object=subject, new_object=None)
     subject.delete()
 
@@ -101,7 +104,6 @@ def get_next_order_id_for_subject(subject: Subject) -> int:
     return 1
 
 def update_student_group(group: StudentGroup, teacher: Teacher, name_es: str = None, name_en: str = None):
-    """Actualiza un grupo de estudiantes dado."""
     if name_es is not None:
         group.name_es = name_es
     if name_en is not None:
@@ -113,13 +115,11 @@ def update_student_group(group: StudentGroup, teacher: Teacher, name_es: str = N
     return group
 
 def delete_student_group(group: StudentGroup, teacher: Teacher) -> None:
-    """Elimina un grupo de estudiantes dado."""
-    makeChanges(user=group.teacher, old_object=group, new_object=None)
+    QuestionEvaluationGroup.objects.filter(group=group).delete()
+    makeChanges(user=teacher, old_object=group, new_object=None)
     group.delete()
 
-def delete_student_groups_by_subject(subject: Subject):
-    """Elimina todos los grupos de estudiantes asociados a una asignatura."""
+def delete_student_groups_by_subject(subject: Subject, teacher: Teacher):
     groups = StudentGroup.objects.filter(subject=subject)
     for group in groups:
-        makeChanges(user=subject.teacher, old_object=group, new_object=None)
-        group.delete()
+        delete_student_group(group=group, teacher=teacher)
