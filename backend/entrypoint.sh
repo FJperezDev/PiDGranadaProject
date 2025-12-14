@@ -3,18 +3,17 @@ set -e
 
 echo "Esperando a que la base de datos esté lista..."
 until nc -z db 5432; do
-  echo "Base de datos no disponible — esperando..."
-  sleep 2
+  echo "Base de datos no disponible — esperando..."
+  sleep 2
 done
 
 echo "Base de datos disponible ✅"
 
-# 1. Iniciamos CRON (Como somos root, esto ahora funcionará)
+# 1. Iniciamos CRON (Ahora como root, usando el binario directamente y en background)
 echo "Iniciando servicio cron..."
-service cron start
+/usr/sbin/cron &
 
 # 2. Ejecutamos migraciones COMO USUARIO DJANGO (usando gosu)
-# Si lo hacemos como root, los archivos creados darán problemas de permisos después.
 echo "Ejecutando migraciones..."
 gosu django python manage.py makemigrations --noinput
 gosu django python manage.py migrate --noinput
@@ -26,5 +25,4 @@ gosu django /cron_jobs.sh
 
 echo "Arrancando servidor Gunicorn..."
 # 4. Finalmente, arrancamos Gunicorn como usuario django
-# 'exec' asegura que gunicorn reciba las señales de parada de Docker (SIGTERM)
 exec gosu django gunicorn config.wsgi:application --bind 0.0.0.0:8000

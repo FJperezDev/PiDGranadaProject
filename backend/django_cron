@@ -1,0 +1,2 @@
+# Tarea cron: Ejecutar /cron_jobs.sh cada día a medianoche
+0 0 * * * django /cron_jobs.sh >> /var/log/cron.log 2>&1
