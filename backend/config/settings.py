@@ -30,17 +30,17 @@ RSA_PRIVATE_KEY = base64.b64decode(RSA_PRIVATE_KEY_B64).decode('utf-8') if RSA_P
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-default-key')
 
-ALLOWED_HOSTS = ['localhost', 'api.franjpg.com', '192.168.0.14']
+ALLOWED_HOSTS = ['localhost', 'api.franjpg.com']
 
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 else:
     CORS_ALLOW_ALL_ORIGINS = False
     CORS_ALLOWED_ORIGINS = [
-        "https://teacher.franjpg.com",  
-        "https://student.franjpg.com", 
-        "http://localhost:8081",       
-        "http://localhost:8082",       
+        "https://teacher.franjpg.com",
+        "https://student.franjpg.com",
+        "http://localhost:8081",
+        "http://localhost:8082",
     ]
 
 # Application definition
@@ -52,7 +52,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',  # Can remove if not using sessions
     'django.contrib.messages',  # Can remove if not using templates
     'django.contrib.staticfiles',
-    
+
     'apps.customauth',
     'apps.content',
     'apps.courses',
@@ -63,7 +63,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
-    
+
     'corsheaders',
 ]
 
@@ -80,7 +80,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
 
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
+
 ]
 
 SIMPLE_JWT = {
