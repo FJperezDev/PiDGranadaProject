@@ -224,6 +224,7 @@ class ConceptViewSet(BaseContentViewSet):
             try:
                 services.link_concepts(concept_from, concept_to, request.data.get('description_es', ''), request.data.get('description_en', ''), bidirectional)
             except ValidationError as e:
+                print(f"ERROR LINKING: {e}") # <--- VERÁS ESTO EN CONSOLA
                 return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
             return Response({'message': 'Linked successfully'}, status=status.HTTP_200_OK)
@@ -248,6 +249,7 @@ class ConceptViewSet(BaseContentViewSet):
             try:
                 services.unlink_concepts(concept_from, concept_to, bidirectional)
             except ValidationError as e:
+                print(f"ERROR UNLINKING: {e}") # <--- IMPORTANTE: VERÁS ESTO EN CONSOLA
                 return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
             return Response({'message': 'Unlinked successfully'}, status=status.HTTP_200_OK)

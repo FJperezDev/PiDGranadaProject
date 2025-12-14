@@ -1,56 +1,31 @@
 import React, { useContext, useState, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, KeyboardAvoidingView,
-  Platform, ScrollView
+  Platform, ScrollView, Dimensions
 } from 'react-native';
 import { AuthContext } from '../context/AuthContext';
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
-import { StyledButton } from '../components/StyledButton';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react-native'; // Importa AlertCircle si quieres un icono
+import { StyledButton } from '../components/StyledButton'; // Importar
+import { Eye, EyeOff } from 'lucide-react-native'; // Usar iconos de Lucide
 import { encryptPassword } from '../utils/encryption';
 
 export default function LoginScreen({ navigation }) {
   const { login, isAuthenticated } = useContext(AuthContext);
-  const { t } = useLanguage();
-  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const { t } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  
-  // 1. Nuevo estado para el mensaje de error
-  const [errorMessage, setErrorMessage] = useState('');
 
   const handleLogin = async () => {
-    // Limpiamos errores previos al intentar de nuevo
-    setErrorMessage('');
     setLoading(true);
-    
     try {
       const securePassword = encryptPassword(password);
       await login(email, securePassword);
       
     } catch (error) {
       console.error("Login failed", error);
-      
-      // 2. Determinamos qué mensaje mostrar
-      let msg = "Credenciales incorrectas o error de servidor.";
-      
-      // Si el backend te devuelve un mensaje específico (ej: "No active account found")
-      if (error.response?.data?.detail) {
-        msg = error.response.data.detail;
-      } else if (error.message === "Network Error") {
-        msg = "Verifica tu conexión a internet.";
-      }
-
-      setErrorMessage(msg);
-
-      // 3. Lógica "Temporalmente": El mensaje desaparece a los 4 segundos
-      setTimeout(() => {
-        setErrorMessage('');
-      }, 4000);
-
     } finally {
       setLoading(false);
     }
@@ -61,12 +36,6 @@ export default function LoginScreen({ navigation }) {
       navigation.replace('Home');
     }
   }, [isAuthenticated]);
-
-  // Función auxiliar para limpiar error al escribir
-  const handleInputChange = (setter) => (text) => {
-    setter(text);
-    if (errorMessage) setErrorMessage(''); // Borra el error apenas el usuario corrige
-  };
 
   return (
     <KeyboardAvoidingView
@@ -80,12 +49,11 @@ export default function LoginScreen({ navigation }) {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t('email')}</Text>
             <TextInput
-              style={[styles.input, errorMessage && styles.inputError]} // Borde rojo opcional
+              style={styles.input}
               placeholder="ejemplo@correo.com"
               placeholderTextColor={COLORS.textSecondary}
               value={email}
-              // Limpiamos el error al escribir
-              onChangeText={handleInputChange(setEmail)}
+              onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
             />
@@ -93,15 +61,14 @@ export default function LoginScreen({ navigation }) {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t('password')}</Text>
-            <View style={[styles.passwordContainer, errorMessage && styles.inputError]}>
+            <View style={styles.passwordContainer}>
               <TextInput
                 style={styles.passwordInput}
                 secureTextEntry={!showPassword}
                 placeholder="******"
                 placeholderTextColor={COLORS.textSecondary}
                 value={password}
-                // Limpiamos el error al escribir
-                onChangeText={handleInputChange(setPassword)}
+                onChangeText={setPassword}
               />
               <StyledButton
                 onPress={() => setShowPassword(!showPassword)}
@@ -119,15 +86,6 @@ export default function LoginScreen({ navigation }) {
             size="large"
             style={{ marginTop: 20 }}
           />
-
-          {/* 4. Renderizado condicional del mensaje de error */}
-          {errorMessage ? (
-            <View style={styles.errorContainer}>
-              <AlertCircle size={16} color="#FF4444" style={{ marginRight: 6 }} />
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
-          ) : null}
-
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -135,7 +93,6 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  // ... tus estilos anteriores ...
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -144,11 +101,15 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 400, // Responsive: No se estira en web
     backgroundColor: COLORS.surface,
     borderRadius: 16,
     padding: 30,
-    // ... sombras ...
+    ...Platform.select({
+      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 },
+      android: { elevation: 5 },
+      web: { boxShadow: '0px 4px 20px rgba(0,0,0,0.1)' },
+    }),
   },
   title: {
     fontSize: 28,
@@ -195,24 +156,4 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 10,
   },
-  
-  // --- NUEVOS ESTILOS ---
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 15,
-    padding: 10,
-    backgroundColor: '#FF444415', // Rojo muy suave de fondo
-    borderRadius: 8,
-  },
-  errorText: {
-    color: '#FF4444', // Rojo fuerte
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  inputError: {
-    borderColor: '#FF4444', // Borde rojo en inputs cuando hay error
-  }
 });
