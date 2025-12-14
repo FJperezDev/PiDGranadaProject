@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getLanguage } from '../context/LanguageContext';
 
 export const apiClient = axios.create({
-  baseURL: 'https://api.franjpg.com', 
+  baseURL: 'https://api.franjpg.com',
   // baseURL: 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',

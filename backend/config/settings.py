@@ -48,6 +48,18 @@ else:
         "http://localhost:8082",
     ]
 
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',  # <-- NECESARIO PARA JWT (BEARER TOKEN)
+    'content-type',   # <-- NECESARIO PARA JSON
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
 # Application definition
 
 INSTALLED_APPS = [
