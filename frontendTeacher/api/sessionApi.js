@@ -50,7 +50,7 @@ apiClient.interceptors.response.use(
         })
           .then(token => {
             originalRequest.headers['Authorization'] = 'Bearer ' + token;
-            return instance(originalRequest);
+            return apiClient(originalRequest);
           })
           .catch(err => Promise.reject(err));
       }
@@ -59,6 +59,8 @@ apiClient.interceptors.response.use(
 
       try {
         const refresh = await getRefreshToken();
+        if (!refresh) throw new Error("No refresh token available. Forcing logout.");
+
         const res = await apiClient.post('/token/refresh/', { refresh });
         const newAccess = res.data.access;
         if (res.data.refresh) {
@@ -68,16 +70,20 @@ apiClient.interceptors.response.use(
         setAccessToken(newAccess);
         processQueue(null, newAccess);
 
-        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
-        return instance(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
         logout();
-        Alert.alert("Expired Session", "Try login again.");
+        if (refreshError.code !== 'ECONNABORTED' && refreshError.code !== 'ERR_NETWORK') {
+            Alert.alert("Expired Session", "Try login again.");
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
+
+      originalRequest.headers['Authorization'] = 'Bearer ' + getAccessToken();
+      return apiClient(originalRequest);
+     
     }
 
     return Promise.reject(error);
