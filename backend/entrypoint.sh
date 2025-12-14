@@ -12,7 +12,15 @@ echo "Base de datos disponible ✅"
 
 # Iniciamos el demonio cron en segundo plano.
 echo "Iniciando servicio cron..."
-/usr/sbin/cron
+if command -v crond >/dev/null 2>&1; then
+    echo "Iniciando crond..."
+    crond
+elif command -v cron >/dev/null 2>&1; then
+    echo "Iniciando cron..."
+    cron
+else
+    echo "⚠️ CRON no encontrado en PATH, saltando servicio de cron."
+fi
 
 # Ejecuta las migraciones automáticamente
 python manage.py makemigrations --noinput

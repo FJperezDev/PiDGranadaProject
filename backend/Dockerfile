@@ -22,7 +22,13 @@ COPY . .
 
 # Copia el entrypoint
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY cron_jobs.sh /cron_jobs.sh
+RUN chmod +x /entrypoint.sh /cron_jobs.sh
+
+# CONFIGURACIÓN DE CRONTAB: Ejecutar cron_jobs.sh diariamente
+# 0 0 * * * -> Ejecutar cada día a medianoche (00:00)
+# Esto es más seguro que usar el cron interno de Linux.
+RUN (crontab -l 2>/dev/null; echo "0 0 * * * /cron_jobs.sh >> /var/log/cron.log 2>&1") | crontab -
 
 # Crea el usuario no root
 RUN adduser --disabled-password django
