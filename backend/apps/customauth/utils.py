@@ -8,6 +8,10 @@ def decrypt_rsa_password(encrypted_password):
     Desencripta la contraseña si no estamos en DEBUG.
     Si estamos en DEBUG, asume que viene en texto plano (o manéjalo según tu flujo).
     """
+    print(f"Attempting to decrypt password: {encrypted_password}")
+    print(f"DEBUG mode: {settings.DEBUG}")
+    print(settings.RSA_PRIVATE_KEY)
+
     if not encrypted_password:
         return None
     # Si estás en modo local y decides enviar texto plano para probar rápido:
@@ -28,6 +32,9 @@ def decrypt_rsa_password(encrypted_password):
                 label=None
             )
         )
+
+        print(f"Decrypted password: {decrypted_bytes.decode('utf-8')}")
+
         return decrypted_bytes.decode('utf-8')
     except Exception as e:
         print(f"Decryption error: {e}")
