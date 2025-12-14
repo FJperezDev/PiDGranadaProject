@@ -14,11 +14,11 @@ GENERATE_CMD="/usr/local/bin/python /app/manage.py shell -c 'from apps.audit.uti
 echo "Iniciando script de tareas programadas..."
 
 # --- TAREA 1: GENERACIÓN MENSUAL (Día 1 del mes a las 00:00) ---
-if [[ "$(date +%d)" == "01" ]]; then
+#if [[ "$(date +%d)" == "01" ]]; then
     echo "Ejecutando generación de backup mensual..."
     $GENERATE_CMD
     echo "Generación de backup completada."
-fi
+#fi
 
 # --- TAREA 2: LIMPIEZA DE ARCHIVOS ANTIGUOS (Más de 4 meses) ---
 # Borra archivos .xlsx con fecha de modificación (mtime) mayor a 120 días (aprox. 4 meses)
