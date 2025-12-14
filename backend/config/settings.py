@@ -17,7 +17,7 @@ import base64
 from datetime import timedelta
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = 'RSA_PRIVATE_KEY_B64' not in os.environ
+DEBUG = os.environ.get('DJANGO_DEBUG', True) == True
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent

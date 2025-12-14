@@ -27,6 +27,20 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.django.rule=Host(`api.franjpg.com`)"
       - "traefik.http.routers.django.entrypoints=websecure"
+      
+      # --- PASO CRÍTICO: APLICAR MIDDLEWARE CORS ---
+      - "traefik.http.routers.django.middlewares=cors-header@docker" 
+      
+      # 1. Definir el middleware CORS (permite los dominios y métodos)
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolalloworiginlist=https://teacher.franjpg.com,https://student.franjpg.com"
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
+      
+      # 2. Permitir el encabezado Authorization (JWT) y Content-Type
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowheaders=Authorization,Content-Type"
+      
+      # 3. Permitir credenciales (buena práctica para JWT y CORS)
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowcredentials=true"
+      # --- FIN MIDDLEWARE CORS ---
 
   frontend_student:
     build: ./frontendStudent
