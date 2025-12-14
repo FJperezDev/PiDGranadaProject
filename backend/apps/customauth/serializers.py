@@ -8,6 +8,30 @@ class CustomTeacherSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'is_super']
         read_only_fields = ['id']
 
+class RegisterSerializer(serializers.ModelSerializer):
+    # Validamos la contraseña usando las reglas de Django
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+    
+    # Username es obligatorio según tus REQUIRED_FIELDS
+    username = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True)
+
+    class Meta:
+        model = CustomTeacher
+        fields = ('username', 'email', 'password')
+
+    def create(self, validated_data):
+        # Usamos create_user en lugar de create() manual para asegurar 
+        # que Django maneje el hasheo y normalización del email correctamente.
+        user = CustomTeacher.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password']
+        )
+        # Nota: Tu método save() personalizado en el modelo se encargará 
+        # de los permisos automáticamente aquí.
+        return user
+
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
