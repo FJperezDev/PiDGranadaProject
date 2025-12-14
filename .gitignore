@@ -5,3 +5,4 @@ venv
 *.log
 *cache*
 db.sqlite3
+backup*
