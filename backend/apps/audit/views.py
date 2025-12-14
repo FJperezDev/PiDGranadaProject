@@ -1,12 +1,58 @@
-from django.shortcuts import render
-from rest_framework import viewsets
-from apps.utils.permissions import IsSuperTeacher
 from apps.content.domain import selectors as content_selectors
 from apps.courses.domain import selectors as courses_selectors
 from apps.evaluation.domain import selectors as evaluation_selectors
+
+from apps.utils.permissions import IsSuperTeacher
+from .models import BackupFile
+from .serializers import BackupFileSerializer
+from .utils import generate_excel_backup, restore_excel_backup
+
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-# Create your views here.
+from .models import BackupFile
+from .serializers import BackupFileSerializer
+from .utils import generate_excel_backup, restore_excel_backup
+
+class BackupViewSet(viewsets.ModelViewSet):
+    """
+    Endpoints:
+    GET /backups/          -> Lista backups (getBackups)
+    POST /backups/         -> Genera nuevo backup (generateBackup)
+    DELETE /backups/{id}/  -> Borra backup (deleteBackup)
+    POST /backups/{id}/restore/ -> Restaura backup (restoreBackup)
+    """
+    queryset = BackupFile.objects.all()
+    serializer_class = BackupFileSerializer
+
+    # Sobreescribimos create para mapear "POST /backups/" a la lógica de generar Excel
+    def create(self, request, *args, **kwargs):
+        try:
+            # Generamos el backup on-demand
+            backup = generate_excel_backup(is_auto=False)
+            serializer = self.get_serializer(backup)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response(
+                {"error": f"Error generando backup: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        """Restaura la base de datos a partir de este archivo Excel"""
+        try:
+            # Llamamos a la utilidad que hace el trabajo sucio
+            restore_excel_backup(pk)
+            return Response(
+                {"status": "success", "message": "Base de datos restaurada correctamente."}, 
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class AuditViewSet(viewsets.ViewSet):
     permission_classes = [IsSuperTeacher]

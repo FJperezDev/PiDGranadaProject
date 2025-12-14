@@ -10,7 +10,7 @@ TEACHER_PASSWORD = "admin123"
 EXCEL_FILE = "Prueba.xlsx"
 
 # Número de peticiones simultáneas (ajustar si el servidor se satura)
-MAX_WORKERS = 3
+MAX_WORKERS = 5
 
 def clean_str(val):
     if pd.isna(val) or val == "":

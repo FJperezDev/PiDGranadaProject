@@ -1,7 +1,9 @@
 from rest_framework.routers import DefaultRouter
-from apps.audit.views import AuditViewSet
+from apps.audit.views import AuditViewSet, BackupViewSet
+
 
 router = DefaultRouter()
 router.register(r'audits', AuditViewSet, basename='audit')
+router.register(r'backups', BackupViewSet, basename='backup')
 
 urlpatterns = router.urls

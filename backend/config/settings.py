@@ -24,6 +24,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 RSA_PRIVATE_KEY_B64 = os.environ.get('RSA_PRIVATE_KEY_B64')
 RSA_PRIVATE_KEY = base64.b64decode(RSA_PRIVATE_KEY_B64).decode('utf-8') if RSA_PRIVATE_KEY_B64 else None
 
+MEDIA_URL = '/media/'
+
+# Ruta física en tu disco duro donde se guardarán los archivos
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
