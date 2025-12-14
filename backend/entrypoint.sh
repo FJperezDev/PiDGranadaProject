@@ -10,9 +10,18 @@ done
 
 echo "Base de datos disponible ✅"
 
+# Iniciamos el demonio cron en segundo plano.
+echo "Iniciando servicio cron..."
+/usr/sbin/cron
+
 # Ejecuta las migraciones automáticamente
 python manage.py makemigrations --noinput
 python manage.py migrate --noinput
+
+# Llama al script de cron para realizar la limpieza de archivos viejos 
+# y la posible generación si es día 1.
+echo "Ejecutando tareas de mantenimiento y limpieza (cron_jobs.sh)..."
+/cron_jobs.sh
 
 # (opcional) collectstatic si usas archivos estáticos
 # python manage.py collectstatic --noinput

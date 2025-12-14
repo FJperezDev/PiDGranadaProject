@@ -10,6 +10,7 @@ import ManageQuestionsScreen from '../screens/ManageQuestionsScreen'
 import SubjectTopicsScreen from '../screens/SubjectTopicScreen';
 import ManageUsersScreen from '../screens/ManageUsersScreen'
 import ManageContentScreen from '../screens/ManageContentScreen'
+import BackupManagerScreen from '../screens/BackupManagerScreen'
 import AnalyticsScreen from '../screens/AnalyticsScreen'
 import UnauthorizedScreen from '../screens/UnauthorizedScreen'
 import { CustomHeader } from '../components/CustomHeader';
@@ -34,6 +35,7 @@ export default function AppNavigator() {
           <Stack.Screen name="GroupDetail" component={GroupDetailScreen} options={({ route }) => ({ title: route.params.group.name_es || t('groupDetail') })}/>
           <Stack.Screen name="ManageQuestions" component={ManageQuestionsScreen} options={{ title: t('manageQuestions') }} />
           <Stack.Screen name="ManageContent" component={ManageContentScreen} options={{ title: t('manageContent') }} />
+          <Stack.Screen name="BackupManager" component={BackupManagerScreen} options={{ title: t('backupManager') }} />
           <Stack.Screen name="TopicDetail" component={TopicDetailScreen} options={({ route }) => ({ title: t('topicDetail') })} />
           <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ title: t('analytics') }} />
           <Stack.Screen name="InviteTeacher" component={ManageUsersScreen} options={{ title: t('inviteTeacher') }} />

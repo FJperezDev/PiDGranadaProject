@@ -27,7 +27,9 @@ class TopicViewSet(BaseContentViewSet):
         return Response(self.get_serializer(topic).data, status=status.HTTP_200_OK)
       
     def destroy(self, request, *args, **kwargs):
-        return services.delete_topic(selectors.get_topic_by_id(kwargs['pk']), teacher=request.user)
+        services.delete_topic(selectors.get_topic_by_id(kwargs['pk']), teacher=request.user)
+        # Devolvemos una respuesta HTTP 204 (No Content)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def create(self, request, *args, **kwargs):
         data = request.data
@@ -260,7 +262,8 @@ class ConceptViewSet(BaseContentViewSet):
     
     # CORRECCIÓN: Renombrado de 'delete' a 'destroy' (nombre estándar de DRF)
     def destroy(self, request, *args, **kwargs):
-        return services.delete_concept(selectors.get_concept_by_id(kwargs['pk']), teacher=request.user)
+        services.delete_concept(selectors.get_concept_by_id(kwargs['pk']), teacher=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def create(self, request, *args, **kwargs):
         data = request.data

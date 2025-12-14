@@ -24,7 +24,7 @@ export default function UserHomeScreen({ navigation }) {
     ...(isSuper
       ? [
           { title: t('inviteTeacher'), icon: UserPlus, onPress: () => navigation.navigate("InviteTeacher") },
-          { title: t('logs'), icon: ClipboardList, onPress: () => navigation.navigate("Logs") },
+          { title: t('logs'), icon: ClipboardList, onPress: () => navigation.navigate("BackupManager") },
         ]
       : []),
   ];
