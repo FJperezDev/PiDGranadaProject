@@ -5,84 +5,11 @@ import { apiClient } from './api'
 let isRefreshing = false;
 let failedQueue = [];
 
-const processQueue = (error, token = null) => {
-  failedQueue.forEach(prom => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-
-  failedQueue = [];
+export const logout = async () => {
+  await deleteRefreshToken("refresh");
+  setAccessToken(null);
+  await apiClient.post("/logout/");
 };
-
-// Authorization interceptor
-apiClient.interceptors.request.use(
-  async config => {
-    const token = getAccessToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  error => Promise.reject(error)
-);
-
-// Response interceptor: 401 code errors refreshing token
-apiClient.interceptors.response.use(
-  response => response,
-  async error => {
-    const originalRequest = error.config;
-
-    if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      !originalRequest.url.includes('/token/refresh/') &&
-      !originalRequest.url.includes('/login/') &&
-      !originalRequest.url.includes('/logout/')
-    ) {
-      originalRequest._retry = true;
-
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then(token => {
-            originalRequest.headers['Authorization'] = 'Bearer ' + token;
-            return instance(originalRequest);
-          })
-          .catch(err => Promise.reject(err));
-      }
-
-      isRefreshing = true;
-
-      try {
-        const refresh = await getRefreshToken();
-        const res = await apiClient.post('/token/refresh/', { refresh });
-        const newAccess = res.data.access;
-        if (res.data.refresh) {
-          await setRefreshToken(res.data.refresh);
-        }
-
-        setAccessToken(newAccess);
-        processQueue(null, newAccess);
-
-        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
-        return instance(originalRequest);
-      } catch (refreshError) {
-        processQueue(refreshError, null);
-        logout();
-        Alert.alert("Expired Session", "Try login again.");
-        return Promise.reject(refreshError);
-      } finally {
-        isRefreshing = false;
-      }
-    }
-
-    return Promise.reject(error);
-  }
-);
 
 export const login = async (email, password) => {
   try {
@@ -97,12 +24,6 @@ export const login = async (email, password) => {
     console.warn("Login error:", error.response?.data || error.message);
     throw error;
   }
-};
-
-export const logout = async () => {
-  await deleteRefreshToken("refresh");
-  setAccessToken(null);
-  await apiClient.post("/logout/");
 };
 
 export const register = async (data) => {
@@ -148,3 +69,82 @@ export const restoreSession = async () => {
     return false;
   }
 };
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+
+  failedQueue = [];
+};
+
+// Authorization interceptor
+apiClient.interceptors.request.use(
+  async config => {
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  error => Promise.reject(error)
+);
+
+// Response interceptor: 401 code errors refreshing token
+apiClient.interceptors.response.use(
+  response => response,
+  async error => {
+    const originalRequest = error.config;
+
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url.includes('/token/refresh/') &&
+      !originalRequest.url.includes('/login/') &&
+      !originalRequest.url.includes('/logout/')
+    ) {
+      originalRequest._retry = true;
+
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(token => {
+            originalRequest.headers['Authorization'] = 'Bearer ' + token;
+            return apiClient(originalRequest);
+          })
+          .catch(err => Promise.reject(err));
+      }
+
+      isRefreshing = true;
+
+      try {
+        const refresh = await getRefreshToken();
+        const res = await apiClient.post('/token/refresh/', { refresh });
+        const newAccess = res.data.access;
+        if (res.data.refresh) {
+          await setRefreshToken(res.data.refresh);
+        }
+
+        setAccessToken(newAccess);
+        processQueue(null, newAccess);
+
+        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        logout();
+        Alert.alert("Expired Session", "Try login again.");
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);

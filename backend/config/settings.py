@@ -17,7 +17,7 @@ import base64
 from datetime import timedelta
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = 'RSA_PRIVATE_KEY_B64' not in os.environ
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,7 +30,7 @@ RSA_PRIVATE_KEY = base64.b64decode(RSA_PRIVATE_KEY_B64).decode('utf-8') if RSA_P
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-default-key')
 
-ALLOWED_HOSTS = ['localhost', 'api.franjpg.com']
+ALLOWED_HOSTS = ['localhost', 'api.franjpg.com', '192.168.0.14']
 
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
@@ -40,6 +40,7 @@ else:
         "https://teacher.franjpg.com",  
         "https://student.franjpg.com", 
         "http://localhost:8081",       
+        "http://localhost:8082",       
     ]
 
 # Application definition
@@ -102,12 +103,9 @@ DATABASES = {
 }
 
 # # This production code might break development mode, so we check whether we're in DEBUG mode
-if not DEBUG:
-    # Tell Django to copy static assets into a path called `staticfiles` (this is specific to Render)
-    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-    # Enable the WhiteNoise storage backend, which compresses static files to reduce disk use
-    # and renames the files with unique names for each version to support long-term caching
+if not DEBUG:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 ROOT_URLCONF = 'config.urls'

@@ -10,6 +10,8 @@ import { COLORS } from './constants/colors';
 import { LanguageProvider } from './context/LanguageContext';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+global.Buffer = global.Buffer || require('buffer').Buffer;
+
 const App = () => {
 
   return (

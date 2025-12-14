@@ -8,6 +8,24 @@ class CustomTeacherSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'is_super']
         read_only_fields = ['id']
 
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+    
+    username = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True)
+
+    class Meta:
+        model = CustomTeacher
+        fields = ('username', 'email', 'password')
+
+    def create(self, validated_data):
+        user = CustomTeacher.objects.create_user(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            password=validated_data['password']
+        )
+        return user
+    
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True)
