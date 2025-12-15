@@ -174,7 +174,7 @@ def generate_excel_backup(is_auto=False):
             # 10. STUDENT GROUPS
             print("   - Exportando Student Groups...")
             qs_grp = StudentGroup.objects.all().values(
-                'id', 'name_es', 'name_en', 
+                'id', 'name_es', 'name_en', 'groupCode',
                 'subject__id', 
                 'teacher__email'
             )
@@ -182,12 +182,13 @@ def generate_excel_backup(is_auto=False):
             if not df_grp.empty:
                 df_grp.rename(columns={
                     'id': 'group_code', 
+                    'groupCode': 'groupCode',
                     'subject__id': 'subject_code',
                     'teacher__email': 'teacher_email'
                 }, inplace=True)
                 df_grp.to_excel(writer, sheet_name='student_groups', index=False)
             else:
-                pd.DataFrame(columns=['group_code', 'name_es', 'name_en', 'subject_code', 'teacher_email']).to_excel(writer, sheet_name='student_groups', index=False)
+                pd.DataFrame(columns=['group_code', 'name_es', 'name_en', 'groupCode', 'subject_code', 'teacher_email']).to_excel(writer, sheet_name='student_groups', index=False)
 
         output.seek(0)
         print("💾 Guardando archivo...")
@@ -428,6 +429,9 @@ def restore_excel_backup(backup_id):
                 if subject_obj: clean_payload['subject'] = subject_obj
                 if teacher_obj: clean_payload['teacher'] = teacher_obj 
                 
+                if 'groupCode' in payload:
+                    clean_payload['groupCode'] = clean_str(payload['groupCode'])
+
                 # Crear el grupo
                 obj = StudentGroup.objects.create(**clean_payload)
 
