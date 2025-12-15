@@ -132,7 +132,6 @@ export default function ManageQuestionsScreen({ navigation }) {
 
   const handleEdit = (item) => { setEditingQuestion(item); setModalVisible(true); };
   const handleCreate = () => { setEditingQuestion(null); setModalVisible(true); };
-  const handleUploadExcel = () => { Alert.alert("Subir Excel", "Funcionalidad pendiente."); };
 
   const renderItem = ({ item }) => {
     const topicNames = getTopicsFromItem(item);
@@ -176,10 +175,6 @@ export default function ManageQuestionsScreen({ navigation }) {
       <View style={styles.topHeader}>
          <Text style={styles.screenTitle}>Preguntas</Text>
          <View style={styles.headerButtons}>
-             <TouchableOpacity style={styles.excelBtn} onPress={handleUploadExcel}>
-                 <FileSpreadsheet size={20} color="white" />
-                 <Text style={styles.btnText}>Excel</Text>
-             </TouchableOpacity>
              <TouchableOpacity style={styles.addBtn} onPress={handleCreate}>
                  <Plus size={20} color="white" />
                  <Text style={styles.btnText}>Nueva</Text>
@@ -295,7 +290,6 @@ const styles = StyleSheet.create({
   topHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, backgroundColor: 'white', elevation: 2, zIndex: 10 },
   screenTitle: { fontSize: 22, fontWeight: 'bold', color: COLORS.text },
   headerButtons: { flexDirection: 'row', gap: 10 },
-  excelBtn: { flexDirection: 'row', backgroundColor: '#217346', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, alignItems: 'center', gap: 6 },
   addBtn: { flexDirection: 'row', backgroundColor: COLORS.primary || 'blue', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, alignItems: 'center', gap: 6 },
   btnText: { color: 'white', fontWeight: '600', fontSize: 13 },
 
