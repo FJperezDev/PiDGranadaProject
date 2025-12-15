@@ -1,21 +1,52 @@
-import React, { useContext, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Platform } from "react-native";
+import React, { useContext, useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Platform, Alert, ActivityIndicator } from "react-native";
 import { AuthContext } from "../context/AuthContext";
 import { useLanguage } from '../context/LanguageContext';
 import { COLORS } from "../constants/colors";
-import { Users, FileQuestion, BookOpen, BarChart3, UserPlus, ClipboardList } from "lucide-react-native";
+import { Users, FileQuestion, BookOpen, BarChart3, UserPlus, ClipboardList, UploadCloud } from "lucide-react-native";
+import * as DocumentPicker from 'expo-document-picker';
+import { importContentFromExcel } from '../api/backupRequests'; // Asegúrate de la ruta correcta
 
 export default function UserHomeScreen({ navigation }) {
   const { isSuper, onRefresh } = useContext(AuthContext);
   const { t } = useLanguage();
   const { width } = useWindowDimensions();
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     onRefresh();
   }, []);
 
+  // Función para manejar la subida del Excel
+  const handleUploadExcel = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+            "application/vnd.ms-excel"
+        ],
+        copyToCacheDirectory: true,
+      });
 
-  // Botones del menú
+      if (result.canceled) return;
+
+      const file = result.assets[0];
+      setUploading(true);
+
+      // En web 'file.file' es el objeto File real, en móvil usamos uri
+      const fileToUpload = Platform.OS === 'web' ? file.file : file.uri;
+
+      await importContentFromExcel(fileToUpload, file.name, file.mimeType);
+      
+      Alert.alert(t('success') || "Éxito", "Contenido importado correctamente.");
+    } catch (error) {
+      console.error(error);
+      Alert.alert(t('error') || "Error", "Fallo al importar el contenido.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const menuItems = [
     { title: t('manageGroups'), icon: Users, onPress: () => navigation.navigate("ManageGroups") },
     { title: t('manageQuestions'), icon: FileQuestion, onPress: () => navigation.navigate("ManageQuestions") },
@@ -25,17 +56,25 @@ export default function UserHomeScreen({ navigation }) {
       ? [
           { title: t('inviteTeacher'), icon: UserPlus, onPress: () => navigation.navigate("InviteTeacher") },
           { title: t('logs'), icon: ClipboardList, onPress: () => navigation.navigate("BackupManager") },
+          // Nuevo botón para cargar excel
+          { title: "Cargar Excel", icon: UploadCloud, onPress: handleUploadExcel }, 
         ]
       : []),
   ];
 
-  // Cuántas columnas mostrar según el ancho
   const numColumns = width > 1000 ? 3 : width > 600 ? 2 : 1;
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
       <View style={[styles.container, { maxWidth: width > 600 ? 800 : "100%" }]}>
         <Text style={styles.title}>{t('panel')}</Text>
+
+        {uploading && (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={{marginTop: 10}}>Importando datos...</Text>
+            </View>
+        )}
 
         <View
           style={[
@@ -57,6 +96,7 @@ export default function UserHomeScreen({ navigation }) {
                 ]}
                 activeOpacity={0.8}
                 onPress={item.onPress}
+                disabled={uploading}
               >
                 <Icon size={40} color={COLORS.primaryDark || COLORS.primary} />
                 <Text style={styles.menuText}>{item.title}</Text>
@@ -99,6 +139,10 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 20,
     textAlign: "center",
+  },
+  loadingContainer: {
+      marginBottom: 20,
+      alignItems: 'center'
   },
   menuGrid: {
     width: "100%",

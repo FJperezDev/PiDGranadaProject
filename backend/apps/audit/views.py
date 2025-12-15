@@ -12,7 +12,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import BackupFile
 from .serializers import BackupFileSerializer
-from .utils import generate_excel_backup, restore_excel_backup
+from .utils import generate_excel_backup, restore_excel_backup, import_content_from_excel
+from rest_framework.parsers import MultiPartParser, FormParser
 
 class BackupViewSet(viewsets.ModelViewSet):
     """
@@ -25,6 +26,7 @@ class BackupViewSet(viewsets.ModelViewSet):
     queryset = BackupFile.objects.all()
     serializer_class = BackupFileSerializer
 
+    parser_classes = (MultiPartParser, FormParser)
     # Sobreescribimos create para mapear "POST /backups/" a la lógica de generar Excel
     def create(self, request, *args, **kwargs):
         try:
@@ -36,6 +38,29 @@ class BackupViewSet(viewsets.ModelViewSet):
             return Response(
                 {"error": f"Error generando backup: {str(e)}"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['post'], url_path='import-content')
+    def import_content(self, request):
+        """
+        Endpoint para subir un Excel y cargar contenido masivo (Subjects, Topics, etc.)
+        mimicando el script de carga.
+        """
+        file_obj = request.FILES.get('file')
+        if not file_obj:
+            return Response({"error": "No se proporcionó ningún archivo."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Llamamos a la función de utilidad
+            import_content_from_excel(file_obj, teacher=request.user)
+            return Response(
+                {"status": "success", "message": "Contenido importado correctamente."}, 
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Error importando contenido: {str(e)}"}, 
+                status=status.HTTP_400_BAD_REQUEST
             )
 
     @action(detail=True, methods=['post'])

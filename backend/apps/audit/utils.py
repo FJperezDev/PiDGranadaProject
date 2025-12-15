@@ -19,6 +19,8 @@ from apps.evaluation.api.models import (
 )
 from apps.customauth.models import CustomTeacher as Teacher 
 
+from apps.courses.utils import generate_groupCode
+
 # --- HELPERS ---
 def clean_str(val):
     if pd.isna(val) or val == "":
@@ -436,3 +438,246 @@ def restore_excel_backup(backup_id):
                 obj = StudentGroup.objects.create(**clean_payload)
 
         print("🏁 Restauración completada exitosamente.")
+
+# ==========================================
+#   IMPORTACIÓN MASIVA (Desde Excel subido)
+# ==========================================
+def import_content_from_excel(file_obj, teacher):
+    """
+    Replica la lógica del script Python de carga masiva, 
+    pero usando el ORM de Django directamente.
+    
+    ⚠️ ATENCIÓN: BORRA TODOS LOS DATOS DE CONTENIDO ANTES DE IMPORTAR.
+    """
+    try:
+        xls = {name: df.fillna("") for name, df in pd.read_excel(file_obj, sheet_name=None).items()}
+    except Exception as e:
+        raise Exception(f"Error leyendo archivo Excel: {str(e)}")
+
+    with transaction.atomic():
+        print("⚠️ INICIANDO LIMPIEZA TOTAL DE DATOS DE LA ASIGNATURA...")
+        
+        # --- 0. FLUSH (BORRADO PREVIO) ---
+        # Borramos en orden inverso a las dependencias para evitar conflictos,
+        # aunque el delete() en cascada de Django suele encargarse, es más limpio así.
+        
+        # 1. Tablas intermedias y dependencias profundas
+        SubjectIsAboutTopic.objects.all().delete()
+        TopicIsAboutConcept.objects.all().delete()
+        ConceptIsRelatedToConcept.objects.all().delete()
+        try:
+            QuestionBelongsToTopic.objects.all().delete()
+            QuestionRelatedToConcept.objects.all().delete()
+        except:
+            pass # Por si los modelos no existen o cambiaron de nombre
+
+        # 2. Hojas/Nodos finales
+        Answer.objects.all().delete()
+        Question.objects.all().delete()
+        Epigraph.objects.all().delete()
+        StudentGroup.objects.all().delete()
+        
+        # 3. Nodos principales
+        Concept.objects.all().delete()
+        Topic.objects.all().delete()
+        Subject.objects.all().delete()
+        
+        # NOTA: No borramos CustomTeacher (Usuarios) ni BackupFile (Logs de auditoría)
+        print("✅ Base de datos limpia. Iniciando carga masiva de contenido...")
+        
+        # --- FIN FLUSH ---
+
+        
+        # Mapas para referencias (Code -> Objeto BD)
+        subjects_map = {}
+        topics_map = {}
+        concepts_map = {}
+        concepts_name_map = {}
+        questions_map = {}
+
+        # --- 1. SUBJECTS ---
+        if "subjects" in xls:
+            for _, row in xls["subjects"].iterrows():
+                s_code = clean_str(row.get("subject_code"))
+                payload = {
+                    'name_es': row.get('name_es'),
+                    'name_en': row.get('name_en'),
+                    'description_es': row.get('description_es', ''),
+                    'description_en': row.get('description_en', ''),
+                }
+                # Al haber borrado todo, update_or_create actúa básicamente como create,
+                # pero nos protege si el Excel tiene duplicados internos.
+                obj, _ = Subject.objects.update_or_create(
+                    name_es=payload['name_es'], 
+                    defaults=payload
+                )
+                subjects_map[s_code] = obj
+
+        # --- 2. TOPICS ---
+        if "topics" in xls:
+            for _, row in xls["topics"].iterrows():
+                t_code = clean_str(row.get("topic_code"))
+                s_code = clean_str(row.get("subject_code"))
+                
+                payload = {
+                    'title_es': row.get('title_es'),
+                    'title_en': row.get('title_en'),
+                    'description_es': row.get('description_es', ''),
+                    'description_en': row.get('description_en', ''),
+                }
+                
+                obj, _ = Topic.objects.update_or_create(
+                    title_es=payload['title_es'],
+                    defaults=payload
+                )
+                topics_map[t_code] = obj
+
+                # Vinculación Subject-Topic
+                subject_obj = subjects_map.get(s_code)
+                if subject_obj:
+                    SubjectIsAboutTopic.objects.get_or_create(
+                        subject=subject_obj,
+                        topic=obj,
+                        defaults={'order_id': int(row.get('order_id', 1) or 1)}
+                    )
+
+        # --- 3. CONCEPTS ---
+        if "concepts" in xls:
+            for _, row in xls["concepts"].iterrows():
+                c_code = clean_str(row.get("concept_code"))
+                t_code = clean_str(row.get("related_topic_code"))
+                
+                payload = {
+                    'name_es': row.get('name_es'),
+                    'name_en': row.get('name_en'),
+                    'description_es': row.get('description_es', ''),
+                    'description_en': row.get('description_en', ''),
+                    'examples_es': row.get('examples_es', ''),
+                    'examples_en': row.get('examples_en', ''),
+                }
+
+                obj, _ = Concept.objects.update_or_create(
+                    name_es=payload['name_es'],
+                    defaults=payload
+                )
+                concepts_map[c_code] = obj
+                concepts_name_map[c_code] = obj.name_es 
+
+                # Vinculación Topic-Concept
+                topic_obj = topics_map.get(t_code)
+                if topic_obj:
+                    TopicIsAboutConcept.objects.get_or_create(
+                        topic=topic_obj,
+                        concept=obj,
+                        defaults={'order_id': 1}
+                    )
+
+        # --- 4. RELATIONS (Concepto-Concepto) ---
+        if "relations" in xls:
+            for _, row in xls["relations"].iterrows():
+                code_from = clean_str(row.get("variable1"))
+                code_to = clean_str(row.get("variable2"))
+                
+                source_obj = concepts_map.get(code_from)
+                target_code = next((k for k, v in concepts_name_map.items() if v == code_to), None)
+                target_obj = concepts_map.get(target_code) if target_code else concepts_map.get(code_to)
+
+                if source_obj and target_obj:
+                    ConceptIsRelatedToConcept.objects.get_or_create(
+                        concept_from=source_obj,
+                        concept_to=target_obj,
+                        defaults={
+                            'description_es': row.get("description_es", ""),
+                            'description_en': row.get("description_en", "")
+                        }
+                    )
+
+        # --- 5. EPIGRAPHS ---
+        if "epigraphs" in xls:
+            for _, row in xls["epigraphs"].iterrows():
+                t_code = clean_str(row.get("topic_code"))
+                topic_obj = topics_map.get(t_code)
+                
+                if topic_obj:
+                    Epigraph.objects.get_or_create(
+                        topic=topic_obj,
+                        name_es=row.get('name_es'),
+                        defaults={
+                            'name_en': row.get('name_en'),
+                            'description_es': row.get('description_es', ''),
+                            'description_en': row.get('description_en', ''),
+                            'order_id': int(row.get('order_id', 1) or 1)
+                        }
+                    )
+
+        # --- 6. QUESTIONS ---
+        if "questions" in xls:
+            for _, row in xls["questions"].iterrows():
+                q_code = clean_str(row.get("question_code"))
+                t_code = clean_str(row.get("topic_code"))
+                c_code = clean_str(row.get("concept_code"))
+
+                payload = {
+                    'statement_es': row.get('statement_es'),
+                    'statement_en': row.get('statement_en'),
+                }
+
+                q_obj, _ = Question.objects.update_or_create(
+                    statement_es=payload['statement_es'],
+                    defaults=payload
+                )
+                questions_map[q_code] = q_obj
+
+                # Vinculaciones
+                topic_obj = topics_map.get(t_code)
+                concept_obj = concepts_map.get(c_code)
+
+                if topic_obj:
+                    QuestionBelongsToTopic.objects.get_or_create(question=q_obj, topic=topic_obj)
+                if concept_obj:
+                    QuestionRelatedToConcept.objects.get_or_create(question=q_obj, concept=concept_obj)
+
+        # --- 7. ANSWERS ---
+        if "answers" in xls:
+            for _, row in xls["answers"].iterrows():
+                q_code = clean_str(row.get("question_code"))
+                q_obj = questions_map.get(q_code)
+                
+                if q_obj:
+                    is_correct = str(row.get("is_correct")).lower() in ['true', '1', 'yes']
+                    Answer.objects.get_or_create(
+                        question=q_obj,
+                        text_es=clean_str(row.get("text_es")),
+                        defaults={
+                            'text_en': clean_str(row.get("text_en")),
+                            'is_correct': is_correct
+                        }
+                    )
+
+        # --- 8. STUDENT GROUPS ---
+        if "student_groups" in xls:
+            for _, row in xls["student_groups"].iterrows():
+                s_code = clean_str(row.get("subject_code"))
+                subject_obj = subjects_map.get(s_code)
+                
+                if subject_obj:
+                    teacher_email = clean_str(teacher.email)
+                    teacher_obj = None
+                    if teacher_email:
+                        try:
+                            # Buscamos el profesor existente, NO LO CREAMOS NI BORRAMOS
+                            teacher_obj = Teacher.objects.get(email=teacher_email)
+                        except Teacher.DoesNotExist:
+                            pass
+
+                    StudentGroup.objects.get_or_create(
+                        name_es=row.get('name_es'),
+                        subject=subject_obj,
+                        defaults={
+                            'name_en': row.get('name_en'),
+                            'groupCode': generate_groupCode(),
+                            'teacher': teacher_obj # Asigna el profesor si existe
+                        }
+                    )
+
+    return True

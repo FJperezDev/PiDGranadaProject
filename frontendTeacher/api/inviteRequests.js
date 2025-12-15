@@ -1,33 +1,37 @@
-import { apiClient } from './api'
+import { apiClient } from './api';
 
-// Simula la URL base
-const API_URL = 'https://tu-backend-api.com'; 
-
+// 1. Obtener todos los usuarios (GET /users/)
 export const getUsers = async () => {
-  // Aquí harías el fetch a tu backend
-  // const response = await fetch(`${API_URL}/users`);
-  // return await response.json();
-  
-  // Mock de datos para visualización
-  return [
-    { id: 1, name: 'Juan Pérez', email: 'juan@test.com', role: 'TEACHER' },
-    { id: 2, name: 'Maria Garcia', email: 'maria@test.com', role: 'STUDENT' },
-  ];
-};
-
-export const inviteUser = async (userData) => {
-  // userData espera: { name, email, role }
   try {
-    // const response = await fetch(`${API_URL}/users/invite`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(userData)
-    // });
-    // if (!response.ok) throw new Error('Error en invitación');
-    // return await response.json();
-
-    return true; // Simula éxito
+    const res = await apiClient.get('/users/');
+    return res.data;
   } catch (error) {
+    console.error('Error getting users:', error.response?.data || error);
     throw error;
   }
+};
+
+// 2. Crear/Invitar un usuario (POST /users/)
+export const createUser = async (userData) => {
+  try {
+    // userData debe contener: { username, email, password, is_super }
+    const res = await apiClient.post('/users/invite/', userData);
+    return res.data;
+  } catch (error) {
+    // Captura el error para que ManageUsersScreen lo maneje
+    console.error('Error creating user:', error.response?.data || error);
+    throw error;
+  }
+};
+
+// 3. Borrar un usuario (DELETE /users/{id})
+export const deleteUser = async (userId) => {
+    try {
+        // DELETE espera un status 204 No Content
+        await apiClient.delete(`/users/${userId}/`);
+        return { success: true };
+    } catch (error) {
+        console.error('Error deleting user:', error.response?.data || error);
+        throw error;
+    }
 };
