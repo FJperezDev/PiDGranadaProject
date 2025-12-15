@@ -440,15 +440,14 @@ def restore_excel_backup(backup_id):
         print("🏁 Restauración completada exitosamente.")
 
 # ==========================================
-#   IMPORTACIÓN MASIVA (Desde Excel subido)
+#   IMPORTACIÓN MASIVA (CORREGIDA RELACIONES)
 # ==========================================
 def import_content_from_excel(file_obj, teacher):
     """
-    Replica la lógica del script Python de carga masiva, 
-    pero con REPORTING DE ERRORES detallado por fila.
+    Replica la lógica de carga masiva, con corrección en Relaciones
+    y reporte de errores fila por fila.
     """
     try:
-        # Cargamos todas las hojas
         xls = {name: df.fillna("") for name, df in pd.read_excel(file_obj, sheet_name=None).items()}
     except Exception as e:
         raise Exception(f"Error leyendo archivo Excel: {str(e)}")
@@ -474,26 +473,23 @@ def import_content_from_excel(file_obj, teacher):
         Topic.objects.all().delete()
         Subject.objects.all().delete()
         
-        print("✅ Base de datos limpia. Iniciando carga masiva de contenido...")
+        print("✅ Base de datos limpia. Iniciando carga masiva...")
 
-        # Mapas para referencias (Code -> Objeto BD)
+        # Mapas
         subjects_map = {}
         topics_map = {}
-        concepts_map = {}
-        concepts_name_map = {}
+        concepts_map = {}      # Code -> Object
+        concepts_name_map = {} # Name -> Object (Para búsqueda por nombre)
         questions_map = {}
 
         # --- 1. SUBJECTS ---
         if "subjects" in xls:
             print("📘 Procesando Subjects...")
             for index, row in xls["subjects"].iterrows():
-                excel_row = index + 2
                 try:
                     s_code = clean_str(row.get("subject_code"))
-                    if not s_code: 
-                        print(f"⚠️ [Subjects] Fila {excel_row}: 'subject_code' vacío. Saltando.")
-                        continue
-                        
+                    if not s_code: continue
+                    
                     payload = {
                         'name_es': row.get('name_es'),
                         'name_en': row.get('name_en'),
@@ -501,25 +497,21 @@ def import_content_from_excel(file_obj, teacher):
                         'description_en': row.get('description_en', ''),
                     }
                     obj, _ = Subject.objects.update_or_create(
-                        name_es=payload['name_es'], 
-                        defaults=payload
+                        name_es=payload['name_es'], defaults=payload
                     )
                     subjects_map[s_code] = obj
                 except Exception as e:
-                    print(f"❌ [Subjects] Error en fila {excel_row} (Code: {s_code if 's_code' in locals() else '?' }): {e}")
+                    print(f"❌ [Subjects] Fila {index+2}: {e}")
 
         # --- 2. TOPICS ---
         if "topics" in xls:
             print("📙 Procesando Topics...")
             for index, row in xls["topics"].iterrows():
-                excel_row = index + 2
                 try:
                     t_code = clean_str(row.get("topic_code"))
                     s_code = clean_str(row.get("subject_code"))
                     
-                    if not t_code:
-                        print(f"⚠️ [Topics] Fila {excel_row}: 'topic_code' vacío. Saltando.")
-                        continue
+                    if not t_code: continue
 
                     payload = {
                         'title_es': row.get('title_es'),
@@ -527,32 +519,24 @@ def import_content_from_excel(file_obj, teacher):
                         'description_es': row.get('description_es', ''),
                         'description_en': row.get('description_en', ''),
                     }
-                    
                     obj, _ = Topic.objects.update_or_create(
-                        title_es=payload['title_es'],
-                        defaults=payload
+                        title_es=payload['title_es'], defaults=payload
                     )
                     topics_map[t_code] = obj
 
-                    # Vinculación Subject-Topic
                     subject_obj = subjects_map.get(s_code)
                     if subject_obj:
                         SubjectIsAboutTopic.objects.get_or_create(
-                            subject=subject_obj,
-                            topic=obj,
+                            subject=subject_obj, topic=obj,
                             defaults={'order_id': int(row.get('order_id', 1) or 1)}
                         )
-                    else:
-                        print(f"🔸 [Topics] Fila {excel_row}: El Topic '{t_code}' se creó, pero el Subject '{s_code}' no existe en el mapa.")
-
                 except Exception as e:
-                    print(f"❌ [Topics] Error en fila {excel_row}: {e}")
+                    print(f"❌ [Topics] Fila {index+2}: {e}")
 
         # --- 3. CONCEPTS ---
         if "concepts" in xls:
             print("📗 Procesando Concepts...")
             for index, row in xls["concepts"].iterrows():
-                excel_row = index + 2
                 try:
                     c_code = clean_str(row.get("concept_code"))
                     t_code = clean_str(row.get("related_topic_code"))
@@ -565,43 +549,73 @@ def import_content_from_excel(file_obj, teacher):
                         'examples_es': row.get('examples_es', ''),
                         'examples_en': row.get('examples_en', ''),
                     }
-
                     obj, _ = Concept.objects.update_or_create(
-                        name_es=payload['name_es'],
-                        defaults=payload
+                        name_es=payload['name_es'], defaults=payload
                     )
                     concepts_map[c_code] = obj
-                    concepts_name_map[c_code] = obj.name_es 
+                    
+                    # Guardamos también por nombre para búsquedas flexibles
+                    if obj.name_es:
+                        concepts_name_map[clean_str(obj.name_es)] = obj
 
-                    # Vinculación Topic-Concept
                     topic_obj = topics_map.get(t_code)
                     if topic_obj:
                         TopicIsAboutConcept.objects.get_or_create(
-                            topic=topic_obj,
-                            concept=obj,
-                            defaults={'order_id': 1}
+                            topic=topic_obj, concept=obj, defaults={'order_id': 1}
                         )
-                    elif t_code: # Solo avisa si venía un código pero no se encontró
-                         print(f"🔸 [Concepts] Fila {excel_row}: Concepto '{c_code}' creado, pero Topic '{t_code}' no encontrado.")
-                
                 except Exception as e:
-                    print(f"❌ [Concepts] Error en fila {excel_row}: {e}")
+                    print(f"❌ [Concepts] Fila {index+2}: {e}")
 
-        # --- 4. RELATIONS (Concepto-Concepto) ---
+        # --- 4. RELATIONS (CORREGIDO) ---
         if "relations" in xls:
+            print("🔗 Procesando Relaciones...")
             for index, row in xls["relations"].iterrows():
-                # (Lógica simplificada para brevedad, sigue el mismo patrón try/except si quieres)
-                pass 
+                excel_row = index + 2
+                try:
+                    # Obtenemos los valores limpios
+                    val_1 = clean_str(row.get("variable1")) # Origen
+                    val_2 = clean_str(row.get("variable2")) # Destino
+
+                    if not val_1 or not val_2:
+                        continue
+
+                    # 1. Buscar Origen (preferiblemente por código, fallback por nombre)
+                    source_obj = concepts_map.get(val_1)
+                    if not source_obj:
+                        source_obj = concepts_name_map.get(val_1)
+
+                    # 2. Buscar Destino (preferiblemente por código, fallback por nombre)
+                    target_obj = concepts_map.get(val_2)
+                    if not target_obj:
+                        target_obj = concepts_name_map.get(val_2)
+
+                    # 3. Crear relación si ambos existen
+                    if source_obj and target_obj:
+                        ConceptIsRelatedToConcept.objects.get_or_create(
+                            concept_from=source_obj,
+                            concept_to=target_obj,
+                            defaults={
+                                'description_es': row.get("description_es", ""),
+                                'description_en': row.get("description_en", "")
+                            }
+                        )
+                    else:
+                        # Reporte detallado de qué faltó
+                        missing = []
+                        if not source_obj: missing.append(f"Origen '{val_1}' no encontrado")
+                        if not target_obj: missing.append(f"Destino '{val_2}' no encontrado")
+                        print(f"⚠️ [Relations] Fila {excel_row}: No se creó. {', '.join(missing)}.")
+
+                except Exception as e:
+                    print(f"❌ [Relations] Error crítico en fila {excel_row}: {e}")
 
         # --- 5. EPIGRAPHS ---
         if "epigraphs" in xls:
             print("📑 Procesando Epigraphs...")
             for index, row in xls["epigraphs"].iterrows():
-                excel_row = index + 2
                 try:
                     t_code = clean_str(row.get("topic_code"))
                     topic_obj = topics_map.get(t_code)
-                    
                     if topic_obj:
                         Epigraph.objects.get_or_create(
                             topic=topic_obj,
@@ -613,98 +627,68 @@ def import_content_from_excel(file_obj, teacher):
                                 'order_id': int(row.get('order_id', 1) or 1)
                             }
                         )
-                    else:
-                        print(f"❌ [Epigraphs] Fila {excel_row}: No se pudo crear Epígrafe. Topic '{t_code}' no encontrado.")
                 except Exception as e:
-                    print(f"❌ [Epigraphs] Error en fila {excel_row}: {e}")
+                    print(f"❌ [Epigraphs] Fila {index+2}: {e}")
 
-        # --- 6. QUESTIONS (AQUÍ ES DONDE SUELE FALLAR) ---
+        # --- 6. QUESTIONS ---
         if "questions" in xls:
             print("❓ Procesando Questions...")
             for index, row in xls["questions"].iterrows():
-                excel_row = index + 2
                 try:
                     q_code = clean_str(row.get("question_code"))
                     t_code = clean_str(row.get("topic_code"))
                     c_code = clean_str(row.get("concept_code"))
-                    statement_es = row.get('statement_es')
-
-                    if not q_code or not statement_es:
-                        print(f"⚠️ [Questions] Fila {excel_row}: Falta 'question_code' o 'statement_es'. Saltando.")
-                        continue
+                    
+                    if not q_code: continue
 
                     payload = {
-                        'statement_es': statement_es,
+                        'statement_es': row.get('statement_es'),
                         'statement_en': row.get('statement_en'),
                     }
-
                     q_obj, _ = Question.objects.update_or_create(
-                        statement_es=payload['statement_es'],
-                        defaults=payload
+                        statement_es=payload['statement_es'], defaults=payload
                     )
                     questions_map[q_code] = q_obj
 
-                    # Vinculaciones
-                    # Topic
                     if t_code:
-                        topic_obj = topics_map.get(t_code)
-                        if topic_obj:
-                            QuestionBelongsToTopic.objects.get_or_create(question=q_obj, topic=topic_obj)
-                        else:
-                            print(f"🔸 [Questions] Fila {excel_row}: Pregunta '{q_code}' creada, pero Topic '{t_code}' NO existe.")
+                        t_obj = topics_map.get(t_code)
+                        if t_obj: QuestionBelongsToTopic.objects.get_or_create(question=q_obj, topic=t_obj)
                     
-                    # Concept
                     if c_code:
-                        concept_obj = concepts_map.get(c_code)
-                        if concept_obj:
-                            QuestionRelatedToConcept.objects.get_or_create(question=q_obj, concept=concept_obj)
-                        else:
-                            print(f"🔸 [Questions] Fila {excel_row}: Pregunta '{q_code}' creada, pero Concept '{c_code}' NO existe.")
+                        c_obj = concepts_map.get(c_code)
+                        if c_obj: QuestionRelatedToConcept.objects.get_or_create(question=q_obj, concept=c_obj)
 
                 except Exception as e:
-                    print(f"❌ [Questions] Error CRÍTICO en fila {excel_row} (Code: {q_code}): {e}")
+                    print(f"❌ [Questions] Fila {index+2}: {e}")
 
-        # --- 7. ANSWERS (CRÍTICO) ---
+        # --- 7. ANSWERS ---
         if "answers" in xls:
             print("✏️ Procesando Answers...")
             for index, row in xls["answers"].iterrows():
                 excel_row = index + 2
                 try:
                     q_code = clean_str(row.get("question_code"))
-                    text_es = clean_str(row.get("text_es"))
-                    
-                    # 1. Chequeo de integridad básico
-                    if not q_code:
-                        print(f"❌ [Answers] Fila {excel_row}: Falta 'question_code'. No se puede asignar respuesta.")
-                        continue
-
-                    # 2. Buscar la pregunta padre
                     q_obj = questions_map.get(q_code)
                     
-                    # 3. SI NO EXISTE LA PREGUNTA -> ERROR CLARO
-                    if not q_obj:
-                        print(f"❌ [Answers] Fila {excel_row}: INTENTO FALLIDO. La pregunta con código '{q_code}' NO fue encontrada en el mapa de preguntas importadas.")
-                        print(f"   -> Verifica que en la hoja 'questions' exista una fila con question_code='{q_code}'.")
-                        continue
-                    
-                    is_correct = str(row.get("is_correct")).lower() in ['true', '1', 'yes']
-                    
-                    Answer.objects.get_or_create(
-                        question=q_obj,
-                        text_es=text_es,
-                        defaults={
-                            'text_en': clean_str(row.get("text_en")),
-                            'is_correct': is_correct
-                        }
-                    )
+                    if q_obj:
+                        is_correct = str(row.get("is_correct")).lower() in ['true', '1', 'yes']
+                        Answer.objects.get_or_create(
+                            question=q_obj,
+                            text_es=clean_str(row.get("text_es")),
+                            defaults={
+                                'text_en': clean_str(row.get("text_en")),
+                                'is_correct': is_correct
+                            }
+                        )
+                    else:
+                        print(f"❌ [Answers] Fila {excel_row}: Pregunta padre '{q_code}' no encontrada.")
                 except Exception as e:
-                    print(f"❌ [Answers] Error desconocido en fila {excel_row}: {e}")
+                    print(f"❌ [Answers] Fila {excel_row}: {e}")
 
         # --- 8. STUDENT GROUPS ---
         if "student_groups" in xls:
             print("👥 Procesando Student Groups...")
             for index, row in xls["student_groups"].iterrows():
-                excel_row = index + 2
                 try:
                     s_code = clean_str(row.get("subject_code"))
                     subject_obj = subjects_map.get(s_code)
@@ -727,9 +711,7 @@ def import_content_from_excel(file_obj, teacher):
                                 'teacher': teacher_obj 
                             }
                         )
-                    else:
-                        print(f"❌ [Groups] Fila {excel_row}: Subject '{s_code}' no encontrado.")
                 except Exception as e:
-                    print(f"❌ [Groups] Error en fila {excel_row}: {e}")
+                    print(f"❌ [Groups] Fila {index+2}: {e}")
 
     return True
