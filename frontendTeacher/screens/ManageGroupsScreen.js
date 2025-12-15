@@ -2,8 +2,9 @@ import React, { useState, useContext, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext'; 
-import { getMyGroups, getOtherGroups, getSubjects, createGroup } from '../api/coursesRequests'; 
+import { getMyGroups, getOtherGroups, getSubjects, createGroup, createSubject } from '../api/coursesRequests'; 
 import CreateGroupModal from '../components/CreateGroupModal';
+import CreateSubjectModal from '../components/CreateSubjectModal';
 import { PlusCircle, BookOpen } from 'lucide-react-native'; // Asegúrate de tener BookOpen
 import { COLORS } from '../constants/colors';
 
@@ -15,14 +16,15 @@ export default function ManageGroupsScreen({ navigation }) {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [groupModalVisible, setGroupModalVisible] = useState(false);
+  const [subjectModalVisible, setSubjectModalVisible] = useState(false);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const subjectsData = await getSubjects();
       setSubjects(subjectsData);
-      
+
       const myGroupsData = await getMyGroups();
       setMyGroups(myGroupsData);
       
@@ -49,22 +51,37 @@ export default function ManageGroupsScreen({ navigation }) {
     fetchData();
   };
 
-  const handleOpenModal = () => {
+  const handleOpenGroupModal = () => {
     if (subjects.length === 0) {
       Alert.alert('Error', 'No hay asignaturas creadas. Debes crear una asignatura primero.');
       return;
     }
-    setModalVisible(true);
+    setGroupModalVisible(true);
   };
 
   const handleCreateGroup = async (subjectId, name) => {
     try {
       await createGroup(subjectId, name, name);
-      setModalVisible(false);
+      setGroupModalVisible(false);
       Alert.alert('Éxito', 'Grupo creado correctamente.');
       fetchData(); 
     } catch (error) {
       Alert.alert('Error', 'No se pudo crear el grupo.');
+    }
+  };
+
+  const handleOpenSubjectModal = () => {
+    setSubjectModalVisible(true);
+  };
+
+  const handleCreateSubject = async (name) => {
+    try {
+      await createSubject(name, name, name, name);
+      setSubjectModalVisible(false);
+      Alert.alert('Éxito', 'Asignatura creada correctamente.');
+      fetchData();
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo crear la asignatura. ');
     }
   };
 
@@ -98,21 +115,26 @@ export default function ManageGroupsScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* Usamos ScrollView general en lugar de FlatList anidados */}
-      <ScrollView 
+      <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
           <Text style={styles.title}>Gestión Docente</Text>
-          <TouchableOpacity onPress={handleOpenModal}>
+        </View>
+
+        {/* --- SECCIÓN ASIGNATURAS --- */}
+
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.sectionTitle}>Asignaturas</Text>
+            <Text style={styles.subtitle}>Toca para ordenar temas</Text>
+          </View>
+	  <TouchableOpacity onPress={handleOpenSubjectModal}>
             <PlusCircle size={30} color={COLORS.secondary || 'blue'} />
           </TouchableOpacity>
         </View>
 
-        {/* --- SECCIÓN ASIGNATURAS --- */}
-        <Text style={styles.sectionTitle}>Asignaturas</Text>
-        <Text style={styles.subtitle}>Toca para ordenar temas</Text>
-        
         {subjects.length > 0 ? (
           subjects.map((subject) => (
             <View key={subject.id}>
@@ -126,7 +148,12 @@ export default function ManageGroupsScreen({ navigation }) {
         <View style={styles.divider} />
 
         {/* --- SECCIÓN GRUPOS --- */}
-        <Text style={styles.sectionTitle}>Mis Grupos</Text>
+        <View style={styles.header}>
+	  <Text style={styles.sectionTitle}>Mis Grupos</Text>
+	  <TouchableOpacity onPress={handleOpenGroupModal}>
+            <PlusCircle size={30} color={COLORS.secondary || 'blue'} />
+          </TouchableOpacity>
+	</View>
         {myGroups.length > 0 ? (
              myGroups.map((group) => (
                 <View key={group.id}>{renderGroup({ item: group })}</View>
@@ -148,12 +175,17 @@ export default function ManageGroupsScreen({ navigation }) {
 
       {subjects.length > 0 && (
         <CreateGroupModal
-          visible={modalVisible}
+          visible={groupModalVisible}
           subjects={subjects}
-          onClose={() => setModalVisible(false)}
+          onClose={() => setGroupModalVisible(false)}
           onSubmit={handleCreateGroup}
         />
       )}
+      <CreateSubjectModal
+	visible={subjectModalVisible}
+	onClose={() => setSubjectModalVisible(false)}
+	onSubmit={handleCreateSubject}
+      />
     </View>
   );
 }

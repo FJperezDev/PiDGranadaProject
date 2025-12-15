@@ -31,6 +31,26 @@ export const getOtherGroups = async () => {
   }
 };
 
+export const createSubject = async (name_es, name_en, description_es, description_en) => {
+  try {
+    const payload = { name_es, name_en, description_es, description_en};
+    const response = await apiClient.post(`/subjects/`, payload);
+    return response.data;
+  } catch (error) {
+    console.error("Error creating subject:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
+export const deleteSubject = async (subjectId) => {
+  try {
+    await apiClient.delete(`/subjects/${subjectId}/`);
+  } catch (error) {
+    console.error("Error deleting subject:", error.response?.data || error.message);
+    throw error;
+  }
+};
+
 export const createGroup = async (subjectId, name_es, name_en) => {
   try {
     const payload = { name_es, name_en };
