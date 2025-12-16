@@ -55,7 +55,7 @@ class Command(BaseCommand):
         ]
 
         self.stdout.write('--- Verificando usuarios iniciales ---')
-        User.objects.all().delete()
+        # User.objects.all().delete()
 
         for u in users_data:
             username = u['username']
@@ -63,8 +63,12 @@ class Command(BaseCommand):
             password = u['password']
             is_super = u['is_super']
             
-            if User.objects.filter(email=email).exists():
+            if User.objects.filter(email=email).exists() :
                 self.stdout.write(f'ℹ️ Email "{email}" ya está en uso por otro usuario. Saltando creación de "{username}"...')
+                continue
+
+            if User.objects.filter(username=username).exists():
+                self.stdout.write(f'ℹ️ Username "{username}" ya está en uso por otro usuario. Saltando creación de "{username}"...')
                 continue
 
             self.stdout.write(f'Creando usuario: {username} ({email})...')
