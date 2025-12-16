@@ -110,3 +110,14 @@ export const getAnalytics = async (filters) => {
         throw error;
     }
 };
+
+export const resetAnalytics = async (params) => {
+    // params: { scope: 'global'|'subject'|'specific', subject_id, group_by, target_id }
+    try {
+        const response = await apiClient.delete('/analytics/reset-analytics/', { params });
+        return response.data;
+    } catch (error) {
+        console.error('Error resetting analytics:', error);
+        throw error;
+    }
+};

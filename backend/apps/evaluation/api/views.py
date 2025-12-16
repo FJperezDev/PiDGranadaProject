@@ -20,6 +20,8 @@ from .serializers import (
 from apps.evaluation.domain import selectors, services
 from apps.utils.permissions import BaseContentViewSet
 
+from apps.utils.permissions import IsSuperTeacher
+
 class QuestionRelatedToConceptViewSet(BaseContentViewSet):
     queryset = QuestionRelatedToConcept.objects.all()
     serializer_class = QuestionRelatedToConceptSerializer
@@ -206,23 +208,28 @@ class AnalyticsViewSet(BaseContentViewSet):
         try:
             label_key = None 
             is_question_grouping = False
+            id_key = None
 
             if group_by == 'topic':
                 label_key = 'question__topics__topic__title_es'
+                id_key = 'question__topics__topic__id'
                 queryset = queryset.exclude(question__topics__topic__isnull=True)
             elif group_by == 'concept':
                 label_key = 'question__concepts__concept__name_es'
+                id_key = 'question__concepts__concept__id'
                 queryset = queryset.exclude(question__concepts__concept__isnull=True)
             elif group_by == 'group':
                 label_key = 'group__name_es'
+                id_key = 'group__id'
             elif group_by == 'question':
+                id_key = 'question__id'
                 label_key = 'question__id'
                 is_question_grouping = True
             else:
                 return Response({'detail': 'Invalid group_by parameter'}, status=400)
 
             # --- CONSULTA Y CÁLCULOS ---
-            result = queryset.values(label_key).annotate(
+            result = queryset.values(label_key, id_key).annotate(
                 total_attempts=Coalesce(Sum('ev_count'), 0),
                 total_correct=Coalesce(Sum('correct_count'), 0)
             ).annotate(
@@ -267,6 +274,7 @@ class AnalyticsViewSet(BaseContentViewSet):
             for item in result:
                 attempts = item['total_attempts']
                 percentage = round(item['accuracy'], 2) if item['accuracy'] is not None else 0
+                item_id = item.get(id_key)
 
                 if is_question_grouping:
                     q_id = item['question__id']
@@ -279,6 +287,7 @@ class AnalyticsViewSet(BaseContentViewSet):
                     full_label = str(raw_label)
 
                 formatted_data.append({
+                    'id': item_id,
                     'label': label,
                     'full_label': full_label,
                     'value': percentage,
@@ -291,4 +300,69 @@ class AnalyticsViewSet(BaseContentViewSet):
             print(f"Error Analytics: {e}")
             import traceback
             traceback.print_exc()
+            return Response({'detail': str(e)}, status=500)
+        
+
+    @action(detail=False, methods=['delete'], url_path='reset-analytics', permission_classes=[IsSuperTeacher])
+    def reset_analytics(self, request):
+        """
+        Permite borrar registros de QuestionEvaluationGroup.
+        Query Params:
+            - scope: 'global', 'subject', 'specific'
+            - subject_id: ID de la asignatura (opcional para global, requerido para subject)
+            - group_by: 'topic', 'concept', 'group', 'question' (requerido para specific)
+            - target_id: ID del elemento específico a borrar (topic_id, question_id, etc.)
+        """
+        scope = request.query_params.get('scope')
+        subject_id = request.query_params.get('subject_id')
+        
+        # Base QuerySet
+        queryset = QuestionEvaluationGroup.objects.all()
+
+        try:
+            if scope == 'global':
+                # Borrar TODO
+                count, _ = queryset.delete()
+                return Response({'message': f'Se han eliminado {count} registros globales.'})
+
+            elif scope == 'subject':
+                # Borrar por Asignatura
+                if not subject_id:
+                    return Response({'detail': 'Subject ID required'}, status=400)
+                
+                # Filtramos por los grupos que pertenecen a esa asignatura
+                queryset = queryset.filter(group__subject_id=subject_id)
+                count, _ = queryset.delete()
+                return Response({'message': f'Se han eliminado {count} registros de la asignatura.'})
+
+            elif scope == 'specific':
+                # Borrar un item específico de la lista (un tema concreto, un grupo concreto...)
+                group_by = request.query_params.get('group_by')
+                target_id = request.query_params.get('target_id')
+
+                if not group_by or not target_id:
+                    return Response({'detail': 'Group By and Target ID required for specific deletion'}, status=400)
+
+                if group_by == 'topic':
+                    queryset = queryset.filter(question__topics__topic_id=target_id)
+                elif group_by == 'concept':
+                    queryset = queryset.filter(question__concepts__concept_id=target_id)
+                elif group_by == 'group':
+                    queryset = queryset.filter(group_id=target_id)
+                elif group_by == 'question':
+                    queryset = queryset.filter(question_id=target_id)
+                else:
+                    return Response({'detail': 'Invalid group_by type'}, status=400)
+                
+                # Si además hay subject seleccionado, respetamos ese filtro también por seguridad
+                if subject_id:
+                    queryset = queryset.filter(group__subject_id=subject_id)
+
+                count, _ = queryset.delete()
+                return Response({'message': f'Se han eliminado {count} registros específicos.'})
+
+            else:
+                return Response({'detail': 'Invalid scope'}, status=400)
+
+        except Exception as e:
             return Response({'detail': str(e)}, status=500)

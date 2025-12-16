@@ -18,6 +18,9 @@ echo "Ejecutando migraciones..."
 gosu django python manage.py makemigrations --noinput
 gosu django python manage.py migrate --noinput
 
+echo "Verificando/Creando usuarios iniciales..."
+gosu django python manage.py init_users
+
 # 3. Tareas de limpieza iniciales
 echo "Ejecutando tareas de mantenimiento (cron_jobs.sh)..."
 # Ejecutamos el script como django

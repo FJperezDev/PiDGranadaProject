@@ -107,22 +107,31 @@ export default function ManageContentScreen({ navigation }) {
       const conceptsToLink = currentConceptIds.filter(id => !originalConceptIds.includes(id));
 
       // Helper para obtener nombre del concepto
-      const getConceptNameById = (id) => {
+      
+      const getConceptDataById = (id) => {
         const found = concepts.find(c => c.id === id);
-        return found ? (found.name_es || found.name) : null;
+        return found ? { name: found.name_es || found.name, id: found.id } : null;
       };
 
       const conceptUnlinkPromises = conceptsToUnlink.map(cId => {
-        const cName = getConceptNameById(cId);
-        if (cName) return topicIsNotAboutConcept(topicId, cName);
+        const cData = getConceptDataById(cId);
+        // CORRECCIÓN: Pasamos el ID como tercer argumento
+        if (cData) return topicIsNotAboutConcept(topicId, cData.name, cData.id);
         return Promise.resolve();
       });
 
       const conceptLinkPromises = conceptsToLink.map(cId => {
-        const cName = getConceptNameById(cId);
-        if (cName) return topicIsAboutConcept(topicId, cName);
+        const cData = getConceptDataById(cId);
+        // Para vincular usamos el nombre o creamos una función que acepte ID en el futuro
+        // Por ahora tu backend en POST concepts usa 'concept_name' para buscar o crear.
+        if (cData) return topicIsAboutConcept(topicId, cData.name); 
         return Promise.resolve();
       });
+      
+      const getConceptNameById = (id) => {
+        const found = concepts.find(c => c.id === id);
+        return found ? (found.name_es || found.name) : null;
+      };
 
       // 5. Ejecutar TODO junto
       await Promise.all([
@@ -187,6 +196,7 @@ export default function ManageContentScreen({ navigation }) {
   
       let parentConceptId;
   
+      // 1. Guardar o Actualizar el Concepto Padre
       if (editingItem) {
         await updateConcept(editingItem.id, dataToSave);
         parentConceptId = editingItem.id;
@@ -195,10 +205,17 @@ export default function ManageContentScreen({ navigation }) {
         parentConceptId = newConcept.id;
       }
 
+      // 2. GESTIÓN DE RELACIONES
+      
+      // A. UNLINK: Estaban antes, pero ya no están en la lista actual
       const idsToUnlink = originalIdsFromModal.filter(id => !incomingIds.includes(id));
       const unlinkPromises = idsToUnlink.map(childId => unlinkConceptFromConcept(parentConceptId, childId));
   
-      const linkPromises = incomingRelations.map(relation => {
+      // B. LINK: Son nuevos (están en la lista actual pero NO estaban antes)
+      // CORRECCIÓN CRÍTICA: Filtramos para no enviar POST de los que ya existen
+      const relationsToLink = incomingRelations.filter(r => !originalIdsFromModal.includes(r.id));
+
+      const linkPromises = relationsToLink.map(relation => {
         return linkConceptToConcept(
             parentConceptId, 
             relation.id, 
@@ -207,16 +224,19 @@ export default function ManageContentScreen({ navigation }) {
         );
       });
   
+      // Ejecutar cambios
       await Promise.all([...unlinkPromises, ...linkPromises]);
   
       setConceptModalVisible(false);
       setEditingItem(null);
       fetchData(); 
-      Alert.alert('Éxito', 'Concepto y relaciones guardados correctamente');
+      Alert.alert('Éxito', 'Concepto guardado correctamente');
   
     } catch (e) { 
       console.error(e);
-      Alert.alert('Error', 'Ocurrió un error al guardar'); 
+      // Si el error viene del backend, mostramos el mensaje detallado
+      const msg = e.response?.data?.detail || 'Ocurrió un error al guardar';
+      Alert.alert('Error', msg); 
     } finally {
       setLoading(false);
     }

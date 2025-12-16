@@ -21,10 +21,23 @@ export const swapTopicOrder = async (subjectId, topicA_Title, topicB_Title) => {
 };
 
 export const subjectIsAboutTopic = async (subjectId, topicName) => (await apiClient.post(`/subjects/${subjectId}/topics/`, {topic_name: topicName})).data;
-export const subjectIsNotAboutTopic = async (subjectId, topicName) => (await apiClient.delete(`/subjects/${subjectId}/topics/`, {topic_name: topicName})).data;
+
+export const subjectIsNotAboutTopic = async (subjectId, topicName) => {
+  return (await apiClient.delete(`/subjects/${subjectId}/topics/`, { 
+    data: { topic_name: topicName } 
+  })).data;
+};
 
 export const topicIsAboutConcept = async (topicId, conceptName) => (await apiClient.post(`/topics/${topicId}/concepts/`, {concept_name: conceptName})).data;
-export const topicIsNotAboutConcept = async (topicId, conceptName) => (await apiClient.delete(`/topics/${topicId}/concepts/`, {concept_name: conceptName})).data;
+
+export const topicIsNotAboutConcept = async (topicId, conceptName, conceptId = null) => {
+  return (await apiClient.delete(`/topics/${topicId}/concepts/`, { 
+    data: { 
+        concept_name: conceptName,
+        concept_id: conceptId // Enviamos también el ID si lo tenemos
+    } 
+  })).data;
+};
 
 // --- Epigraphs (Nested actions) ---
 

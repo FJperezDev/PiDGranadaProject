@@ -1,23 +1,22 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react'; // Importar useContext
 import { 
-    View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, Modal, FlatList, RefreshControl, Platform, UIManager, LayoutAnimation 
+    View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, Modal, FlatList, RefreshControl, Platform, UIManager, LayoutAnimation, Alert, TouchableOpacity 
 } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
-import { getAnalytics } from '../api/evaluationRequests'; 
+import { getAnalytics, resetAnalytics } from '../api/evaluationRequests'; // Importar resetAnalytics
 import { getSubjects } from '../api/coursesRequests';
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
+import { AuthContext } from '../context/AuthContext'; // Importar AuthContext
 import { StyledButton } from '../components/StyledButton';
-import { Filter, ChevronDown, X, BarChart2, Target, Repeat, Layers } from 'lucide-react-native';
+import { Filter, ChevronDown, X, BarChart2, Target, Repeat, Layers, Trash2 } from 'lucide-react-native'; // Importar Trash2
 
 const screenWidth = Dimensions.get("window").width;
 
-// Habilitar animaciones para Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Componente pequeño para la barra de progreso en la lista
 const ProgressBar = ({ percentage }) => {
     const color = percentage < 50 ? '#ef4444' : (percentage < 80 ? '#f59e0b' : '#10b981');
     return (
@@ -29,19 +28,17 @@ const ProgressBar = ({ percentage }) => {
 
 export default function AnalyticsScreen({ route }) {
     const { t } = useLanguage();
+    const { isSuper } = useContext(AuthContext); // Obtener permiso de SuperUser
     const { initialGroupBy } = route.params || {};
 
-    // Estados
     const [chartData, setChartData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
-    // Filtros
     const [groupBy, setGroupBy] = useState(initialGroupBy || 'topic'); 
     const [selectedSubject, setSelectedSubject] = useState(null); 
     const [showFilters, setShowFilters] = useState(false);
     
-    // Modal
     const [showFilterModal, setShowFilterModal] = useState(false);
     const [filterOptions, setFilterOptions] = useState([]); 
 
@@ -91,6 +88,73 @@ export default function AnalyticsScreen({ route }) {
         setRefreshing(false);
     }, [groupBy, selectedSubject]);
 
+    // --- LÓGICA DE BORRADO ---
+    const confirmDelete = (title, message, deleteParams) => {
+        if (Platform.OS === 'web') {
+            if (window.confirm(`${title}\n${message}`)) {
+                performDelete(deleteParams);
+            }
+        } else {
+            Alert.alert(
+                title,
+                message,
+                [
+                    { text: "Cancelar", style: "cancel" },
+                    { text: "Eliminar", style: "destructive", onPress: () => performDelete(deleteParams) }
+                ]
+            );
+        }
+    };
+
+    const performDelete = async (params) => {
+        setLoading(true);
+        try {
+            await resetAnalytics(params);
+            // Alert.alert("Éxito", "Datos eliminados correctamente.");
+            await fetchData(); // Recargar datos
+        } catch (error) {
+            Alert.alert("Error", "No se pudieron eliminar los datos.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGlobalReset = () => {
+        // Opción 1: Borrar TODO globalmente
+        // Opción 2: Borrar TODO de la asignatura seleccionada
+        
+        if (selectedSubject) {
+            confirmDelete(
+                "Borrar datos de Asignatura",
+                `¿Estás seguro de borrar TODOS los registros de evaluación para ${selectedSubject.name}? Esta acción no se puede deshacer.`,
+                { scope: 'subject', subject_id: selectedSubject.id }
+            );
+        } else {
+            // Si no hay asignatura, preguntamos si quiere borrar TODO EL SISTEMA
+            // Esto es peligroso, así que pedimos doble confirmación o un alert claro
+            confirmDelete(
+                "⚠️ BORRADO GLOBAL",
+                "¿Estás seguro de borrar TODAS las estadísticas de TODAS las asignaturas? Esto dejará el historial de exámenes vacío.",
+                { scope: 'global' }
+            );
+        }
+    };
+
+    const handleSpecificReset = (item) => {
+        // Borrar un item específico (ej: un Tema concreto)
+        const typeLabel = t(groupBy) || groupBy;
+        confirmDelete(
+            "Borrar datos específicos",
+            `¿Borrar estadísticas para el ${typeLabel}: "${item.full_label}"?`,
+            { 
+                scope: 'specific', 
+                group_by: groupBy, 
+                target_id: item.id, // ID que viene del backend ahora
+                subject_id: selectedSubject?.id // Contexto opcional
+            }
+        );
+    };
+
     // --- LÓGICA DE PREFIJOS ---
     const getPrefix = () => {
         switch (groupBy) {
@@ -116,11 +180,11 @@ export default function AnalyticsScreen({ route }) {
         fillShadowGradientTo: COLORS.primary,
         fillShadowGradientFromOpacity: 0.7,
         fillShadowGradientToOpacity: 0.3,
-        color: (opacity = 1) => COLORS.primary, // Color de las barras
+        color: (opacity = 1) => COLORS.primary, 
         strokeWidth: 0,
         barPercentage: 0.7,
         decimalPlaces: 0,
-        labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`, // Gris moderno
+        labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`, 
         propsForLabels: { fontSize: 11, fontWeight: '600' },
         style: { borderRadius: 16 }
     };
@@ -136,8 +200,18 @@ export default function AnalyticsScreen({ route }) {
             }
         >
             <View style={styles.headerContainer}>
-                <Text style={styles.headerTitle}>{t('performanceAnalytics') || 'Rendimiento'}</Text>
-                <Text style={styles.headerSubtitle}>Analiza tu progreso y estadísticas</Text>
+                <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <View>
+                        <Text style={styles.headerTitle}>{t('performanceAnalytics') || 'Rendimiento'}</Text>
+                        <Text style={styles.headerSubtitle}>Analiza tu progreso y estadísticas</Text>
+                    </View>
+                    {/* BOTÓN DE RESETEO GLOBAL (Solo SuperUser) */}
+                    {isSuper && (
+                        <TouchableOpacity onPress={handleGlobalReset} style={styles.globalDeleteBtn}>
+                            <Trash2 size={22} color="#ef4444" />
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
 
             {/* --- SECCIÓN DE CONTROLES / FILTROS --- */}
@@ -222,7 +296,7 @@ export default function AnalyticsScreen({ route }) {
                             withInnerLines={true}
                             withHorizontalLabels={true}
                             withVerticalLabels={true}
-                            style={{ paddingRight: 30, marginLeft: -10 }} // Ajuste visual
+                            style={{ paddingRight: 30, marginLeft: -10 }} 
                         />
                     </ScrollView>
                 </View>
@@ -247,6 +321,15 @@ export default function AnalyticsScreen({ route }) {
                                 <Text style={styles.detailTitle} numberOfLines={1}>
                                     {item.full_label || item.label}
                                 </Text>
+                                {/* BOTÓN BORRAR ESPECÍFICO (Solo SuperUser) */}
+                                {isSuper && (
+                                    <TouchableOpacity 
+                                        onPress={() => handleSpecificReset(item)} 
+                                        style={styles.itemDeleteBtn}
+                                    >
+                                        <Trash2 size={18} color="#ef4444" />
+                                    </TouchableOpacity>
+                                )}
                             </View>
 
                             <View style={styles.detailStatsRow}>
@@ -329,6 +412,12 @@ const styles = StyleSheet.create({
     headerContainer: { marginBottom: 20 },
     headerTitle: { fontSize: 28, fontWeight: '800', color: '#111827' },
     headerSubtitle: { fontSize: 14, color: '#6b7280', marginTop: 4 },
+    
+    globalDeleteBtn: {
+        padding: 8,
+        backgroundColor: '#fee2e2',
+        borderRadius: 8,
+    },
 
     // Cards Genéricas
     card: {
@@ -389,7 +478,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#eff6ff', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginRight: 10 
     },
     badgeText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
-    detailTitle: { fontSize: 15, fontWeight: '600', color: '#1f2937', flex: 1 },
+    detailTitle: { fontSize: 15, fontWeight: '600', color: '#1f2937', flex: 1, marginRight: 8 },
+    itemDeleteBtn: { padding: 4 }, // Estilo para el botón de borrar item
     
     detailStatsRow: { flexDirection: 'row', justifyContent: 'space-between' },
     statGroup: { flex: 1 },

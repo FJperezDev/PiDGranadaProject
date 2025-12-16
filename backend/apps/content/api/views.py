@@ -107,15 +107,29 @@ class TopicViewSet(BaseContentViewSet):
         elif request.method == 'DELETE':
             topic = selectors.get_topic_by_id(topic_id=pk)
             data = request.data
+            
+            # --- MEJORA: Buscar por ID primero, luego por Nombre ---
+            concept_id = data.get('concept_id')
             concept_name = data.get('concept_name')
             
-            concept = selectors.get_concept_by_name(name=concept_name)
+            concept = None
+            if concept_id:
+                try:
+                    concept = selectors.get_concept_by_id(concept_id)
+                except:
+                    pass # Si falla el ID, intentamos por nombre
+            
+            if not concept and concept_name:
+                concept = selectors.get_concept_by_name(name=concept_name)
+            
             if not concept:
-                return Response({'detail': 'Concept not found'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'detail': 'Concept not found via ID or Name'}, status=status.HTTP_404_NOT_FOUND)
+            # -------------------------------------------------------
             
             try:
                 services.unlink_concept_from_topic(topic=topic, concept=concept)
             except Exception as e:
+                # Capturamos ValidationError u otros
                 return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
             return Response({
