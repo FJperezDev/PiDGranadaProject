@@ -55,6 +55,7 @@ class Command(BaseCommand):
         ]
 
         self.stdout.write('--- Verificando usuarios iniciales ---')
+        User.objects.delete()
 
         for u in users_data:
             username = u['username']
