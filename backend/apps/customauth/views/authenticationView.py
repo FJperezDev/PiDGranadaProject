@@ -66,7 +66,7 @@ class LoginView(TokenObtainPairView):
         if not password:
              return Response({'message': 'Error de encriptación'}, status=400)
 
-	try:
+        try:
             # Buscamos el usuario "a mano" para ver si existe
             user_manual = CustomTeacher.objects.get(email=email)
             print(f"✅ Usuario encontrado en DB: ID={user_manual.id}, Username={user_manual.username}, Email={user_manual.email}")
