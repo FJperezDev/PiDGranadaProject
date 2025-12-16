@@ -1,6 +1,7 @@
 import os
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 
 class Command(BaseCommand):
     help = 'Crea usuarios iniciales predefinidos si no existen'
@@ -60,8 +61,8 @@ class Command(BaseCommand):
             email = u['email']
             password = u['password']
             is_super = u['is_super']
-
-	    if User.objects.filter(username=username).exists():
+            
+            if User.objects.filter(username=username).exists():
                 self.stdout.write(f'ℹ️ Usuario "{username}" ya existe. Saltando...')
                 continue
             
@@ -72,7 +73,7 @@ class Command(BaseCommand):
             if not User.objects.filter(username=username).exists():
                 self.stdout.write(f'Creando usuario: {username} ({email})...')
                 
-	    try:
+            try:
                 if is_super:
                     # Crear como Superusuario
                     User.objects.create_superuser(
