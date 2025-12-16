@@ -6,3 +6,4 @@ venv
 *cache*
 db.sqlite3
 backup*
+init_users.py
