@@ -3,44 +3,100 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 
 class Command(BaseCommand):
-    help = 'Crea usuarios iniciales si no existen'
+    help = 'Crea usuarios iniciales predefinidos si no existen'
 
     def handle(self, *args, **options):
         User = get_user_model()
         
-        # 1. Datos del Super Admin (desde variables de entorno o valores por defecto seguros)
-        admin_user = os.environ.get('DJANGO_SUPERUSER_USERNAME', 'admin')
-        admin_email = os.environ.get('DJANGO_SUPERUSER_EMAIL', 'admin@admin.com')
-        admin_pass = os.environ.get('DJANGO_SUPERUSER_PASSWORD', 'admin123')
+        # Lista de usuarios a crear
+        # is_super=True usará create_superuser
+        # is_super=False usará create_user
+        users_data = [
+            # --- SUPERUSUARIOS / ADMINS ---
+            {
+                'username': 'Admin',
+                'email': 'admin@admin.es',
+                'password': 'admin123',
+                'is_super': True
+            },
+            {
+                'username': 'Marilena',
+                'email': 'marilena@ugr.es',
+                'password': 'marilena',
+                'is_super': True
+            },
+            {
+                'username': 'Carlos',
+                'email': 'calbacet@ugr.es',
+                'password': 'calbacet',
+                'is_super': True
+            },
+            {
+                'username': 'Marcelino',
+                'email': 'mcabrera@ugr.es',
+                'password': 'mcabrera',
+                'is_super': True
+            },
+            {
+                'username': 'Araceli',
+                'email': 'gallegoburin@ugr.es',
+                'password': 'gallegoburin',
+                'is_super': True
+            },
+            
+            # --- USUARIOS NORMALES ---
+            {
+                'username': 'Fran',
+                'email': 'fran@gmail.es',
+                'password': 'fran123',
+                'is_super': False
+            }
+        ]
 
-        if not User.objects.filter(username=admin_user).exists():
-            self.stdout.write(f'Creando superusuario: {admin_user}...')
-            User.objects.create_superuser(
-                username=admin_user,
-                email=admin_email,
-                password=admin_pass,
-                is_super=True,
-                is_active=True
-            )
-            self.stdout.write(self.style.SUCCESS('✅ Superusuario creado.'))
-        else:
-            self.stdout.write('ℹ️ Superusuario ya existe.')
+        self.stdout.write('--- Verificando usuarios iniciales ---')
 
-        # 2. Datos del Usuario "Fran" (Demo/Profesor)
-        # Puedes hardcodearlo aquí si es solo para desarrollo, o usar env vars también
-        fran_user = 'fran'
-        fran_email = 'fran@gmail.com'
-        fran_pass = os.environ.get('DJANGO_FRAN_PASSWORD', 'fran123') # Mejor usar env var
+        for u in users_data:
+            username = u['username']
+            email = u['email']
+            password = u['password']
+            is_super = u['is_super']
 
-        if not User.objects.filter(username=fran_user).exists():
-            self.stdout.write(f'Creando usuario profesor: {fran_user}...')
-            User.objects.create_user(
-                username=fran_user,
-                email=fran_email,
-                password=fran_pass,
-                is_active=True,
-                is_super=False
-            )
-            self.stdout.write(self.style.SUCCESS('✅ Usuario Fran creado.'))
-        else:
-            self.stdout.write('ℹ️ Usuario Fran ya existe.')
+	    if User.objects.filter(username=username).exists():
+                self.stdout.write(f'ℹ️ Usuario "{username}" ya existe. Saltando...')
+                continue
+            
+            if User.objects.filter(email=email).exists():
+                self.stdout.write(f'ℹ️ Email "{email}" ya está en uso por otro usuario. Saltando creación de "{username}"...')
+                continue
+
+            if not User.objects.filter(username=username).exists():
+                self.stdout.write(f'Creando usuario: {username} ({email})...')
+                
+	    try:
+                if is_super:
+                    # Crear como Superusuario
+                    User.objects.create_superuser(
+                        username=username,
+                        email=email,
+                        password=password,
+                        is_super=True,
+                        is_active=True
+                    )
+                else:
+                    # Crear como Usuario Normal
+                    User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password,
+                        is_super=False,
+                        is_active=True
+                    )
+                
+                self.stdout.write(self.style.SUCCESS(f'✅ {username} creado exitosamente.'))
+            except IntegrityError as e:
+                # Capturamos el error por si acaso hay una condición de carrera rara o datos sucios
+                self.stdout.write(self.style.WARNING(f'⚠️ Error de integridad al crear {username}: {str(e)}. Probablemente ya existe.'))
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f'❌ Error creando {username}: {str(e)}'))
+
+        self.stdout.write(self.style.SUCCESS('--- Proceso de usuarios finalizado ---'))
