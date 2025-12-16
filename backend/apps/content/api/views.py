@@ -171,7 +171,7 @@ class TopicViewSet(BaseContentViewSet):
             return Response(status=status.HTTP_204_NO_CONTENT)
 
     # --- ACTION UNIFICADA: EPIGRAPH DETAIL ---
-    @action(detail=True, methods=['get', 'put', 'delete'], url_path='epigraphs/(?P<order_id>\d+)')
+    @action(detail=True, methods=['get', 'put', 'delete'], url_path=r'epigraphs/(?P<order_id>\d+)')
     def epigraph_detail(self, request, pk=None, order_id=None):
         epigraph = selectors.get_epigraph_by_id(topic_id=pk, order_id=order_id)
         if not epigraph or str(epigraph.topic.id) != str(pk):
