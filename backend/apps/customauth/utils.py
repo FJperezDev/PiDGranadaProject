@@ -15,8 +15,15 @@ def decrypt_rsa_password(encrypted_password):
         return encrypted_password
 
     try:
-        private_key_pem = settings.RSA_PRIVATE_KEY.encode('utf-8')
-        private_key = serialization.load_pem_private_key(private_key_pem, password=None)
+
+        private_key_b64 = settings.RSA_PRIVATE_KEY
+
+        if "-----BEGIN PRIVATE KEY-----" in private_key_b64:
+             private_key_bytes = private_key_b64.encode('utf-8')
+        else:
+             private_key_bytes = base64.b64decode(private_key_b64)
+
+        private_key = serialization.load_pem_private_key(private_key_bytes, password=None)
 
         ciphertext = base64.b64decode(encrypted_password)
 
