@@ -66,6 +66,18 @@ class LoginView(TokenObtainPairView):
         if not password:
              return Response({'message': 'Error de encriptación'}, status=400)
 
+	try:
+            # Buscamos el usuario "a mano" para ver si existe
+            user_manual = CustomTeacher.objects.get(email=email)
+            print(f"✅ Usuario encontrado en DB: ID={user_manual.id}, Username={user_manual.username}, Email={user_manual.email}")
+            
+            # Verificamos el password "a mano"
+            is_password_correct = user_manual.check_password(password)
+            print(f"❓ check_password manual: {is_password_correct}")
+            
+        except CustomTeacher.DoesNotExist:
+            print(f"❌ Usuario con email '{email}' NO EXISTE en la base de datos.")
+
         # 3. Autenticar
         # NOTA CRUCIAL: Aunque el parámetro se llama 'username', Django 
         # internamente lo mapea a tu USERNAME_FIELD (que es 'email').
