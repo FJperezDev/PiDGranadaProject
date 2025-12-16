@@ -5,14 +5,14 @@ import { StyledButton } from "../components/StyledButton";
 import { useNavigation } from "@react-navigation/native";
 import { useVoiceControl } from "../context/VoiceContext";
 import { useIsFocused } from "@react-navigation/native";
-
+import { COLORS } from "../constants/colors";
 
 export const ExamRecommendationsScreen = ({ route }) => {
   const { t } = useLanguage();
   const navigation = useNavigation();
   const isFocused = useIsFocused();
   const { transcript, setTranscript } = useVoiceControl();
-  const { code, recommendations, score, total } = route.params;
+  const { code, recommendations } = route.params; // score, total tambien disponibles si se necesitan
 
   const handleFinish = () => {
     navigation.navigate('Subject', { code: code });
@@ -23,14 +23,11 @@ export const ExamRecommendationsScreen = ({ route }) => {
   }
 
   useEffect(() => {
-      // Si no hay texto o la pantalla no está activa, salimos
       if (!transcript || !isFocused) return;
   
       const spoken = normalizeText(transcript);
       console.log("Comando oído en Recommendations:", spoken);
   
-      // --- Comandos para Terminar / Volver a la Asignatura ---
-      // Palabras clave: terminar, finalizar, asignatura, volver, finish, end, subject, back
       if (
           spoken.includes('terminar') || 
           spoken.includes('finalizar') || 
@@ -47,7 +44,6 @@ export const ExamRecommendationsScreen = ({ route }) => {
           return;
       }
   
-      // --- Navegación a Inicio ---
       if (spoken.includes('inicio') || spoken.includes('home') || spoken.includes('casa')) {
           navigation.navigate('Home');
           setTranscript('');
@@ -93,23 +89,23 @@ const styles = StyleSheet.create({
     maxWidth: 800,
     alignSelf: 'center',
     padding: 20,
-    backgroundColor: '#f0f9ff', // sky-50
+    backgroundColor: COLORS.background, // Sustituido #f0f9ff (Slate-50 aprox)
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: COLORS.text,
     marginTop: 40,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
+    color: COLORS.textSecondary,
     marginBottom: 24,
     textAlign: 'center',
   },
   card: {
     width: '100%',
-    backgroundColor: 'white',
+    backgroundColor: COLORS.surface,
     padding: 24,
     borderRadius: 16,
     flex: 1,
@@ -117,7 +113,7 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1)' }
       : {
-          shadowColor: '#000',
+          shadowColor: COLORS.shadow,
           shadowOpacity: 0.1,
           shadowRadius: 5,
           elevation: 3,
@@ -127,30 +123,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 16,
-    backgroundColor: '#f8fafc',
+    backgroundColor: COLORS.surfaceHighlight, // Sustituido #f8fafc
     padding: 12,
     borderRadius: 8,
   },
   bullet: {
     fontSize: 20,
     marginRight: 10,
-    color: '#0ea5e9',
+    color: COLORS.primary, // Sustituido #0ea5e9
     fontWeight: 'bold',
   },
   recText: {
     fontSize: 16,
     flex: 1,
-    color: '#334155',
+    color: COLORS.text,
     lineHeight: 24,
   },
   italicText: {
     fontSize: 16,
     fontStyle: 'italic',
     textAlign: 'center',
-    color: '#94a3b8',
+    color: COLORS.textLight,
   },
   finishButton: {
-    backgroundColor: '#22c55e', // green-500
+    backgroundColor: COLORS.success, // Sustituido green-500
     padding: 16,
     borderRadius: 10,
     width: '100%',

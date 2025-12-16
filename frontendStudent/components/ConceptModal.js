@@ -9,11 +9,13 @@ import {
 import { Ionicons } from '@expo/vector-icons'; 
 import { COLORS } from '../constants/colors';
 import { StyledButton } from '../components/StyledButton';
+import { useLanguage } from '../context/LanguageContext';
 
-export const ConceptModal = ({ visible, onClose, concept, onRelatedPress, t }) => {
+export const ConceptModal = ({ visible, onClose, concept, onRelatedPress }) => {
+  const { t } = useLanguage(); // Usamos el hook directamente aquí
+  
   if (!concept) return null;
 
-  // Procesar ejemplos: separar por '@' y filtrar vacíos
   const examplesList = concept.examples 
     ? concept.examples.split('@').filter(ex => ex.trim() !== '') 
     : [];
@@ -42,60 +44,58 @@ export const ConceptModal = ({ visible, onClose, concept, onRelatedPress, t }) =
             
             {/* 1. Descripción */}
             <View style={styles.section}>
-              <Text style={styles.label}>{t("description") || "DESCRIPCIÓN"}</Text>
+              <Text style={styles.label}>{t("description")}</Text>
               <Text style={styles.description}>
-                {concept.description || t("noDescription") || "Sin descripción disponible."}
+                {concept.description || t("noDescription")}
               </Text>
             </View>
 
-            {/* 2. Ejemplos (NUEVO) */}
+            {/* 2. Ejemplos */}
             {examplesList.length > 0 && (
               <View style={styles.section}>
                 <View style={styles.divider} />
                 <Text style={styles.label}>
                   <Ionicons name="easel-outline" size={14} /> 
-                  {" "}{t("examples") || "EJEMPLOS PRÁCTICOS"}
+                  {" "}{t("examples")}
                 </Text>
                 
                 {examplesList.map((example, index) => (
                   <View key={index} style={styles.exampleCard}>
-                    <Ionicons name="checkmark-circle-outline" size={18} color="green" style={{marginTop: 2}} />
+                    <Ionicons name="checkmark-circle-outline" size={18} color={COLORS.exampleText} style={{marginTop: 2}} />
                     <Text style={styles.exampleText}>{example.trim()}</Text>
                   </View>
                 ))} 
               </View>
             )}
 
+            {/* 3. Conceptos Relacionados */}
             {concept.related_concepts && concept.related_concepts.length > 0 && (
               <View style={styles.section}>
                 <View style={styles.divider} />
                 <Text style={styles.label}>
                   <Ionicons name="git-network-outline" size={14} /> 
-                  {" "}{t("related_concepts") || "RELACIONES (Toca para ver)"}
+                  {" "}{t("related_concepts")}
                 </Text>
 
                 {concept.related_concepts.map((relation, index) => {
-                  // Determinamos el nombre y el objeto a pasar
                   const targetName = typeof relation.concept_to === 'object' 
                     ? relation.concept_to.name 
                     : relation.concept_to;
                   
                   const targetObj = typeof relation.concept_to === 'object'
                     ? relation.concept_to
-                    : { name: relation.concept_to }; // Fallback si es string
+                    : { name: relation.concept_to };
 
                   return (
                     <StyledButton 
                       key={index} 
                       style={styles.relationCard}
                       activeOpacity={0.7}
-                      // Al presionar, pasamos el objeto destino al padre
                       onPress={() => onRelatedPress(targetObj)}
                     >
                       <View style={styles.relationHeader}>
                         <Ionicons name="link" size={16} color={COLORS.primary} />
                         <Text style={styles.relationTarget}>{targetName}</Text>
-                        {/* Flechita indicando navegación */}
                         <Ionicons name="chevron-forward" size={16} color={COLORS.primary} style={{marginLeft: 'auto'}}/>
                       </View>
                       
@@ -119,7 +119,7 @@ export const ConceptModal = ({ visible, onClose, concept, onRelatedPress, t }) =
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Un poco más oscuro para resaltar
+    backgroundColor: COLORS.overlay,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 15,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderBottomColor,
+    borderBottomColor: COLORS.border,
   },
   headerTitleContainer: {
     flexDirection: 'row',
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '800',
-    color: COLORS.text ,
+    color: COLORS.text,
     flex: 1,
   },
   closeButton: {
@@ -182,13 +182,12 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.borderColor,
+    backgroundColor: COLORS.border,
     marginVertical: 10,
   },
-  // Estilos para Ejemplos
   exampleCard: {
     flexDirection: 'row',
-    backgroundColor: COLORS.example, // Un verde muy suave
+    backgroundColor: COLORS.example,
     padding: 12,
     borderRadius: 12,
     marginBottom: 8,
@@ -202,7 +201,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontStyle: 'italic',
   },
-  // Estilos para Relaciones (Ahora botones)
   relationCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 12,
@@ -210,7 +208,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
-    // Sombra suave para indicar que es un botón
     ...Platform.select({
       ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
       android: { elevation: 2 },

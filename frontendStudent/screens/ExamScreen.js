@@ -5,8 +5,6 @@ import { StyledButton } from "../components/StyledButton";
 import { Text, View, StyleSheet, Alert } from "react-native";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { COLORS } from "../constants/colors";
-import { TouchableOpacity } from "react-native";
-
 import { useVoiceControl } from "../context/VoiceContext";
 
 export const ExamScreen = ({ route }) => {
@@ -29,19 +27,18 @@ export const ExamScreen = ({ route }) => {
   };
 
   useEffect(() => {
-    if (!transcript || !isFocused) return; // Si no hay texto, no hacemos nada
+    if (!transcript || !isFocused) return; 
 
     const spoken = normalizeText(transcript);
     console.log("Comando oído:", spoken);
 
-    // --- Lógica de Comandos de Navegación ---
     const cmdNext = language === 'en' ? 'next' : 'siguiente';
     const cmdPrev = language === 'en' ? 'previous' : 'anterior';
     const cmdFinish = language === 'en' ? 'finish' : 'finalizar';
 
     if (spoken.includes(cmdNext)) {
         handleNext();
-        setTranscript(''); // Limpiar comando para no repetirlo
+        setTranscript('');
         return;
     }
     if (spoken.includes(cmdPrev)) {
@@ -55,10 +52,8 @@ export const ExamScreen = ({ route }) => {
         return;
     }
 
-    // --- Lógica de Selección de Respuesta ---
     if (questions.length > 0) {
       const currentQuestion = questions[currentQ];
-      // Tu lógica de matching original adaptada:
       const match = currentQuestion.answers.find(opt => {
           const normOpt = normalizeText(opt.text);
           return spoken.includes(normOpt) || normOpt.includes(spoken);
@@ -66,15 +61,13 @@ export const ExamScreen = ({ route }) => {
 
       if (match) {
         handleSelectAnswer(currentQuestion.id, match.id);
-        setTranscript(''); // Limpiar
+        setTranscript('');
       }
     }
     
   }, [transcript, currentQ, questions, language]);
 
-  // Cargar preguntas
   useEffect(() => {
-    
     setIsLoading(true);
     mockApi.generateExam(topics, nQuestions).then((data) => {
       setQuestions(data);
@@ -85,9 +78,7 @@ export const ExamScreen = ({ route }) => {
     });
   }, [topics, nQuestions]);
 
-  // Traducir preguntas cuando cambia el idioma
   useEffect(() => {
-    // Evitamos que se ejecute en la carga inicial del componente
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
@@ -121,8 +112,8 @@ export const ExamScreen = ({ route }) => {
 
     } catch (error) {
       Alert.alert(
-        t("error") || "Error", 
-        t("errorSubmittingExam") || "Hubo un problema enviando el examen. Inténtalo de nuevo."
+        t("error"), 
+        t("errorConnection")
       );
       console.error(error);
     } finally {
@@ -130,7 +121,6 @@ export const ExamScreen = ({ route }) => {
     }
   };
 
-  // Temporizador
   useEffect(() => {
     if (isLoading || isSubmitting) return;
 
@@ -177,7 +167,7 @@ export const ExamScreen = ({ route }) => {
   if (!question) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>{t("loadingQuestion")}</Text>
+        <Text style={styles.loadingText}>{t("loading")}</Text>
       </View>
     );
   }
@@ -208,8 +198,9 @@ export const ExamScreen = ({ route }) => {
                 styles.optionButton,
                 isSelected ? styles.optionSelected : styles.optionDefault,
               ]}
+              textStyle={{ textAlign: "center", fontSize: 16, color: COLORS.text }}
             >
-              <Text style={{ textAlign: "center", fontSize: 16 }}>{opt.text}</Text>
+              <Text style={{ textAlign: "center", fontSize: 16, color: COLORS.text }}>{opt.text}</Text>
             </StyledButton>
           );
         })}
@@ -258,7 +249,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: COLORS.text || "#333",
+    color: COLORS.text,
   },
   header: {
     position: "absolute",
@@ -270,10 +261,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   progressText: {
-    color: "#64748b", // slate-500
+    color: COLORS.textSecondary,
   },
   timerText: {
-    color: COLORS.errorDark, // red-700
+    color: COLORS.errorDark,
     fontWeight: "bold",
     fontSize: 18,
   },
@@ -282,7 +273,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     textAlign: "center",
     marginVertical: 40,
-    color: COLORS.black || "#000",
+    color: COLORS.text,
   },
   optionsContainer: {
     width: "100%",
@@ -293,16 +284,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 2,
     borderRadius: 8,
-    textAlign: "center",
-    fontSize: 16,
   },
   optionDefault: {
     backgroundColor: COLORS.surface,
-    borderColor: COLORS.border, // slate-300
+    borderColor: COLORS.border,
   },
   optionSelected: {
-    backgroundColor: COLORS.primaryVeryLight, // cyan-100
-    borderColor: COLORS.primaryLight, // cyan-300
+    backgroundColor: COLORS.primaryVeryLight, 
+    borderColor: COLORS.primaryLight,
   },
   navContainer: {
     flexDirection: "row",
@@ -311,9 +300,9 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   nextButton: {
-    backgroundColor: COLORS.primaryLight, // cyan-200
+    backgroundColor: COLORS.primaryLight,
   },
   finishButton: {
-    backgroundColor: COLORS.success, // green-500
+    backgroundColor: COLORS.success,
   },
 });

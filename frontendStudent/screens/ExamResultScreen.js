@@ -1,32 +1,31 @@
-import { useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, Platform } from "react-native";
+import { useEffect, useState, useRef } from "react"; // Añadido useRef
+import { View, Text, ScrollView, StyleSheet, Platform, ActivityIndicator } from "react-native"; // Añadido ActivityIndicator
 import { useLanguage } from "../context/LanguageContext";
 import { StyledButton } from "../components/StyledButton";
 import { COLORS } from "../constants/colors"; 
 import { useIsFocused } from "@react-navigation/native";
 import { useVoiceControl } from "../context/VoiceContext";
+import { mockApi } from "../services/api"; // Importamos mockApi para traducir
 
 export const ExamResultScreen = ({ route, navigation }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage(); // Traemos 'language'
   const isFocused = useIsFocused();
   const { transcript, setTranscript } = useVoiceControl();
-
-  const getOptionStyle = (isSelected, isCorrectOption) => {
-    if (isSelected && isCorrectOption) return styles.optionCorrect;
-    if (isSelected && !isCorrectOption) return styles.optionWrong;
-    if (!isSelected && isCorrectOption) return styles.optionMissedCorrect;
-    return styles.optionDefault;
-  };
-
+  
   const { 
     code, 
     score, 
     total, 
     recommendations, 
-    questions = [], 
+    questions = [], // Fallback a array vacío
     userAnswers = {}
   } = route.params;
-  
+
+  // Estado local para las preguntas (para poder traducirlas)
+  const [examQuestions, setExamQuestions] = useState(questions);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const isInitialMount = useRef(true);
+
   const handleContinue = () => {
     navigation.navigate("ExamRecommendations", {
       code,
@@ -40,15 +39,13 @@ export const ExamResultScreen = ({ route, navigation }) => {
     return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
   };
 
+  // --- Efecto para Control de Voz (Sin cambios) ---
   useEffect(() => {
-    // Si no hay texto o la pantalla no está activa, no hacemos nada
     if (!transcript || !isFocused) return;
 
     const spoken = normalizeText(transcript);
     console.log("Comando oído en ExamResult:", spoken);
 
-    // --- Comandos de Acción Principal (Ir a Recomendaciones) ---
-    // Palabras clave: siguiente, recomendaciones, continuar, next, recommendations
     if (
         spoken.includes('siguiente') || 
         spoken.includes('recomendaciones') || 
@@ -61,7 +58,6 @@ export const ExamResultScreen = ({ route, navigation }) => {
         return;
     }
 
-    // --- Comandos de Navegación General ---
     if (spoken.includes('volver') || spoken.includes('atras') || spoken.includes('back')) {
         if (navigation.canGoBack()) navigation.goBack();
         setTranscript('');
@@ -76,6 +72,36 @@ export const ExamResultScreen = ({ route, navigation }) => {
 
   }, [transcript, isFocused, navigation]);
 
+  // --- NUEVO: Efecto para Traducir Preguntas al cambiar idioma ---
+  useEffect(() => {
+    // Evitamos traducir en la primera carga si ya vienen en el idioma correcto,
+    // o puedes quitar esta guarda si prefieres forzar la traducción siempre.
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (!examQuestions || examQuestions.length === 0) return;
+
+    const translateQuestions = async () => {
+      setIsTranslating(true);
+      try {
+        // Mapeamos todas las preguntas actuales para pedir su traducción
+        const translationPromises = examQuestions.map(q => mockApi.getQuestion(q.id));
+        const translatedQuestions = await Promise.all(translationPromises);
+        
+        // Actualizamos el estado con las nuevas preguntas traducidas
+        setExamQuestions(translatedQuestions);
+      } catch (error) {
+        console.error("Error traduciendo resultados:", error);
+      } finally {
+        setIsTranslating(false);
+      }
+    };
+
+    translateQuestions();
+  }, [language]); // Se ejecuta cada vez que 'language' cambia
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{t('results')}</Text>
@@ -87,71 +113,74 @@ export const ExamResultScreen = ({ route, navigation }) => {
         </Text>
       </View>
 
-      <ScrollView style={styles.scrollContainer}>
-        {questions.map((q, index) => {
-          const userAnswerId = userAnswers[q.id];
-          
-          // Buscamos la opción que eligió el usuario para saber si acertó la pregunta entera
-          const selectedOption = q.answers.find(opt => opt.id === userAnswerId);
-          const isQuestionAnsweredCorrectly = selectedOption?.is_correct === true;
-          
-          return (
-            <View key={q.id} style={styles.questionCard}>
-              <Text style={styles.questionStatement}>
-                {index + 1}. {q.statement}
-              </Text>
+      {/* Si se está traduciendo, mostramos un loader, si no, la lista */}
+      {isTranslating ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={{ marginTop: 10, color: COLORS.textSecondary }}>{t('loading')}</Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.scrollContainer}>
+          {examQuestions.map((q, index) => {
+            const userAnswerId = userAnswers[q.id];
+            
+            // Buscamos la opción seleccionada por el usuario en la pregunta (traducida o no)
+            // NOTA: Asumimos que los IDs de las respuestas NO cambian al traducir.
+            const selectedOption = q.answers.find(opt => opt.id === userAnswerId);
+            const isQuestionAnsweredCorrectly = selectedOption?.is_correct === true;
+            
+            return (
+              <View key={q.id} style={styles.questionCard}>
+                <Text style={styles.questionStatement}>
+                  {index + 1}. {q.statement}
+                </Text>
 
-              <View style={styles.optionsList}>
-                {q.answers.map((opt) => {
-                  const isSelected = userAnswerId === opt.id;
-                  // CAMBIO AQUÍ: Usamos opt.is_correct directamente
-                  const isCorrectOption = opt.is_correct === true;
+                <View style={styles.optionsList}>
+                  {q.answers.map((opt) => {
+                    const isSelected = userAnswerId === opt.id;
+                    const isCorrectOption = opt.is_correct === true;
 
-                  let optionStyle = styles.optionDefault;
-                  let textStyle = styles.optionTextDefault;
+                    let optionStyle = styles.optionDefault;
+                    let textStyle = styles.optionTextDefault;
 
-                  // Lógica de estilos:
-                  if (isSelected && isCorrectOption) {
-                    // El usuario marcó esta y ES correcta -> VERDE
-                    optionStyle = styles.optionCorrect; 
-                  } else if (isSelected && !isCorrectOption) {
-                    // El usuario marcó esta y NO es correcta -> ROJO
-                    optionStyle = styles.optionWrong; 
-                  } else if (!isSelected && isCorrectOption) {
-                    // El usuario NO marcó esta, pero ERA la correcta -> VERDE CLARO (corrección)
-                    optionStyle = styles.optionMissedCorrect; 
-                  }
+                    if (isSelected && isCorrectOption) {
+                      optionStyle = styles.optionCorrect; 
+                    } else if (isSelected && !isCorrectOption) {
+                      optionStyle = styles.optionWrong; 
+                    } else if (!isSelected && isCorrectOption) {
+                      optionStyle = styles.optionMissedCorrect; 
+                    }
 
-                  return (
-                    <View key={opt.id} style={[styles.optionBase, optionStyle]}>
-                      <Text style={textStyle}>
-                        {opt.text} 
-                        {/* Iconos indicadores */}
-                        {isCorrectOption ? " ✔" : ""} 
-                        {isSelected && !isCorrectOption ? " ✘" : ""}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-
-              {/* Mostrar Explanation si la pregunta NO fue respondida correctamente */}
-              {!isQuestionAnsweredCorrectly && q.explanation && (
-                <View style={styles.explanationContainer}>
-                  <Text style={styles.explanationLabel}>{t('explanation') || "Explanation"}:</Text>
-                  <Text style={styles.explanationText}>{q.explanation}</Text>
+                    return (
+                      <View key={opt.id} style={[styles.optionBase, optionStyle]}>
+                        <Text style={textStyle}>
+                          {opt.text} 
+                          {isCorrectOption ? " ✔" : ""} 
+                          {isSelected && !isCorrectOption ? " ✘" : ""}
+                        </Text>
+                      </View>
+                    );
+                  })}
                 </View>
-              )}
-            </View>
-          );
-        })}
-      </ScrollView>
+
+                {!isQuestionAnsweredCorrectly && q.explanation && (
+                  <View style={styles.explanationContainer}>
+                    <Text style={styles.explanationLabel}>{t('explanation') || "Explanation"}:</Text>
+                    <Text style={styles.explanationText}>{q.explanation}</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
 
       <View style={styles.footer}>
         <StyledButton 
-            title={t('next') || "See Recommendations"} 
+            title={t('next')} 
             onPress={handleContinue} 
             style={styles.nextButton} 
+            disabled={isTranslating} // Deshabilitar si carga
         />
       </View>
     </View>
@@ -166,21 +195,30 @@ const styles = StyleSheet.create({
     maxWidth: 800,
     alignSelf: 'center',
     padding: 20,
-    backgroundColor: '#f8fafc',
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: COLORS.text,
     marginTop: 20,
     marginBottom: 10,
   },
   scoreContainer: {
     marginBottom: 20,
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
     borderRadius: 12,
     elevation: 2,
+    shadowColor: COLORS.shadow,
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   scoreText: {
     fontSize: 24,
@@ -206,7 +244,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 12,
-    color: '#334155',
+    color: COLORS.textSecondary,
   },
   optionsList: {
     marginBottom: 10,
@@ -220,24 +258,24 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   optionDefault: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.surface,
   },
-  optionCorrect: { // Usuario acertó
+  optionCorrect: { 
     backgroundColor: COLORS.successLight, 
     borderColor: COLORS.successBorder, 
   },
-  optionWrong: { // Usuario falló
+  optionWrong: { 
     backgroundColor: COLORS.errorLight, 
     borderColor: COLORS.error, 
   },
-  optionMissedCorrect: { // Era la correcta pero no la marcó
+  optionMissedCorrect: { 
     backgroundColor: COLORS.successLight, 
     borderColor: COLORS.successBorder,
     borderStyle: 'dashed', 
   },
   optionTextDefault: {
     fontSize: 16,
-    color: '#333',
+    color: COLORS.text,
   },
   explanationContainer: {
     marginTop: 10,

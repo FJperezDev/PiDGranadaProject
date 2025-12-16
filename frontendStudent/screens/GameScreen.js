@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Text, View, StyleSheet, ScrollView } from "react-native"; // 1. Importar ScrollView
+import { Text, View, StyleSheet, ScrollView } from "react-native";
 import { useNavigation } from '@react-navigation/native';
 import { useLanguage } from "../context/LanguageContext";
 import { StyledButton } from "../components/StyledButton";
 import { GAME_QUESTIONS } from "../constants/game";
 import { useIsFocused } from "@react-navigation/native";
 import { useVoiceControl } from "../context/VoiceContext";
+import { COLORS } from "../constants/colors";
 
 export const GameScreen = () => {
   const navigation = useNavigation();
@@ -27,7 +28,6 @@ export const GameScreen = () => {
     const spoken = normalizeText(transcript);
     console.log("Comando oído en Game:", spoken);
 
-    // --- Navegación del Juego ---
     if (spoken.includes('siguiente') || spoken.includes('next') || spoken.includes('continuar')) {
         handleNext();
         setTranscript('');
@@ -42,40 +42,34 @@ export const GameScreen = () => {
         spoken.includes('back')
     ) {
         if (currentQ > 0) {
-            // Si ya hemos avanzado, volvemos a la pregunta anterior
             handlePrev();
         } else {
-            // Si estamos en la primera pregunta (0), salimos del juego hacia atrás
             if (navigation.canGoBack()) {
                 navigation.goBack();
             } else {
-                navigation.navigate('Home'); // Fallback por si acaso
+                navigation.navigate('Home');
             }
         }
         setTranscript('');
         return;
     }
     
-    // Finalizar explícito (si estás en la última)
     if (spoken.includes('terminar') || spoken.includes('finalizar') || spoken.includes('finish')) {
         if (currentQ === questions.length - 1) {
-            handleNext(); // handleNext ya maneja la finalización
+            handleNext();
         }
         setTranscript('');
         return;
     }
 
-    // --- Salir del Juego ---
     if (spoken.includes('inicio') || spoken.includes('home') || spoken.includes('salir')) {
         navigation.navigate('Home');
         setTranscript('');
         return;
     }
 
-    // --- Seleccionar Opción por Voz ---
     const currentQuestion = questions[currentQ];
     if (currentQuestion) {
-        // Buscamos si lo dicho coincide con alguna opción
         const match = currentQuestion.options.find(opt => {
             const normalizedOpt = normalizeText(opt.text);
             return spoken.includes(normalizedOpt) || normalizedOpt.includes(spoken);
@@ -101,7 +95,7 @@ export const GameScreen = () => {
   const handleNext = () => {
     const question = questions[currentQ];
     if (answers[question.id] === undefined) {
-      setWarning(t('pleaseSelectAnswer') || "Por favor, selecciona una respuesta antes de continuar.");
+      setWarning(t('pleaseSelectAnswer'));
       setTimeout(() => setWarning(""), 2000);
       return;
     }
@@ -135,13 +129,11 @@ export const GameScreen = () => {
   const selectedCode = answers[question.id];
 
   return (
-    // 2. Usamos ScrollView en lugar de View
     <ScrollView 
       style={styles.mainContainer}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* Contador movido al flujo normal para evitar solapamientos */}
       <Text style={styles.counterText}>
         {`${currentQ + 1} / ${questions.length}`}
       </Text>
@@ -158,12 +150,9 @@ export const GameScreen = () => {
                 styles.optionButton,
                 isSelected ? styles.optionSelected : styles.optionUnselected
               ]}
-              // Ojo: Si tus opciones tienen texto negro, asegúrate de pasarlo
-              textStyle={{ color: '#0f172a' }} 
+              textStyle={{ color: COLORS.text }} 
               onPress={() => handleSelectAnswer(question.id, opt.code)}
             >
-              {/* Pasamos el texto como hijo para que StyledButton lo renderice, 
-                  o usamos title="" y textStyle. Aquí lo dejo como hijo que es flexible */}
               <Text style={{ textAlign: "center", fontSize: 16 }}>
                 {opt.text}
               </Text>
@@ -179,8 +168,7 @@ export const GameScreen = () => {
           title={t("previous")}
           onPress={handlePrev}
           disabled={currentQ === 0}
-          // Aseguramos contraste si hace falta
-          style={{ backgroundColor: '#e2e8f0' }} 
+          style={{ backgroundColor: COLORS.borderLight }} 
         />
         <StyledButton
           title={currentQ === questions.length - 1 ? t("finishGame") : t("next")}
@@ -189,9 +177,8 @@ export const GameScreen = () => {
             styles.nextButton,
             currentQ === questions.length - 1 ? styles.finishButton : styles.nextButtonDefault
           ]}
-          // IMPORTANTE: El arreglo del color de texto del mensaje anterior
           textStyle={{ 
-            color: currentQ === questions.length - 1 ? 'white' : '#0f172a' 
+            color: currentQ === questions.length - 1 ? COLORS.white : COLORS.text 
           }}
         />
       </View>
@@ -205,27 +192,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  // Contenedor externo del ScrollView
   mainContainer: {
     flex: 1,
-    backgroundColor: '#fff', // O COLORS.background
+    backgroundColor: COLORS.background,
   },
-  // Contenedor interno (lo que antes era container)
   scrollContent: {
-    flexGrow: 1, // Esto permite que si hay poco contenido, se centre, pero si hay mucho, crezca
+    flexGrow: 1, 
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
     width: "100%",
     maxWidth: 600,
     alignSelf: "center",
-    paddingBottom: 40, // Espacio extra abajo para que los botones no toquen el borde
+    paddingBottom: 40,
   },
   counterText: {
-    // Ya no es absolute, se alinea a la derecha
     alignSelf: 'flex-end', 
     marginBottom: 10,
-    color: "#64748b",
+    color: COLORS.textSecondary,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -233,7 +217,8 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "500",
     textAlign: "center",
-    marginVertical: 20, // Reducido un poco para aprovechar espacio
+    marginVertical: 20,
+    color: COLORS.text,
   },
   optionsContainer: {
     width: "100%",
@@ -245,18 +230,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 8,
     borderWidth: 2,
-    // Eliminamos fontSize y textAlign de aquí porque se aplican al contenedor, no al texto directo
   },
   optionSelected: {
-    backgroundColor: "#cffafe",
-    borderColor: "#67e8f9",
+    backgroundColor: COLORS.primaryVeryLight,
+    borderColor: COLORS.primaryLight,
   },
   optionUnselected: {
-    backgroundColor: "#ffffff",
-    borderColor: "#cbd5e1",
+    backgroundColor: COLORS.surface,
+    borderColor: COLORS.border,
   },
   warningText: {
-    color: "#dc2626",
+    color: COLORS.error,
     marginTop: 10,
     marginBottom: 10,
     fontSize: 16,
@@ -269,14 +253,14 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   nextButton: {
-    paddingHorizontal: 24, // Un poco más ancho
+    paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
   },
   nextButtonDefault: {
-    backgroundColor: "#a5f3fc",
+    backgroundColor: COLORS.primaryLight,
   },
   finishButton: {
-    backgroundColor: "#22c55e",
+    backgroundColor: COLORS.success,
   },
 });

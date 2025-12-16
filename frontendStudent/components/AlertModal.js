@@ -2,8 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, Modal, Platform } from 'react-native';
 import { StyledButton } from './StyledButton';
 import { COLORS } from '../constants/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 export const AlertModal = ({ visible, onClose, title, message }) => {
+  const { t } = useLanguage(); // Hook de idioma
+
   return (
     <Modal
       animationType="fade"
@@ -16,7 +19,7 @@ export const AlertModal = ({ visible, onClose, title, message }) => {
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.message}>{message}</Text>
           <StyledButton
-            title="OK"
+            title="OK" // Puedes añadir 'ok': 'OK' en tus strings si quieres traducirlo
             onPress={onClose}
             style={styles.button}
             textStyle={styles.buttonText}
@@ -33,12 +36,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.overlay,
-    padding: 20, // Padding para evitar bordes en móviles pequeños
+    padding: 20,
   },
   modal: {
     backgroundColor: COLORS.surface,
     width: '100%',
-    maxWidth: 400, // Responsivo: Máximo ancho en tablet/web
+    maxWidth: 400,
     borderRadius: 16,
     padding: 24,
     ...Platform.select({
@@ -71,6 +74,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   buttonText: {
-    color: COLORS.text, // Asegura contraste
+    color: COLORS.text,
   }
 });

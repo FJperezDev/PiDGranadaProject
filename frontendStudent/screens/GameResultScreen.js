@@ -5,10 +5,12 @@ import { useLanguage } from "../context/LanguageContext";
 import { GAME_SOLUTION } from "../constants/game";
 import { useMemo } from "react";
 import { useVoiceControl } from "../context/VoiceContext";
-import { useIsFocused } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import { COLORS } from "../constants/colors";
 
 export const GameResultScreen = ({ route }) => {
   const { t, language } = useLanguage();
+  const navigation = useNavigation();
   const isFocused = useIsFocused();
   const { transcript, setTranscript } = useVoiceControl();
   const [imageVisible, setImageVisible] = useState(false);
@@ -25,7 +27,6 @@ export const GameResultScreen = ({ route }) => {
 
     if (sorted.length === 0) return "";
 
-    // Regla especial: si aparece el 6 en los primeros 2 → devolver solo "6"
     if (sorted[0]?.code === 6 || sorted[1]?.code === 6) {
       return "6";
     }
@@ -44,8 +45,6 @@ export const GameResultScreen = ({ route }) => {
     const spoken = normalizeText(transcript);
     console.log("Comando oído en GameResult:", spoken);
 
-    // --- A. Revelar Imagen ---
-    // Palabras clave: imagen, foto, ver, revelar, image, photo, show
     if (
         spoken.includes('imagen') || 
         spoken.includes('foto') || 
@@ -59,8 +58,6 @@ export const GameResultScreen = ({ route }) => {
         return;
     }
 
-    // --- B. Revelar Nombre/Resultado ---
-    // Palabras clave: nombre, texto, resultado, solución, name, text, result
     if (
         spoken.includes('nombre') || 
         spoken.includes('texto') || 
@@ -74,7 +71,6 @@ export const GameResultScreen = ({ route }) => {
         return;
     }
 
-    // --- C. Navegación General ---
     if (spoken.includes('inicio') || spoken.includes('home') || spoken.includes('salir')) {
         navigation.navigate('Home');
         setTranscript('');
@@ -112,7 +108,7 @@ export const GameResultScreen = ({ route }) => {
       {/* Nombre Oculto */}
       <StyledButton onPress={() => setNameVisible(true)} style={styles.nameButton}>
         {nameVisible ? (
-          <Text style={styles.revealedText}>{GAME_SOLUTION[language][topThreeCodes]?.text || t("noResult")}
+          <Text style={styles.revealedText}>{GAME_SOLUTION[language][topThreeCodes]?.text || t("gameResultTitle")}
           </Text>
         ) : (
           <View style={styles.namePlaceholder}>
@@ -131,24 +127,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
-    backgroundColor: "#ffffff",
+    backgroundColor: COLORS.surface,
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#000000",
+    color: COLORS.text,
     marginBottom: 32,
   },
   imageButton: {
-    width: 256, // equivalente a w-64
-    height: 256, // equivalente a h-64
+    width: 256, 
+    height: 256, 
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0, 
+    paddingVertical: 0,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 3px 4px rgba(0,0,0,0.2)' }
       : {
-          shadowColor: "#000",
+          shadowColor: COLORS.shadow,
           shadowOpacity: 0.2,
           shadowOffset: { width: 0, height: 3 },
           shadowRadius: 4,
@@ -163,33 +162,36 @@ const styles = StyleSheet.create({
   imagePlaceholder: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#cbd5e1", // slate-300
+    backgroundColor: COLORS.border,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   placeholderText: {
     fontSize: 18,
-    color: "#000",
+    color: COLORS.text,
   },
   nameButton: {
-    marginTop: 32, // mt-8
+    marginTop: 32,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   revealedText: {
     alignContent: "center",
     textAlign: "center",
-    fontSize: 28, // text-3xl
+    fontSize: 28,
     fontWeight: "bold",
-    color: "#000",
+    color: COLORS.text,
   },
   namePlaceholder: {
-    backgroundColor: "#cbd5e1", // slate-300
+    backgroundColor: COLORS.border,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16, // py-4
-    paddingHorizontal: 32, // px-8
+    paddingVertical: 16,
+    paddingHorizontal: 32,
   },
 });
