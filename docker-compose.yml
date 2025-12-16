@@ -27,20 +27,11 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.django.rule=Host(`api.franjpg.com`)"
       - "traefik.http.routers.django.entrypoints=websecure"
-      
-      # --- PASO CRÍTICO: APLICAR MIDDLEWARE CORS ---
       - "traefik.http.routers.django.middlewares=cors-header@docker" 
-      
-      # 1. Definir el middleware CORS (permite los dominios y métodos)
       - "traefik.http.middlewares.cors-header.headers.accesscontrolalloworiginlist=https://teacher.franjpg.com,https://student.franjpg.com"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
-      
-      # 2. Permitir el encabezado Authorization (JWT) y Content-Type
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowheaders=Authorization,Content-Type"
-      
-      # 3. Permitir credenciales (buena práctica para JWT y CORS)
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowcredentials=true"
-      # --- FIN MIDDLEWARE CORS ---
 
   frontend_student:
     build: ./frontendStudent
@@ -53,7 +44,6 @@ services:
     depends_on:
       - backend
 
-  # --- FRONTEND 2 (Profesor/Admin) ---
   frontend_teacher:
     build:
       context: ./frontendTeacher
@@ -68,9 +58,70 @@ services:
     depends_on:
       - backend
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml 
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d' 
+    networks:
+      - proxy
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - proxy
+  
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0 # Versión estable, funciona bien en arm64
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true 
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - proxy  
+      
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`monitor.franjpg.com`)" 
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
 networks:
   proxy:
     external: true
 
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
