@@ -45,6 +45,5 @@ rm private.pem public.pem
 echo "✅ Claves generadas e inyectadas en .env"
 echo "🚀 Levantando Docker Compose..."
 
-docker compose build --no-cache frontend_teacher frontend_student
 # 6. Levantar
 docker compose up -d --build

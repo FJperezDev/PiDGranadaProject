@@ -16,7 +16,7 @@ class Command(BaseCommand):
             # --- SUPERUSUARIOS / ADMINS ---
             {
                 'username': 'Admin',
-                'email': 'admin@admin.es',
+                'email': 'admin@admin.com',
                 'password': 'admin123',
                 'is_super': True
             },
@@ -48,7 +48,7 @@ class Command(BaseCommand):
             # --- USUARIOS NORMALES ---
             {
                 'username': 'Fran',
-                'email': 'fran@gmail.es',
+                'email': 'fran@gmail.com',
                 'password': 'fran123',
                 'is_super': False
             }
@@ -62,17 +62,11 @@ class Command(BaseCommand):
             password = u['password']
             is_super = u['is_super']
             
-            if User.objects.filter(username=username).exists():
-                self.stdout.write(f'ℹ️ Usuario "{username}" ya existe. Saltando...')
-                continue
-            
             if User.objects.filter(email=email).exists():
                 self.stdout.write(f'ℹ️ Email "{email}" ya está en uso por otro usuario. Saltando creación de "{username}"...')
                 continue
 
-            if not User.objects.filter(username=username).exists():
-                self.stdout.write(f'Creando usuario: {username} ({email})...')
-                
+            self.stdout.write(f'Creando usuario: {username} ({email})...')
             try:
                 if is_super:
                     # Crear como Superusuario
