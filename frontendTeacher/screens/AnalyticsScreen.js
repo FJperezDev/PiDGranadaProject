@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useCallback, useContext } from 'react'; // Importar useContext
+import React, { useState, useEffect, useCallback, useContext } from 'react';
 import { 
-    View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, Modal, FlatList, RefreshControl, Platform, UIManager, LayoutAnimation, Alert, TouchableOpacity 
+    View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, Modal, FlatList, RefreshControl, Platform, UIManager, LayoutAnimation, Alert 
 } from 'react-native';
 import { BarChart } from 'react-native-chart-kit';
-import { getAnalytics, resetAnalytics } from '../api/evaluationRequests'; // Importar resetAnalytics
+import { getAnalytics, resetAnalytics } from '../api/evaluationRequests';
 import { getSubjects } from '../api/coursesRequests';
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
-import { AuthContext } from '../context/AuthContext'; // Importar AuthContext
+import { AuthContext } from '../context/AuthContext';
 import { StyledButton } from '../components/StyledButton';
-import { Filter, ChevronDown, X, BarChart2, Target, Repeat, Layers, Trash2 } from 'lucide-react-native'; // Importar Trash2
+import { Filter, ChevronDown, X, BarChart2, Target, Repeat, Layers, Trash2 } from 'lucide-react-native';
 
 const screenWidth = Dimensions.get("window").width;
 
@@ -18,17 +18,17 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 const ProgressBar = ({ percentage }) => {
-    const color = percentage < 50 ? '#ef4444' : (percentage < 80 ? '#f59e0b' : '#10b981');
+    const color = percentage < 50 ? COLORS.danger : (percentage < 80 ? COLORS.warning : COLORS.success);
     return (
-        <View style={{ height: 6, backgroundColor: '#e5e7eb', borderRadius: 3, flex: 1, marginTop: 4 }}>
+        <View style={{ height: 6, backgroundColor: COLORS.lightGray, borderRadius: 3, flex: 1, marginTop: 4 }}>
             <View style={{ width: `${percentage}%`, backgroundColor: color, height: '100%', borderRadius: 3 }} />
         </View>
     );
 };
 
 export default function AnalyticsScreen({ route }) {
-    const { t } = useLanguage();
-    const { isSuper } = useContext(AuthContext); // Obtener permiso de SuperUser
+    const { t, language } = useLanguage();
+    const { isSuper } = useContext(AuthContext);
     const { initialGroupBy } = route.params || {};
 
     const [chartData, setChartData] = useState([]);
@@ -80,6 +80,10 @@ export default function AnalyticsScreen({ route }) {
 
     useEffect(() => {
         fetchData();
+    }, [language]);
+
+    useEffect(() => {
+        fetchData();
     }, [groupBy, selectedSubject]);
 
     const onRefresh = useCallback(async () => {
@@ -88,7 +92,6 @@ export default function AnalyticsScreen({ route }) {
         setRefreshing(false);
     }, [groupBy, selectedSubject]);
 
-    // --- LÓGICA DE BORRADO ---
     const confirmDelete = (title, message, deleteParams) => {
         if (Platform.OS === 'web') {
             if (window.confirm(`${title}\n${message}`)) {
@@ -99,8 +102,8 @@ export default function AnalyticsScreen({ route }) {
                 title,
                 message,
                 [
-                    { text: "Cancelar", style: "cancel" },
-                    { text: "Eliminar", style: "destructive", onPress: () => performDelete(deleteParams) }
+                    { text: t('cancel'), style: "cancel" },
+                    { text: t('delete'), style: "destructive", onPress: () => performDelete(deleteParams) }
                 ]
             );
         }
@@ -110,52 +113,44 @@ export default function AnalyticsScreen({ route }) {
         setLoading(true);
         try {
             await resetAnalytics(params);
-            // Alert.alert("Éxito", "Datos eliminados correctamente.");
-            await fetchData(); // Recargar datos
+            await fetchData(); 
         } catch (error) {
-            Alert.alert("Error", "No se pudieron eliminar los datos.");
+            Alert.alert(t('error'), t('deleteError') || "No se pudieron eliminar los datos.");
         } finally {
             setLoading(false);
         }
     };
 
     const handleGlobalReset = () => {
-        // Opción 1: Borrar TODO globalmente
-        // Opción 2: Borrar TODO de la asignatura seleccionada
-        
         if (selectedSubject) {
             confirmDelete(
-                "Borrar datos de Asignatura",
-                `¿Estás seguro de borrar TODOS los registros de evaluación para ${selectedSubject.name}? Esta acción no se puede deshacer.`,
+                t('delete'),
+                `${t('deleteGroupConfirm')} ${selectedSubject.name}?`,
                 { scope: 'subject', subject_id: selectedSubject.id }
             );
         } else {
-            // Si no hay asignatura, preguntamos si quiere borrar TODO EL SISTEMA
-            // Esto es peligroso, así que pedimos doble confirmación o un alert claro
             confirmDelete(
-                "⚠️ BORRADO GLOBAL",
-                "¿Estás seguro de borrar TODAS las estadísticas de TODAS las asignaturas? Esto dejará el historial de exámenes vacío.",
+                `⚠️ ${t('globalReset')}`,
+                t('confirmGlobalReset'),
                 { scope: 'global' }
             );
         }
     };
 
     const handleSpecificReset = (item) => {
-        // Borrar un item específico (ej: un Tema concreto)
         const typeLabel = t(groupBy) || groupBy;
         confirmDelete(
-            "Borrar datos específicos",
-            `¿Borrar estadísticas para el ${typeLabel}: "${item.full_label}"?`,
+            t('delete'),
+            `${t('deleteUserConfirm')} ${typeLabel}: "${item.full_label}"?`,
             { 
                 scope: 'specific', 
                 group_by: groupBy, 
-                target_id: item.id, // ID que viene del backend ahora
-                subject_id: selectedSubject?.id // Contexto opcional
+                target_id: item.id, 
+                subject_id: selectedSubject?.id 
             }
         );
     };
 
-    // --- LÓGICA DE PREFIJOS ---
     const getPrefix = () => {
         switch (groupBy) {
             case 'topic': return 'T';
@@ -174,8 +169,8 @@ export default function AnalyticsScreen({ route }) {
     };
 
     const chartConfig = {
-        backgroundGradientFrom: "#ffffff",
-        backgroundGradientTo: "#ffffff",
+        backgroundGradientFrom: COLORS.surface,
+        backgroundGradientTo: COLORS.surface,
         fillShadowGradientFrom: COLORS.primary,
         fillShadowGradientTo: COLORS.primary,
         fillShadowGradientFromOpacity: 0.7,
@@ -202,66 +197,79 @@ export default function AnalyticsScreen({ route }) {
             <View style={styles.headerContainer}>
                 <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
                     <View>
-                        <Text style={styles.headerTitle}>{t('performanceAnalytics') || 'Rendimiento'}</Text>
-                        <Text style={styles.headerSubtitle}>Analiza tu progreso y estadísticas</Text>
+                        <Text style={styles.headerTitle}>{t('performanceAnalytics')}</Text>
+                        <Text style={styles.headerSubtitle}>{t('analyzeProgress')}</Text>
                     </View>
-                    {/* BOTÓN DE RESETEO GLOBAL (Solo SuperUser) */}
                     {isSuper && (
-                        <TouchableOpacity onPress={handleGlobalReset} style={styles.globalDeleteBtn}>
-                            <Trash2 size={22} color="#ef4444" />
-                        </TouchableOpacity>
+                        <StyledButton 
+                            onPress={handleGlobalReset} 
+                            style={styles.globalDeleteBtn}
+                            variant="danger"
+                            size="small"
+                            icon={<Trash2 size={22} color={COLORS.danger} />}
+                        />
                     )}
                 </View>
             </View>
 
             {/* --- SECCIÓN DE CONTROLES / FILTROS --- */}
             <View style={styles.card}>
-                <StyledButton onPress={toggleFilters} style={styles.filterHeader}>
+                <StyledButton 
+                    onPress={toggleFilters} 
+                    style={styles.filterHeader}
+                    variant="ghost"
+                >
                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                        <View style={[styles.iconBox, { backgroundColor: '#eff6ff' }]}>
+                        <View style={[styles.iconBox, { backgroundColor: COLORS.primaryLight }]}>
                             <Filter size={20} color={COLORS.primary} />
                         </View>
                         <View style={{marginLeft: 12}}>
-                            <Text style={styles.cardTitle}>{t('configuration') || 'Configuración'}</Text>
+                            <Text style={styles.cardTitle}>{t('configuration')}</Text>
                             <Text style={styles.cardSubtitle}>
-                                {t(groupBy)} • {selectedSubject ? selectedSubject.name : (t('allSubjects'))}
+                                {t(groupBy)} • {selectedSubject ? selectedSubject.name : t('allSubjects')}
                             </Text>
                         </View>
                     </View>
-                    <ChevronDown size={20} color="#9ca3af" style={{ transform: [{ rotate: showFilters ? '180deg' : '0deg' }] }} />
+                    <ChevronDown size={20} color={COLORS.gray} style={{ transform: [{ rotate: showFilters ? '180deg' : '0deg' }] }} />
                 </StyledButton>
 
                 {showFilters && (
                     <View style={styles.filterContent}>
-                        <Text style={styles.sectionLabel}>{t('groupBy') || 'Agrupar vista por'}</Text>
+                        <Text style={styles.sectionLabel}>{t('groupBy')}</Text>
                         <View style={styles.chipContainer}>
                             {['topic', 'concept', 'group', 'question'].map((mode) => (
                                 <StyledButton 
                                     key={mode} 
                                     style={[styles.chip, groupBy === mode && styles.chipActive]}
                                     onPress={() => setGroupBy(mode)}
+                                    variant="ghost"
                                 >
                                     <Text style={[styles.chipText, groupBy === mode && styles.chipTextActive]}>
-                                        {t(mode) || mode.toUpperCase()}
+                                        {t(mode)}
                                     </Text>
                                 </StyledButton>
                             ))}
                         </View>
 
-                        <Text style={[styles.sectionLabel, { marginTop: 16 }]}>{t('filterBySubject') || 'Filtrar Asignatura'}</Text>
+                        <Text style={[styles.sectionLabel, { marginTop: 16 }]}>{t('filterBySubject')}</Text>
                         <StyledButton 
                             style={styles.selectButton} 
                             onPress={handleOpenSubjectFilter}
+                            variant="ghost"
                         >
                             <Text style={styles.selectButtonText}>
-                                {selectedSubject ? selectedSubject.name : (t('allSubjects') || "Todas las Asignaturas")}
+                                {selectedSubject ? selectedSubject.name : t('allSubjects')}
                             </Text>
-                            <ChevronDown size={16} color="#6b7280" />
+                            <ChevronDown size={16} color={COLORS.textSecondary} />
                         </StyledButton>
 
                         {selectedSubject && (
-                            <StyledButton onPress={() => setSelectedSubject(null)} style={styles.clearFilterBtn}>
-                                <Text style={styles.clearFilterText}>{t('clearFilter') || "Mostrar todas"}</Text>
+                            <StyledButton 
+                                onPress={() => setSelectedSubject(null)} 
+                                style={styles.clearFilterBtn}
+                                variant="ghost"
+                            >
+                                <Text style={styles.clearFilterText}>{t('clearFilter')}</Text>
                             </StyledButton>
                         )}
                     </View>
@@ -276,10 +284,10 @@ export default function AnalyticsScreen({ route }) {
             ) : chartData.length > 0 ? (
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
-                        <View style={[styles.iconBox, { backgroundColor: '#f0fdf4' }]}>
-                            <BarChart2 size={20} color="#10b981" />
+                        <View style={[styles.iconBox, { backgroundColor: COLORS.successBg }]}>
+                            <BarChart2 size={20} color={COLORS.success} />
                         </View>
-                        <Text style={styles.cardTitle}>{t('percentageCorrect') || '% de Aciertos'}</Text>
+                        <Text style={styles.cardTitle}>{t('percentageCorrect')}</Text>
                     </View>
                     
                     <ScrollView horizontal={true} showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -10 }}>
@@ -302,15 +310,15 @@ export default function AnalyticsScreen({ route }) {
                 </View>
             ) : (
                 <View style={[styles.card, styles.emptyState]}>
-                    <Layers size={40} color="#d1d5db" />
-                    <Text style={styles.emptyText}>{t('noData') || 'No hay datos suficientes para mostrar gráficas.'}</Text>
+                    <Layers size={40} color={COLORS.border} />
+                    <Text style={styles.emptyText}>{t('noData')}</Text>
                 </View>
             )}
 
             {/* --- LISTA DE DETALLES --- */}
             {!loading && chartData.length > 0 && (
                 <View>
-                    <Text style={styles.sectionTitle}>{t('breakdown') || 'Desglose Detallado'}</Text>
+                    <Text style={styles.sectionTitle}>{t('breakdown')}</Text>
                     
                     {chartData.map((item, index) => (
                         <View key={index} style={styles.detailItem}>
@@ -321,27 +329,27 @@ export default function AnalyticsScreen({ route }) {
                                 <Text style={styles.detailTitle} numberOfLines={1}>
                                     {item.full_label || item.label}
                                 </Text>
-                                {/* BOTÓN BORRAR ESPECÍFICO (Solo SuperUser) */}
                                 {isSuper && (
-                                    <TouchableOpacity 
+                                    <StyledButton 
                                         onPress={() => handleSpecificReset(item)} 
                                         style={styles.itemDeleteBtn}
-                                    >
-                                        <Trash2 size={18} color="#ef4444" />
-                                    </TouchableOpacity>
+                                        variant="ghost"
+                                        size="small"
+                                        icon={<Trash2 size={18} color={COLORS.danger} />}
+                                    />
                                 )}
                             </View>
 
                             <View style={styles.detailStatsRow}>
                                 <View style={styles.statGroup}>
                                     <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
-                                        <Target size={14} color="#6b7280" style={{marginRight: 4}} />
-                                        <Text style={styles.statLabel}>Aciertos</Text>
+                                        <Target size={14} color={COLORS.textSecondary} style={{marginRight: 4}} />
+                                        <Text style={styles.statLabel}>{t('hits')}</Text>
                                     </View>
                                     <View style={{flexDirection: 'row', alignItems: 'center'}}>
                                         <Text style={[
                                             styles.statValue, 
-                                            item.value < 50 ? {color: '#ef4444'} : {color: '#10b981'}
+                                            item.value < 50 ? {color: COLORS.danger} : {color: COLORS.success}
                                         ]}>
                                             {item.value}%
                                         </Text>
@@ -351,8 +359,8 @@ export default function AnalyticsScreen({ route }) {
                                 
                                 <View style={[styles.statGroup, { flex: 0.4, alignItems: 'flex-end' }]}>
                                     <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
-                                        <Repeat size={14} color="#6b7280" style={{marginRight: 4}} />
-                                        <Text style={styles.statLabel}>Intentos</Text>
+                                        <Repeat size={14} color={COLORS.textSecondary} style={{marginRight: 4}} />
+                                        <Text style={styles.statLabel}>{t('attempts')}</Text>
                                     </View>
                                     <Text style={styles.statValueSimple}>{item.attempts}</Text>
                                 </View>
@@ -371,9 +379,9 @@ export default function AnalyticsScreen({ route }) {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{t('selectSubject') || 'Seleccionar Asignatura'}</Text>
-                            <StyledButton onPress={() => setShowFilterModal(false)}>
-                                <X size={24} color="#6b7280" />
+                            <Text style={styles.modalTitle}>{t('selectSubject')}</Text>
+                            <StyledButton onPress={() => setShowFilterModal(false)} variant="ghost" style={{padding: 4}}>
+                                <X size={24} color={COLORS.textSecondary} />
                             </StyledButton>
                         </View>
                         
@@ -388,12 +396,15 @@ export default function AnalyticsScreen({ route }) {
                                         selectedSubject?.id === item.id && styles.modalItemSelected
                                     ]}
                                     onPress={() => handleSelectOption(item)}
+                                    variant="ghost"
                                 >
-                                    <Text style={[
-                                        styles.modalItemText,
-                                        selectedSubject?.id === item.id && { color: COLORS.primary, fontWeight: 'bold' }
-                                    ]}>{item.name}</Text>
-                                    {selectedSubject?.id === item.id && <Target size={16} color={COLORS.primary} />}
+                                    <View style={{flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center'}}>
+                                        <Text style={[
+                                            styles.modalItemText,
+                                            selectedSubject?.id === item.id && { color: COLORS.primary, fontWeight: 'bold' }
+                                        ]}>{item.name}</Text>
+                                        {selectedSubject?.id === item.id && <Target size={16} color={COLORS.primary} />}
+                                    </View>
                                 </StyledButton>
                             )}
                         />
@@ -406,93 +417,92 @@ export default function AnalyticsScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f9fafb', padding: 16 }, // Fondo más claro y limpio
+    container: { flex: 1, backgroundColor: '#f9fafb', padding: 16 },
     
     // Header
     headerContainer: { marginBottom: 20 },
-    headerTitle: { fontSize: 28, fontWeight: '800', color: '#111827' },
-    headerSubtitle: { fontSize: 14, color: '#6b7280', marginTop: 4 },
+    headerTitle: { fontSize: 28, fontWeight: '800', color: COLORS.text },
+    headerSubtitle: { fontSize: 14, color: COLORS.textSecondary, marginTop: 4 },
     
     globalDeleteBtn: {
-        padding: 8,
-        backgroundColor: '#fee2e2',
+        backgroundColor: COLORS.dangerBg,
         borderRadius: 8,
     },
 
     // Cards Genéricas
     card: {
-        backgroundColor: 'white',
+        backgroundColor: COLORS.surface,
         borderRadius: 16,
         padding: 16,
         marginBottom: 20,
         ...Platform.select({
-            ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
+            ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10 },
             android: { elevation: 3 },
             web: { boxShadow: '0px 4px 10px rgba(0,0,0,0.05)' }
         }),
     },
     cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-    cardTitle: { fontSize: 16, fontWeight: '700', color: '#374151', marginLeft: 12 },
-    cardSubtitle: { fontSize: 13, color: '#9ca3af', marginTop: 2 },
+    cardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginLeft: 12 },
+    cardSubtitle: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2 },
     
     // Icon Boxes
     iconBox: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
 
     // Filtros
-    filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.background },
-    filterContent: { marginTop: 16, borderTopWidth: 1, borderTopColor: '#f3f4f6', paddingTop: 16 },
-    sectionLabel: { fontSize: 12, fontWeight: '600', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+    filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surface, paddingHorizontal: 0 },
+    filterContent: { marginTop: 16, borderTopWidth: 1, borderTopColor: COLORS.background, paddingTop: 16 },
+    sectionLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
     
     // Chips
     chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     chip: { 
         paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, 
-        backgroundColor: '#f3f4f6', borderWidth: 1, borderColor: 'transparent' 
+        backgroundColor: COLORS.background, borderWidth: 1, borderColor: 'transparent' 
     },
-    chipActive: { backgroundColor: COLORS.primary + '15', borderColor: COLORS.primary },
-    chipText: { fontSize: 13, fontWeight: '600', color: '#6b7280' },
-    chipTextActive: { color: COLORS.primary },
+    chipActive: { backgroundColor: COLORS.primaryLight, borderColor: COLORS.primary },
+    chipText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
+    chipTextActive: { color: COLORS.primaryDark },
 
     // Select Button
     selectButton: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#e5e7eb',
+        backgroundColor: '#f9fafb', borderWidth: 1, borderColor: COLORS.border,
         padding: 12, borderRadius: 10
     },
-    selectButtonText: { fontSize: 14, color: '#374151' },
+    selectButtonText: { fontSize: 14, color: COLORS.text },
     clearFilterBtn: { alignItems: 'center', marginTop: 12 },
-    clearFilterText: { fontSize: 13, color: '#ef4444', fontWeight: '600' },
+    clearFilterText: { fontSize: 13, color: COLORS.danger, fontWeight: '600' },
 
     // Empty State
     emptyState: { alignItems: 'center', paddingVertical: 40 },
-    emptyText: { color: '#9ca3af', marginTop: 10, textAlign: 'center' },
+    emptyText: { color: COLORS.textSecondary, marginTop: 10, textAlign: 'center' },
 
     // Detalles Lista
-    sectionTitle: { fontSize: 18, fontWeight: '700', color: '#374151', marginBottom: 12 },
+    sectionTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
     detailItem: {
-        backgroundColor: 'white', borderRadius: 12, padding: 16, marginBottom: 10,
-        borderWidth: 1, borderColor: '#f3f4f6'
+        backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, marginBottom: 10,
+        borderWidth: 1, borderColor: COLORS.background
     },
     detailHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
     badge: { 
         backgroundColor: '#eff6ff', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginRight: 10 
     },
     badgeText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
-    detailTitle: { fontSize: 15, fontWeight: '600', color: '#1f2937', flex: 1, marginRight: 8 },
-    itemDeleteBtn: { padding: 4 }, // Estilo para el botón de borrar item
+    detailTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text, flex: 1, marginRight: 8 },
+    itemDeleteBtn: { padding: 4 },
     
     detailStatsRow: { flexDirection: 'row', justifyContent: 'space-between' },
     statGroup: { flex: 1 },
-    statLabel: { fontSize: 12, color: '#9ca3af' },
+    statLabel: { fontSize: 12, color: COLORS.textSecondary },
     statValue: { fontSize: 18, fontWeight: '800', marginRight: 10 },
-    statValueSimple: { fontSize: 16, fontWeight: '600', color: '#4b5563' },
+    statValueSimple: { fontSize: 16, fontWeight: '600', color: COLORS.textSecondary },
 
     // Modal
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-    modalContent: { backgroundColor: 'white', borderRadius: 20, width: '100%', maxWidth: 400, padding: 20, elevation: 5 },
+    modalOverlay: { flex: 1, backgroundColor: COLORS.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 },
+    modalContent: { backgroundColor: COLORS.surface, borderRadius: 20, width: '100%', maxWidth: 400, padding: 20, elevation: 5 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
-    modalItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f3f4f6', flexDirection: 'row', justifyContent: 'space-between' },
-    modalItemSelected: { backgroundColor: '#f9fafb' },
-    modalItemText: { fontSize: 16, color: '#4b5563' },
+    modalTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
+    modalItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.background, flexDirection: 'row', justifyContent: 'space-between' },
+    modalItemSelected: { backgroundColor: COLORS.background },
+    modalItemText: { fontSize: 16, color: COLORS.textSecondary },
 });

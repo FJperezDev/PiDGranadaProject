@@ -14,12 +14,13 @@ import {
 import { getSubjects } from '../api/coursesRequests';
 import { Trash2, Plus, Save, ArrowRight, ArrowLeft, Check } from 'lucide-react-native';
 import { StyledButton } from './StyledButton';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, editingQuestion }) {
+  const { t } = useLanguage();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // Context
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
   const [concepts, setConcepts] = useState([]); 
@@ -30,7 +31,6 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
   
   const [questionType, setQuestionType] = useState('multiple'); 
 
-  // Content
   const [statementES, setStatementES] = useState('');
   const [statementEN, setStatementEN] = useState('');
   const [deletedAnswerIds, setDeletedAnswerIds] = useState([]);
@@ -117,7 +117,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
   const handleSubjectChange = (val) => {
     setSelectedSubject(val);
     setSelectedTopicTitles([]); 
-    setSelectedConceptNames([]); // 
+    setSelectedConceptNames([]); 
   };
 
   const loadEditingData = async () => {
@@ -127,7 +127,6 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
     setStatementEN(editingQuestion.statement_en || '');
     setQuestionType(editingQuestion.type);
 
-    // Load Topics
     if (editingQuestion.topics && Array.isArray(editingQuestion.topics)) {
         const existingTopics = editingQuestion.topics.map(t => t.name || t.title).filter(Boolean);
         setSelectedTopicTitles(existingTopics);
@@ -135,7 +134,6 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
         setSelectedTopicTitles(editingQuestion.topics_titles);
     }
 
-    // --- Load Concepts while editing ---
     if (editingQuestion.concepts && Array.isArray(editingQuestion.concepts)) {
         const existingConcepts = editingQuestion.concepts.map(c => c.name || c.title).filter(Boolean);
         setSelectedConceptNames(existingConcepts);
@@ -165,7 +163,6 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
     });
   };
 
-  // --- TOGGLE CONCEPTS ---
   const toggleConcept = (name) => {
     setSelectedConceptNames(prev => {
         if (prev.includes(name)) return prev.filter(c => c !== name);
@@ -175,15 +172,15 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
 
   const handleAddAnswer = () => setAnswers([...answers, { text_es: '', text_en: '', is_correct: false, tempId: Date.now() }]);
   const handleRemoveAnswer = (index) => {
-      if (answers.length <= 2) return Alert.alert("Mínimo", "Debe haber al menos 2 opciones.");
+      if (answers.length <= 2) return Alert.alert(t('error'), "Mínimo 2 opciones");
       const ans = answers[index];
       if (ans.id) setDeletedAnswerIds(prev => [...prev, ans.id]);
       const newArr = [...answers];
       newArr.splice(index, 1);
       setAnswers(newArr);
   };
-  const handleAnswerChangeES = (t, i) => { const n = [...answers]; n[i].text_es = t; setAnswers(n); };
-  const handleAnswerChangeEN = (t, i) => { const n = [...answers]; n[i].text_en = t; setAnswers(n); };
+  const handleAnswerChangeES = (text, i) => { const n = [...answers]; n[i].text_es = text; setAnswers(n); };
+  const handleAnswerChangeEN = (text, i) => { const n = [...answers]; n[i].text_en = text; setAnswers(n); };
   const handleCorrectChange = (i) => {
       const n = [...answers];
       if (questionType === 'multiple') n[i].is_correct = !n[i].is_correct;
@@ -194,21 +191,21 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
   const handleNext = () => {
       if (step === 1) {
         if(selectedTopicTitles.length === 0) {
-            Alert.alert("Error", "Selecciona al menos un tema");
+            Alert.alert(t('error'), t('selectTopicError'));
             return;
         }
         setStep(2);
       } else if (step === 2) {
-        if (!statementES.trim()) return Alert.alert("Error", "El enunciado es obligatorio");
-        if (!answers.some(a => a.is_correct)) return Alert.alert("Error", "Marca al menos una respuesta correcta");
-        if (answers.some(a => !a.text_es.trim())) return Alert.alert("Error", "Faltan textos en español");
+        if (!statementES.trim()) return Alert.alert(t('error'), t('missingStatement'));
+        if (!answers.some(a => a.is_correct)) return Alert.alert(t('error'), t('missingCorrect'));
+        if (answers.some(a => !a.text_es.trim())) return Alert.alert(t('error'), t('fillAllFields'));
         setStep(3);
       }
   }
 
   const handleSubmit = async () => {
-    if (!statementEN.trim()) return Alert.alert("Error", "El enunciado en inglés es obligatorio");
-    if (answers.some(a => !a.text_en.trim())) return Alert.alert("Error", "Faltan traducciones al inglés");
+    if (!statementEN.trim()) return Alert.alert(t('error'), t('missingTranslation'));
+    if (answers.some(a => !a.text_en.trim())) return Alert.alert(t('error'), t('missingTranslation'));
 
     setLoading(true);
     try {
@@ -247,12 +244,12 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
             ));
         }
 
-        Alert.alert("Éxito", "Pregunta guardada correctamente");
+        Alert.alert(t('success'), t('saved'));
         onSaveSuccess();
         onClose();
     } catch (error) {
         console.error(error);
-        Alert.alert("Error", "Hubo un problema al guardar.");
+        Alert.alert(t('error'), t('error'));
     } finally {
         setLoading(false);
     }
@@ -260,22 +257,20 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
 
   const renderStep1 = () => (
     <ScrollView style={styles.stepContainer}>
-        <Text style={styles.sectionHeader}>Contexto</Text>
+        <Text style={styles.sectionHeader}>{t('context')}</Text>
         
-        {/* --- SUBJECT PICKER --- */}
-        <Text style={styles.label}>Asignatura</Text>
+        <Text style={styles.label}>{t('subject')}</Text>
         <View style={styles.pickerWrapper}>
             <Picker selectedValue={selectedSubject ?? ""} onValueChange={handleSubjectChange}>
-                {!selectedSubject && <Picker.Item label="Seleccionando..." value="" enabled={false} />}
+                {!selectedSubject && <Picker.Item label={t('select')} value="" enabled={false} />}
                 {subjects.map(s => <Picker.Item key={s.id} label={s.name} value={s.id} />)}
             </Picker>
         </View>
 
-        {/* --- TOPICS SELECTOR --- */}
-        <Text style={styles.label}>Temas (Selecciona para ver Conceptos)</Text>
+        <Text style={styles.label}>{t('topics')}</Text>
         <ScrollView style={styles.topicsBox} nestedScrollEnabled={true} paddingBottom={10} >
             <View style={styles.topicsGrid}>
-                {topics.length === 0 && <Text style={{color: 'gray', padding: 5}}>Selecciona un tema.</Text>}
+                {topics.length === 0 && <Text style={{color: 'gray', padding: 5}}>{t('selectTopic')}</Text>}
                 {topics.map((t, i) => {
                     const topicTitle = t.title || t.name; 
                     const isSelected = selectedTopicTitles.includes(topicTitle);
@@ -284,6 +279,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                           key={i} 
                           style={[styles.topicChip, isSelected && styles.topicChipSelected]} 
                           onPress={() => toggleTopic(topicTitle)}
+                          variant="ghost"
                         >
                           <Text style={[styles.topicText, isSelected && styles.topicTextSelected]}>{topicTitle}</Text>
                           {isSelected && <Check size={16} color={COLORS.surface} style={{marginLeft: 5}}/>}
@@ -293,13 +289,12 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
             </View>
         </ScrollView>
 
-        {/* --- CONCEPTS SELECTOR --- */}
         {selectedTopicTitles.length > 0 && (
             <>
-                <Text style={styles.label}>Conceptos (Opcional)</Text>
+                <Text style={styles.label}>{t('concepts')}</Text>
                 <ScrollView style={styles.topicsBox} nestedScrollEnabled={true} paddingBottom={10} >
                     <View style={styles.topicsGrid}>
-                        {concepts.length === 0 && <Text style={{color: 'gray', padding: 5}}>Cargando o sin conceptos...</Text>}
+                        {concepts.length === 0 && <Text style={{color: 'gray', padding: 5}}>{t('loading')}</Text>}
                         {concepts.map((c, i) => {
                             const cName = c.name || c.title; 
                             const isSelected = selectedConceptNames.includes(cName);
@@ -308,6 +303,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                                   key={i} 
                                   style={[styles.conceptChip, isSelected && styles.conceptChipSelected]} 
                                   onPress={() => toggleConcept(cName)}
+                                  variant="ghost"
                                 >
                                   <Text style={[styles.topicText, isSelected && styles.topicTextSelected]}>{cName}</Text>
                                   {isSelected && <Check size={14} color={COLORS.surface} style={{marginLeft: 5}}/>}
@@ -319,11 +315,11 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
             </>
         )}
 
-        <Text style={styles.label}>Tipo de Pregunta</Text>
+        <Text style={styles.label}>{t('questionType')}</Text>
         <View style={styles.pickerWrapper}>
             <Picker selectedValue={questionType ?? "multiple"} onValueChange={setQuestionType}>
-                <Picker.Item label="Opción Múltiple" value="multiple" />
-                <Picker.Item label="Verdadero / Falso" value="boolean" />
+                <Picker.Item label={t('multipleChoice')} value="multiple" />
+                <Picker.Item label={t('trueFalse')} value="boolean" />
             </Picker>
         </View>
     </ScrollView>
@@ -331,18 +327,19 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
 
   const renderStep2 = () => (
     <ScrollView style={styles.stepContainer}>
-        <Text style={styles.sectionHeader}>Español (ES)</Text>
-        <Text style={styles.label}>Enunciado</Text>
-        <TextInput style={[styles.input, { height: 80 }]} multiline value={statementES} onChangeText={setStatementES} placeholder="Pregunta en español..." />
-        <Text style={styles.label}>Respuestas</Text>
+        <Text style={styles.sectionHeader}>{t('spanishVersion')}</Text>
+        <Text style={styles.label}>{t('statement')}</Text>
+        <TextInput style={[styles.input, { height: 80 }]} multiline value={statementES} onChangeText={setStatementES} placeholder="..." />
+        <Text style={styles.label}>{t('answers')}</Text>
         {answers.map((ans, index) => (
             <View key={ans.id || ans.tempId} style={styles.answerRow}>
                     <Switch value={ans.is_correct} onValueChange={() => handleCorrectChange(index)} trackColor={{false:"#767577", true:COLORS.success}} />
-                    <TextInput style={styles.answerInput} placeholder={`Opción ${index + 1}`} value={ans.text_es} onChangeText={(text) => handleAnswerChangeES(text, index)} />
+                    <TextInput style={styles.answerInput} placeholder={`${t('option')} ${index + 1}`} value={ans.text_es} onChangeText={(text) => handleAnswerChangeES(text, index)} />
                     {questionType === 'multiple' && (
                         <StyledButton 
                           onPress={() => handleRemoveAnswer(index)}
                           icon={<Trash2 size={20} color={COLORS.danger} />}
+                          variant="ghost"
                         />
                     )}
             </View>
@@ -352,8 +349,9 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
               style={styles.addAnswerBtn} 
               onPress={handleAddAnswer}
               icon={<Plus size={20} color={COLORS.surface} />}
+              variant="secondary"
             >  
-              <Text style={{color:COLORS.text, marginLeft:5}}>Añadir Opción</Text>
+              <Text style={{color:COLORS.white, marginLeft:5}}>{t('addOption')}</Text>
             </StyledButton>
         )}
     </ScrollView>
@@ -361,18 +359,18 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
 
   const renderStep3 = () => (
       <ScrollView style={styles.stepContainer}>
-        <Text style={styles.sectionHeader}>Inglés (EN)</Text>
-        <Text style={styles.label}>Enunciado</Text>
+        <Text style={styles.sectionHeader}>{t('englishVersion')}</Text>
+        <Text style={styles.label}>{t('statement')}</Text>
         <Text style={styles.helperText}>{statementES}</Text>
-        <TextInput style={[styles.input, { height: 80 }]} multiline value={statementEN} onChangeText={setStatementEN} placeholder="Question in English..." />
-        <Text style={styles.label}>Respuestas</Text>
+        <TextInput style={[styles.input, { height: 80 }]} multiline value={statementEN} onChangeText={setStatementEN} placeholder="..." />
+        <Text style={styles.label}>{t('answers')}</Text>
         {answers.map((ans, index) => (
             <View key={ans.id || ans.tempId} style={styles.answerRowTranslation}>
                     <View style={styles.originalTextContainer}>
                     <Text style={styles.originalTextLabel}>{ans.text_es}</Text>
-                    {ans.is_correct && <Text style={styles.correctBadge}>Correcta</Text>}
+                    {ans.is_correct && <Text style={styles.correctBadge}>{t('correct')}</Text>}
                     </View>
-                    <TextInput style={styles.answerInput} placeholder={`Option ${index + 1}`} value={ans.text_en} onChangeText={(text) => handleAnswerChangeEN(text, index)} />
+                    <TextInput style={styles.answerInput} placeholder={`${t('option')} ${index + 1}`} value={ans.text_en} onChangeText={(text) => handleAnswerChangeEN(text, index)} />
             </View>
         ))}
     </ScrollView>
@@ -382,13 +380,13 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>{editingQuestion ? "Editar" : "Nueva"} ({step}/3)</Text>
+          <Text style={styles.modalTitle}>{editingQuestion ? t('edit') : t('new')} ({step}/3)</Text>
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
           <View style={styles.buttonRow}>
-            <StyledButton title="Cancelar" variant='danger' onPress={onClose} />
-            <View style={{flexDirection: 'row', gap: 10}}>
+            <StyledButton title={t('cancel')} variant='danger' onPress={onClose} style={{flex: 1, marginRight: 5}} />
+            <View style={{flexDirection: 'row', gap: 10, flex: 1, justifyContent: 'flex-end'}}>
                 {step > 1 && 
                   <StyledButton 
                     style={styles.backBtn} 
@@ -401,7 +399,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                       onPress={handleNext}
                       icon={<ArrowRight size={20} color={COLORS.surface} />}
                     >
-                      <Text style={styles.nextBtnText}>Siguiente</Text>
+                      <Text style={styles.nextBtnText}>{t('next')}</Text>
                     </StyledButton>
                 ) : (
                     <StyledButton 
@@ -410,7 +408,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                       disabled={loading}
                       icon={<Save size={20} color="white" />}
                     >
-                      <Text style={styles.nextBtnText}>Guardar</Text>
+                      <Text style={styles.nextBtnText}>{t('save')}</Text>
                     </StyledButton>
                 )}
             </View>
@@ -436,12 +434,12 @@ const styles = StyleSheet.create({
   topicsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 15 },
   
   topicChip: { backgroundColor: '#f0f0f0', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: '#ccc', flexDirection: 'row', alignItems: 'center' },
-  topicChipSelected: { backgroundColor: COLORS.primary || 'blue', borderColor: COLORS.primary || 'blue' },
+  topicChipSelected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   
   conceptChip: { backgroundColor: '#e8f5e9', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 15, borderWidth: 1, borderColor: '#c8e6c9', flexDirection: 'row', alignItems: 'center' },
-  conceptChipSelected: { backgroundColor: '#4caf50', borderColor: '#4caf50' },
+  conceptChipSelected: { backgroundColor: COLORS.success, borderColor: COLORS.success },
 
-  topicText: { color: COLORS.text || 'black', fontSize: 14 },
+  topicText: { color: COLORS.text, fontSize: 14 },
   topicTextSelected: { color: 'white', fontWeight: 'bold' },
 
   answerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 },
@@ -450,10 +448,10 @@ const styles = StyleSheet.create({
   originalTextLabel: { fontWeight: 'bold', color: '#444', flex: 1 },
   correctBadge: { fontSize: 10, color: 'green', fontWeight: 'bold', backgroundColor: '#e8f5e9', padding: 2, borderRadius: 4 },
   answerInput: { flex: 1, borderWidth: 1, borderColor: '#eee', borderRadius: 5, padding: 8, backgroundColor: '#f9f9f9' },
-  addAnswerBtn: { flexDirection: 'row', backgroundColor: COLORS.secondary || '#6200ee', padding: 10, borderRadius: 5, alignSelf: 'flex-start', alignItems: 'center', marginTop: 10 },
+  addAnswerBtn: { padding: 10, borderRadius: 5, alignSelf: 'flex-start', alignItems: 'center', marginTop: 10 },
   buttonRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 10 },
-  backBtn: { backgroundColor: COLORS.gray || 'gray', padding: 10, borderRadius: 5, justifyContent: 'center' },
-  nextBtn: { flexDirection: 'row', backgroundColor: COLORS.primary || 'blue', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 5, alignItems: 'center' },
-  saveBtn: { flexDirection: 'row', backgroundColor: COLORS.success || 'green', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 5, alignItems: 'center' },
+  backBtn: { backgroundColor: COLORS.gray, padding: 10, borderRadius: 5, justifyContent: 'center' },
+  nextBtn: { flexDirection: 'row', backgroundColor: COLORS.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 5, alignItems: 'center' },
+  saveBtn: { flexDirection: 'row', backgroundColor: COLORS.success, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 5, alignItems: 'center' },
   nextBtnText: { color: 'white', fontWeight: 'bold', marginRight: 5, marginLeft: 5 },
 });

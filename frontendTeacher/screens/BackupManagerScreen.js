@@ -8,20 +8,20 @@ import {
   ActivityIndicator, 
   StyleSheet, 
   RefreshControl,
-  Platform // <--- Importante para detectar si es Web o Móvil
+  Platform 
 } from 'react-native';
-
-// Solo importamos FileSystem y Sharing si NO es web, o lo manejamos con cuidado
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-
 import { getBackups, generateBackup, restoreBackup, deleteBackup } from '../api/backupRequests';
+import { COLORS } from '../constants/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function BackupManagerScreen() {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchBackups();
@@ -34,12 +34,8 @@ export default function BackupManagerScreen() {
       setBackups(data);
     } catch (error) {
       console.error(error);
-      // En web, Alert a veces es molesto, pero funciona. 
-      // Si falla la conexión, revisa que el backend permita CORS.
       if (Platform.OS !== 'web') {
-          Alert.alert("Error", "No se pudo conectar con el servidor.");
-      } else {
-          console.log("Error de conexión:", error);
+          Alert.alert(t('error'), "No se pudo conectar con el servidor.");
       }
     } finally {
       setLoading(false);
@@ -52,37 +48,34 @@ export default function BackupManagerScreen() {
     fetchBackups();
   }, []);
 
-  // --- ACCIONES ---
-
   const handleGenerateBackup = async () => {
     setProcessing(true);
     try {
       await generateBackup();
-      if (Platform.OS !== 'web') Alert.alert("Éxito", "Copia generada.");
+      if (Platform.OS !== 'web') Alert.alert(t('success'), t('success'));
       fetchBackups(); 
     } catch (error) {
-      const msg = error.response?.data?.error || "Falló la generación.";
-      if (Platform.OS !== 'web') Alert.alert("Error", msg);
-      else alert(msg); // Fallback para web
+      const msg = error.response?.data?.error || t('error');
+      if (Platform.OS !== 'web') Alert.alert(t('error'), msg);
+      else alert(msg);
     } finally {
       setProcessing(false);
     }
   };
 
   const handleDelete = (id) => {
+    const confirmMsg = t('deleteGroupConfirm'); // Reutilizamos texto o creamos específico
     if (Platform.OS === 'web') {
-        // Confirmación nativa del navegador para Web
-        if (confirm("¿Estás seguro de eliminar esta copia?")) {
+        if (confirm(confirmMsg)) {
             performDelete(id);
         }
     } else {
-        // Alerta nativa para Móvil
         Alert.alert(
-            "Eliminar copia",
-            "¿Estás seguro? Esta acción no se puede deshacer.",
+            t('delete'),
+            confirmMsg,
             [
-                { text: "Cancelar", style: "cancel" },
-                { text: "Eliminar", style: "destructive", onPress: () => performDelete(id) }
+                { text: t('cancel'), style: "cancel" },
+                { text: t('delete'), style: "destructive", onPress: () => performDelete(id) }
             ]
         );
     }
@@ -94,26 +87,26 @@ export default function BackupManagerScreen() {
       await deleteBackup(id);
       setBackups(prev => prev.filter(b => b.id !== id));
     } catch (error) {
-      alert("No se pudo eliminar");
+      alert(t('error'));
     } finally {
       setProcessing(false);
     }
   };
 
   const handleRestore = (id) => {
-    const msg = "⚠️ ESTO BORRARÁ TODOS LOS DATOS ACTUALES y restaurará la copia seleccionada.";
+    const msg = t('restoreConfirm');
     
     if (Platform.OS === 'web') {
-        if (confirm(msg + "\n¿Continuar?")) {
+        if (confirm(msg)) {
             performRestore(id);
         }
     } else {
         Alert.alert(
-            "Restaurar Base de Datos",
+            t('restore'),
             msg,
             [
-                { text: "Cancelar", style: "cancel" },
-                { text: "RESTAURAR", style: "destructive", onPress: () => performRestore(id) }
+                { text: t('cancel'), style: "cancel" },
+                { text: t('restore'), style: "destructive", onPress: () => performRestore(id) }
             ]
         );
     }
@@ -123,25 +116,20 @@ export default function BackupManagerScreen() {
     setProcessing(true);
     try {
       await restoreBackup(id);
-      alert("✅ Restauración completada con éxito.");
+      alert(t('restoreSuccess'));
     } catch (error) {
-      console.log("🔥 ERROR DEL SERVER:", JSON.stringify(error.response?.data, null, 2)); 
-      
-      const msg = error.response?.data?.error || "Error desconocido";
-      alert("Falló la restauración: " + msg);
+      const msg = error.response?.data?.error || t('error');
+      alert(t('restoreFail') + ": " + msg);
     } finally {
       setProcessing(false);
     }
   };
 
-  // --- LÓGICA DE DESCARGA HÍBRIDA (WEB vs MÓVIL) ---
   const downloadFile = async (fileUrl, fileName) => {
     if (!fileUrl) return;
 
-    // 1. LÓGICA PARA WEB (Navegador)
     if (Platform.OS === 'web') {
         try {
-            // Creamos un link invisible y le hacemos click
             const link = document.createElement('a');
             link.href = fileUrl;
             link.download = fileName || 'backup.xlsx';
@@ -149,29 +137,22 @@ export default function BackupManagerScreen() {
             link.click();
             document.body.removeChild(link);
         } catch (e) {
-            console.error("Error descarga web:", e);
-            alert("Error al descargar en el navegador.");
+            alert(t('downloadError'));
         }
         return;
     }
 
-    // 2. LÓGICA PARA MÓVIL (Android / iOS)
     try {
       const fileUri = FileSystem.documentDirectory + fileName;
-      
-      // Nota: Si usas Expo SDK 54+, 'downloadAsync' está deprecado.
-      // Si te da error en MÓVIL, cambia esta línea por la nueva API de FileSystem
-      // pero por ahora mantenemos la compatibilidad si no has migrado completamente.
       const downloadRes = await FileSystem.downloadAsync(fileUrl, fileUri);
 
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(downloadRes.uri);
       } else {
-        Alert.alert("Descargado", "Archivo guardado en la carpeta de la app.");
+        Alert.alert(t('success'), "Archivo guardado.");
       }
     } catch (e) {
-      console.error(e);
-      Alert.alert("Error", "No se pudo descargar en el dispositivo.");
+      Alert.alert(t('error'), t('downloadError'));
     }
   };
 
@@ -186,7 +167,7 @@ export default function BackupManagerScreen() {
         <View style={styles.metaRow}>
             <View style={[styles.badge, item.is_auto_generated ? styles.badgeAuto : styles.badgeManual]}>
                 <Text style={styles.badgeText}>
-                    {item.is_auto_generated ? 'AUTO' : 'MANUAL'}
+                    {item.is_auto_generated ? t('auto') : t('manual')}
                 </Text>
             </View>
             <Text style={styles.sizeText}>{item.file_size}</Text>
@@ -211,18 +192,18 @@ export default function BackupManagerScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Gestión de Copias</Text>
+      <Text style={styles.header}>{t('backupManagement')}</Text>
       
       <TouchableOpacity 
         style={[styles.mainBtn, processing && styles.disabledBtn]} 
         onPress={handleGenerateBackup}
         disabled={processing}
       >
-        {processing ? <ActivityIndicator color="#fff"/> : <Text style={styles.mainBtnText}>+ Generar Nueva Copia</Text>}
+        {processing ? <ActivityIndicator color="#fff"/> : <Text style={styles.mainBtnText}>+ {t('generateBackup')}</Text>}
       </TouchableOpacity>
 
       {loading && !refreshing ? (
-        <ActivityIndicator size="large" color="#007AFF" style={{marginTop: 20}} />
+        <ActivityIndicator size="large" color={COLORS.primary} style={{marginTop: 20}} />
       ) : (
         <FlatList
           data={backups}
@@ -231,7 +212,7 @@ export default function BackupManagerScreen() {
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No hay copias disponibles.</Text>
+            <Text style={styles.emptyText}>{t('noBackups')}</Text>
           }
         />
       )}
@@ -239,7 +220,7 @@ export default function BackupManagerScreen() {
       {processing && (
         <View style={styles.overlay}>
             <ActivityIndicator size="large" color="#fff" />
-            <Text style={{color: '#fff', marginTop: 10}}>Procesando...</Text>
+            <Text style={{color: '#fff', marginTop: 10}}>{t('processing')}</Text>
         </View>
       )}
     </View>
@@ -247,27 +228,27 @@ export default function BackupManagerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, paddingTop: 50, backgroundColor: '#F2F2F7' },
-  header: { fontSize: 28, fontWeight: '800', marginBottom: 25, color: '#1C1C1E' },
-  mainBtn: { backgroundColor: '#007AFF', padding: 16, borderRadius: 14, alignItems: 'center', marginBottom: 20 },
-  mainBtnText: { color: '#fff', fontWeight: '700', fontSize: 17 },
+  container: { flex: 1, padding: 20, paddingTop: 50, backgroundColor: COLORS.background },
+  header: { fontSize: 28, fontWeight: '800', marginBottom: 25, color: COLORS.text },
+  mainBtn: { backgroundColor: COLORS.primary, padding: 16, borderRadius: 14, alignItems: 'center', marginBottom: 20 },
+  mainBtnText: { color: COLORS.white, fontWeight: '700', fontSize: 17 },
   disabledBtn: { opacity: 0.6 },
   list: { paddingBottom: 40 },
-  emptyText: { textAlign: 'center', color: '#8E8E93', marginTop: 20 },
-  card: { backgroundColor: '#fff', padding: 16, borderRadius: 16, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: "#000", shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
+  emptyText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 20 },
+  card: { backgroundColor: COLORS.surface, padding: 16, borderRadius: 16, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: COLORS.shadow, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
   infoContainer: { flex: 1, marginRight: 10 },
-  fileName: { fontWeight: '600', fontSize: 15, color: '#1C1C1E', marginBottom: 4 },
-  dateText: { color: '#8E8E93', fontSize: 13, marginBottom: 8 },
+  fileName: { fontWeight: '600', fontSize: 15, color: COLORS.text, marginBottom: 4 },
+  dateText: { color: COLORS.textSecondary, fontSize: 13, marginBottom: 8 },
   metaRow: { flexDirection: 'row', alignItems: 'center' },
-  sizeText: { color: '#8E8E93', fontSize: 12, fontWeight: '500' },
+  sizeText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '500' },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginRight: 8 },
-  badgeAuto: { backgroundColor: '#E0F2F1' },   
-  badgeManual: { backgroundColor: '#E3F2FD' }, 
-  badgeText: { fontSize: 10, fontWeight: '700', color: '#444' },
+  badgeAuto: { backgroundColor: COLORS.successBg },   
+  badgeManual: { backgroundColor: COLORS.primaryLight }, 
+  badgeText: { fontSize: 10, fontWeight: '700', color: COLORS.text },
   actionsContainer: { flexDirection: 'row', gap: 8 },
-  actionBtn: { backgroundColor: '#F2F2F7', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  actionBtn: { backgroundColor: COLORS.background, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   restoreBtn: { backgroundColor: '#FFF3E0' }, 
-  deleteBtn: { backgroundColor: '#FFEBEE' }, 
+  deleteBtn: { backgroundColor: COLORS.dangerBg }, 
   actionIcon: { fontSize: 18 },
-  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 999 }
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.overlay, justifyContent: 'center', alignItems: 'center', zIndex: 999 }
 });

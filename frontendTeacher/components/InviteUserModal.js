@@ -2,19 +2,19 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Modal, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { COLORS } from '../constants/colors';
-import { StyledButton } from '../components/StyledButton'; // Asegúrate de que este componente exista
+import { StyledButton } from '../components/StyledButton'; 
+import { useLanguage } from '../context/LanguageContext';
 
-// Función para generar la contraseña a partir del email
 const generatePasswordFromEmail = (email) => {
-    // Si el email es 'ana.lopez@gmail.com', la contraseña será 'ana.lopez'
     const parts = email.split('@');
     return parts.length > 0 ? parts[0] : '';
 };
 
 export default function InviteUserModal({ visible, onClose, onSubmit }) {
+    const { t } = useLanguage();
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
-    const [role, setRole] = useState('TEACHER'); // 'TEACHER' o 'ADMIN'
+    const [role, setRole] = useState('TEACHER'); 
     const [submitting, setSubmitting] = useState(false);
 
     const isValidEmail = (email) => {
@@ -23,49 +23,42 @@ export default function InviteUserModal({ visible, onClose, onSubmit }) {
 
     const handleSubmit = async () => {
         if (!username.trim() || !email.trim()) {
-            Alert.alert('Error', 'Por favor completa el nombre de usuario y el correo.');
+            Alert.alert(t('error'), t('fillAllFields'));
             return;
         }
 
         if (!isValidEmail(email)) {
-            Alert.alert('Error', 'Introduce un correo electrónico válido.');
+            Alert.alert(t('error'), t('emailInvalid'));
             return;
         }
 
-        // 1. Generar contraseña basada en el email (Tu requisito)
         const password = generatePasswordFromEmail(email.trim());
 
         if (password.length === 0) {
-             Alert.alert('Error', 'No se pudo generar la contraseña a partir del correo.');
+             Alert.alert(t('error'), t('passwordGenError'));
             return;
         }
 
-        // 2. Mapear datos al formato del backend
         const userData = {
             username: username.trim(),
             email: email.trim(),
-            password: password, // Contraseña generada
-            is_super: role === 'ADMIN', // Mapeamos 'ADMIN'/'TEACHER' a booleano
+            password: password, 
+            is_super: role === 'ADMIN', 
         };
 
         try {
             setSubmitting(true);
-            
-            await onSubmit(userData); // Ejecuta handleCreateUser en ManageUsersScreen
-            
-            // Limpiar formulario al éxito
+            await onSubmit(userData); 
             setUsername('');
             setEmail('');
             setRole('TEACHER');
-            
         } catch (error) {
-            // El error se maneja en ManageUsersScreen
+            // El error se maneja en el padre
         } finally {
             setSubmitting(false);
         }
     };
 
-    // Al cerrar, resetear los campos
     const handleClose = () => {
         setUsername('');
         setEmail('');
@@ -82,10 +75,9 @@ export default function InviteUserModal({ visible, onClose, onSubmit }) {
         >
             <View style={styles.centeredView}>
                 <View style={styles.modalView}>
-                    <Text style={styles.modalTitle}>Crear Usuario</Text>
-                    <Text style={styles.subTitle}>La contraseña temporal se asignará a partir del correo.</Text>
-
-                    <Text style={styles.label}>Nombre de Usuario (Username)</Text>
+                    <Text style={styles.modalTitle}>{t('createUser')}</Text>
+                    
+                    <Text style={styles.label}>{t('username')}</Text>
                     <TextInput
                         style={styles.input}
                         placeholder="Ej: ana.lopez"
@@ -94,43 +86,42 @@ export default function InviteUserModal({ visible, onClose, onSubmit }) {
                         autoCapitalize="none"
                     />
 
-                    <Text style={styles.label}>Correo Electrónico</Text>
+                    <Text style={styles.label}>{t('email')}</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Ej: ana@universidad.edu"
+                        placeholder="Ej: ana@ugr.es"
                         value={email}
                         onChangeText={setEmail}
                         keyboardType="email-address"
                         autoCapitalize="none"
                     />
                     
-                    {/* Visualización de Contraseña Temporal (Para el usuario) */}
                     {email.trim().length > 0 && isValidEmail(email.trim()) && (
                          <Text style={styles.passwordHint}>
-                             Contraseña temporal: **{generatePasswordFromEmail(email)}**
+                             {t('tempPasswordHint')} **{generatePasswordFromEmail(email)}**
                          </Text>
                     )}
 
-
-                    <Text style={styles.label}>Rol</Text>
+                    <Text style={styles.label}>{t('role')}</Text>
                     <View style={styles.pickerContainer}>
                         <Picker
                             selectedValue={role}
                             onValueChange={(itemValue) => setRole(itemValue)}
                             style={styles.picker}
                         >
-                            <Picker.Item label="Profesor" value="TEACHER" />
-                            <Picker.Item label="Administrador (SuperUser)" value="ADMIN" />
+                            <Picker.Item label={t('teacher')} value="TEACHER" />
+                            <Picker.Item label={t('admin')} value="ADMIN" />
                         </Picker>
                     </View>
 
                     <View style={styles.buttonRow}>
-                        <StyledButton title="Cancelar" onPress={handleClose} variant='danger' />
-                        {submitting ? (
-                            <ActivityIndicator color={COLORS.primary} size="small" style={{ marginHorizontal: 30 }} />
-                        ) : (
-                            <StyledButton title="Crear Usuario" onPress={handleSubmit} />
-                        )}
+                        <StyledButton title={t('cancel')} onPress={handleClose} variant='danger' style={{flex: 1, marginRight: 10}} />
+                        <StyledButton 
+                            title={t('create')} 
+                            onPress={handleSubmit} 
+                            loading={submitting}
+                            style={{flex: 1, marginLeft: 10}}
+                        />
                     </View>
                 </View>
             </View>
@@ -163,11 +154,6 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         textAlign: 'center',
         color: COLORS.text,
-    },
-    subTitle: {
-        fontSize: 14,
-        color: COLORS.gray,
-        textAlign: 'center',
         marginBottom: 20,
     },
     label: {
@@ -186,7 +172,7 @@ const styles = StyleSheet.create({
     },
     passwordHint: {
         fontSize: 14,
-        color: COLORS.success || 'green',
+        color: COLORS.success,
         marginBottom: 15,
         textAlign: 'center',
     },

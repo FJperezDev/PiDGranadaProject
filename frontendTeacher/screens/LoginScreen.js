@@ -6,8 +6,8 @@ import {
 import { AuthContext } from '../context/AuthContext';
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
-import { StyledButton } from '../components/StyledButton'; // Importar
-import { Eye, EyeOff } from 'lucide-react-native'; // Usar iconos de Lucide
+import { StyledButton } from '../components/StyledButton';
+import { Eye, EyeOff } from 'lucide-react-native'; 
 import { encryptPassword } from '../utils/encryption';
 
 export default function LoginScreen({ navigation }) {
@@ -50,7 +50,7 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.label}>{t('email')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="ejemplo@correo.com"
+              placeholder="example@email.com"
               placeholderTextColor={COLORS.textSecondary}
               value={email}
               onChangeText={setEmail}
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    maxWidth: 400, // Responsive: No se estira en web
+    maxWidth: 400, 
     backgroundColor: COLORS.surface,
     borderRadius: 16,
     padding: 30,

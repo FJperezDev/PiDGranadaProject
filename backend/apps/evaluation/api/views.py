@@ -14,8 +14,8 @@ from .models import (
 )
 from .serializers import (
     QuestionSerializer, AnswerSerializer, ShortQuestionSerializer,
-    QuestionBelongsToTopicSerializer, QuestionRelatedToConceptSerializer,
-    QuestionEvaluationGroupSerializer
+    QuestionRelatedToConceptSerializer,
+    AnalyticsResponseSerializer
 )
 from apps.evaluation.domain import selectors, services
 from apps.utils.permissions import BaseContentViewSet
@@ -187,10 +187,16 @@ class ExamViewSet(viewsets.GenericViewSet):
 class AnalyticsViewSet(BaseContentViewSet):
 
     @action(detail=False, methods=['get'])
+    # Helper para obtener el idioma de las cabeceras
+    def get_language(self, request):
+        accept_language = request.META.get('HTTP_ACCEPT_LANGUAGE', 'es')
+        return 'en' if 'en' in accept_language else 'es'
+
+    @action(detail=False, methods=['get'])
     def performance(self, request):
         queryset = QuestionEvaluationGroup.objects.all()
 
-        # 1. Filtramos basura (cosas sin intentos)
+        # 1. Filtramos basura
         queryset = queryset.filter(ev_count__gt=0) 
         
         # Filtro Subject
@@ -205,24 +211,31 @@ class AnalyticsViewSet(BaseContentViewSet):
         limit_param = request.query_params.get('limit', 10)
         limit = int(limit_param) if limit_param else None
 
+        # --- LÓGICA DE IDIOMA DINÁMICA ---
+        lang = self.get_language(request)
+
         try:
             label_key = None 
             is_question_grouping = False
             id_key = None
 
             if group_by == 'topic':
-                label_key = 'question__topics__topic__title_es'
+                # Seleccionamos la columna title_es o title_en dinámicamente
+                label_key = f'question__topics__topic__title_{lang}'
                 id_key = 'question__topics__topic__id'
                 queryset = queryset.exclude(question__topics__topic__isnull=True)
             elif group_by == 'concept':
-                label_key = 'question__concepts__concept__name_es'
+                # name_es o name_en
+                label_key = f'question__concepts__concept__name_{lang}'
                 id_key = 'question__concepts__concept__id'
                 queryset = queryset.exclude(question__concepts__concept__isnull=True)
             elif group_by == 'group':
-                label_key = 'group__name_es'
+                # name_es o name_en
+                label_key = f'group__name_{lang}'
                 id_key = 'group__id'
             elif group_by == 'question':
                 id_key = 'question__id'
+                # Para preguntas el label es el ID, pero buscaremos el texto después
                 label_key = 'question__id'
                 is_question_grouping = True
             else:
@@ -233,7 +246,6 @@ class AnalyticsViewSet(BaseContentViewSet):
                 total_attempts=Coalesce(Sum('ev_count'), 0),
                 total_correct=Coalesce(Sum('correct_count'), 0)
             ).annotate(
-                # Calculamos el % de precisión
                 accuracy=Case(
                     When(total_attempts=0, then=Value(0.0)),
                     default=ExpressionWrapper(
@@ -242,33 +254,27 @@ class AnalyticsViewSet(BaseContentViewSet):
                     ),
                     output_field=FloatField()
                 ),
-                # NUEVO: Calculamos el "Volumen de Fallos" (Intentos - Aciertos)
                 total_failures=ExpressionWrapper(
                     F('total_attempts') - F('total_correct'),
                     output_field=FloatField()
                 )
             )
             
-            # --- AQUÍ ESTÁ TU "BALANCE" ---
-            
-            # OPCIÓN A (Impacto Real): Ordena por volumen de fallos. 
-            # Pone primero las preguntas que más "puntos" han quitado a la clase en total.
-            # Equilibra naturalmente % malo con muchos intentos.
+            # Ordenamiento inteligente
             result = result.order_by('-total_failures') 
-
-            # OPCIÓN B (Cascada): Si prefieres estricto % primero y luego intentos:
-            # result = result.order_by('accuracy', '-total_attempts')
 
             if limit:
                 result = result[:limit]
 
-            # --- MAPEO DE TEXTOS ---
+            # --- MAPEO DE TEXTOS (Si es por pregunta) ---
             question_map = {}
             if is_question_grouping and result:
                 q_ids = [item['question__id'] for item in result]
-                questions = Question.objects.filter(id__in=q_ids).values('id', 'statement_es')
+                # Buscamos statement_es o statement_en dinámicamente
+                statement_field = f'statement_{lang}'
+                questions = Question.objects.filter(id__in=q_ids).values('id', statement_field)
                 for q in questions:
-                    question_map[q['id']] = q['statement_es']
+                    question_map[q['id']] = q[statement_field]
 
             formatted_data = []
             for item in result:
@@ -291,17 +297,21 @@ class AnalyticsViewSet(BaseContentViewSet):
                     'label': label,
                     'full_label': full_label,
                     'value': percentage,
-                    'attempts': attempts
+                    'attempts': attempts,
+                    'total_failures': item.get('total_failures', 0)
                 })
 
-            return Response(formatted_data)
+            # Usamos el Serializer para validar la salida (opcional pero limpio)
+            serializer = AnalyticsResponseSerializer(data=formatted_data, many=True)
+            serializer.is_valid() # No levantamos excepción aquí para ser flexibles, pero estructura los datos
+            
+            return Response(serializer.data)
 
         except Exception as e:
             print(f"Error Analytics: {e}")
             import traceback
             traceback.print_exc()
-            return Response({'detail': str(e)}, status=500)
-        
+            return Response({'detail': str(e)}, status=500) 
 
     @action(detail=False, methods=['delete'], url_path='reset-analytics', permission_classes=[IsSuperTeacher])
     def reset_analytics(self, request):

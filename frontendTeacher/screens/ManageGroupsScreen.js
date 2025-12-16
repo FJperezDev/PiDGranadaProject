@@ -1,15 +1,17 @@
-import React, { useState, useContext, useCallback } from 'react';
+import React, { useState, useContext, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform, ScrollView } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext'; 
 import { getMyGroups, getOtherGroups, getSubjects, createGroup, createSubject } from '../api/coursesRequests'; 
 import CreateGroupModal from '../components/CreateGroupModal';
 import CreateSubjectModal from '../components/CreateSubjectModal';
-import { PlusCircle, BookOpen } from 'lucide-react-native'; // Asegúrate de tener BookOpen
+import { PlusCircle, BookOpen } from 'lucide-react-native'; 
 import { COLORS } from '../constants/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function ManageGroupsScreen({ navigation }) {
-  const { loggedUser, isSuper } = useContext(AuthContext);
+  const { isSuper } = useContext(AuthContext);
+  const { t, language } = useLanguage();
 
   const [myGroups, setMyGroups] = useState([]);
   const [otherGroups, setOtherGroups] = useState([]);
@@ -33,12 +35,16 @@ export default function ManageGroupsScreen({ navigation }) {
         setOtherGroups(otherGroupsData);
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudieron cargar los datos.');
+      Alert.alert(t('error'), t('error'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [language]);
 
   useFocusEffect(
     useCallback(() => {
@@ -53,20 +59,20 @@ export default function ManageGroupsScreen({ navigation }) {
 
   const handleOpenGroupModal = () => {
     if (subjects.length === 0) {
-      Alert.alert('Error', 'No hay asignaturas creadas. Debes crear una asignatura primero.');
+      Alert.alert(t('error'), t('noSubjects'));
       return;
     }
     setGroupModalVisible(true);
   };
 
-  const handleCreateGroup = async (subjectId, name) => {
+  const handleCreateGroup = async (subjectId, nameEs, nameEn) => {
     try {
-      await createGroup(subjectId, name, name);
+      await createGroup(subjectId, nameEs, nameEn);
       setGroupModalVisible(false);
-      Alert.alert('Éxito', 'Grupo creado correctamente.');
+      Alert.alert(t('success'), t('success'));
       fetchData(); 
     } catch (error) {
-      Alert.alert('Error', 'No se pudo crear el grupo.');
+      Alert.alert(t('error'), t('error'));
     }
   };
 
@@ -74,18 +80,17 @@ export default function ManageGroupsScreen({ navigation }) {
     setSubjectModalVisible(true);
   };
 
-  const handleCreateSubject = async (name) => {
+  const handleCreateSubject = async (nameEs, nameEn, descEs, descEn) => {
     try {
-      await createSubject(name, name, name, name);
+      await createSubject(nameEs, nameEn, descEs, descEn);
       setSubjectModalVisible(false);
-      Alert.alert('Éxito', 'Asignatura creada correctamente.');
+      Alert.alert(t('success'), t('success'));
       fetchData();
     } catch (error) {
-      Alert.alert('Error', 'No se pudo crear la asignatura. ');
+      Alert.alert(t('error'), t('error'));
     }
   };
 
-  // Render para Grupos
   const renderGroup = ({ item }) => (
     <TouchableOpacity
       style={styles.groupButton}
@@ -95,11 +100,10 @@ export default function ManageGroupsScreen({ navigation }) {
     </TouchableOpacity>
   );
 
-  // Render para Asignaturas (NUEVO)
   const renderSubject = ({ item }) => (
     <TouchableOpacity
       style={[styles.groupButton, { borderLeftWidth: 5, borderLeftColor: COLORS.primary }]}
-      onPress={() => navigation.navigate('SubjectTopics', { subject: item })} // <--- NOMBRE CORREGIDO AQUÍ
+      onPress={() => navigation.navigate('SubjectTopics', { subject: item })} 
     >
       <View style={{flexDirection: 'row', alignItems: 'center'}}>
         <BookOpen size={24} color={COLORS.primary} style={{marginRight: 10}}/>
@@ -109,29 +113,26 @@ export default function ManageGroupsScreen({ navigation }) {
   );
 
   if (loading && !refreshing) {
-    return <ActivityIndicator style={styles.loader} size="large" />;
+    return <ActivityIndicator style={styles.loader} size="large" color={COLORS.primary} />;
   }
 
   return (
     <View style={styles.container}>
-      {/* Usamos ScrollView general en lugar de FlatList anidados */}
       <ScrollView
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>Gestión Docente</Text>
+          <Text style={styles.title}>{t('teachingManagement')}</Text>
         </View>
-
-        {/* --- SECCIÓN ASIGNATURAS --- */}
 
         <View style={styles.header}>
           <View>
-            <Text style={styles.sectionTitle}>Asignaturas</Text>
-            <Text style={styles.subtitle}>Toca para ordenar temas</Text>
+            <Text style={styles.sectionTitle}>{t('subjects')}</Text>
+            <Text style={styles.subtitle}>{t('touchToOrder')}</Text>
           </View>
-	  <TouchableOpacity onPress={handleOpenSubjectModal}>
-            <PlusCircle size={30} color={COLORS.secondary || 'blue'} />
+          <TouchableOpacity onPress={handleOpenSubjectModal}>
+            <PlusCircle size={30} color={COLORS.secondary} />
           </TouchableOpacity>
         </View>
 
@@ -142,30 +143,30 @@ export default function ManageGroupsScreen({ navigation }) {
             </View>
           ))
         ) : (
-            <Text style={styles.emptyText}>No hay asignaturas disponibles.</Text>
+            <Text style={styles.emptyText}>{t('noSubjects')}</Text>
         )}
 
         <View style={styles.divider} />
 
-        {/* --- SECCIÓN GRUPOS --- */}
         <View style={styles.header}>
-	  <Text style={styles.sectionTitle}>Mis Grupos</Text>
-	  <TouchableOpacity onPress={handleOpenGroupModal}>
-            <PlusCircle size={30} color={COLORS.secondary || 'blue'} />
+          <Text style={styles.sectionTitle}>{t('myGroups')}</Text>
+          <TouchableOpacity onPress={handleOpenGroupModal}>
+            <PlusCircle size={30} color={COLORS.secondary} />
           </TouchableOpacity>
-	</View>
+        </View>
+        
         {myGroups.length > 0 ? (
              myGroups.map((group) => (
                 <View key={group.id}>{renderGroup({ item: group })}</View>
              ))
         ) : (
-            <Text style={styles.emptyText}>No has creado ningún grupo.</Text>
+            <Text style={styles.emptyText}>{t('noGroups')}</Text>
         )}
 
         {isSuper && (
           <>
             <View style={styles.divider} />
-            <Text style={styles.sectionTitle}>Otros Grupos</Text>
+            <Text style={styles.sectionTitle}>{t('otherGroups')}</Text>
             {otherGroups.map((group) => (
                 <View key={group.id}>{renderGroup({ item: group })}</View>
             ))}
@@ -182,9 +183,9 @@ export default function ManageGroupsScreen({ navigation }) {
         />
       )}
       <CreateSubjectModal
-	visible={subjectModalVisible}
-	onClose={() => setSubjectModalVisible(false)}
-	onSubmit={handleCreateSubject}
+        visible={subjectModalVisible}
+        onClose={() => setSubjectModalVisible(false)}
+        onSubmit={handleCreateSubject}
       />
     </View>
   );
@@ -194,7 +195,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: COLORS.background || '#f7f9fa',
+    backgroundColor: COLORS.background,
   },
   loader: {
     flex: 1,
@@ -213,14 +214,14 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   groupButton: {
-    backgroundColor: COLORS.white || 'white',
+    backgroundColor: COLORS.surface,
     padding: 20,
     borderRadius: 10,
     marginBottom: 15,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }
       : {
-          shadowColor: '#000',
+          shadowColor: COLORS.shadow,
           shadowOffset: { width: 0, height: 1 },
           shadowOpacity: 0.1,
           shadowRadius: 3,
@@ -230,16 +231,15 @@ const styles = StyleSheet.create({
   groupButtonText: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.primaryDark || 'black',
+    color: COLORS.primaryDark,
   },
   emptyText: {
     textAlign: 'center',
     marginTop: 20,
     marginBottom: 20,
     fontSize: 16,
-    color: 'gray',
+    color: COLORS.textSecondary,
   },
-  // Estilos nuevos
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
@@ -249,12 +249,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: 'gray',
+    color: COLORS.textSecondary,
     marginBottom: 15,
   },
   divider: {
     height: 1,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: COLORS.border,
     marginVertical: 15,
   }
 });

@@ -159,3 +159,11 @@ class QuestionEvaluationGroupSerializer(serializers.ModelSerializer):
         model = QuestionEvaluationGroup
         fields = '__all__'
         read_only_fields = ['id']
+
+class AnalyticsResponseSerializer(serializers.Serializer):
+    id = serializers.IntegerField(allow_null=True)
+    label = serializers.CharField()
+    full_label = serializers.CharField()
+    value = serializers.FloatField()
+    attempts = serializers.IntegerField()
+    total_failures = serializers.FloatField(required=False)

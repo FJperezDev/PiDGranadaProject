@@ -2,8 +2,11 @@ import React from 'react';
 import { View, Text, Modal, StyleSheet, Platform } from 'react-native';
 import { COLORS } from '../constants/colors';
 import { StyledButton } from './StyledButton';
+import { useLanguage } from '../context/LanguageContext';
 
-export default function ConfirmDeleteModal({ visible, onClose, onConfirm }) {
+export default function ConfirmDeleteModal({ visible, onClose, onConfirm, title, message }) {
+  const { t } = useLanguage();
+
   return (
     <Modal
       animationType="fade"
@@ -13,13 +16,22 @@ export default function ConfirmDeleteModal({ visible, onClose, onConfirm }) {
     >
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>Confirmar Eliminación</Text>
+          <Text style={styles.modalTitle}>{title || t('delete')}</Text>
           <Text style={styles.modalText}>
-            ¿Estás seguro de que quieres eliminar este grupo? Esta acción no se puede deshacer.
+            {message || t('deleteGroupConfirm')}
           </Text>
           <View style={styles.buttonRow}>
-            <StyledButton title="Cancelar" onPress={onClose} variant='ghost' style={{ marginRight: 10 }} />
-            <StyledButton title="Eliminar" onPress={onConfirm} variant='danger' />
+            <StyledButton 
+                title={t('cancel')} 
+                onPress={onClose} 
+                variant='ghost' 
+                style={{ marginRight: 10 }} 
+            />
+            <StyledButton 
+                title={t('delete')} 
+                onPress={onConfirm} 
+                variant='danger' 
+            />
           </View>
         </View>
       </View>

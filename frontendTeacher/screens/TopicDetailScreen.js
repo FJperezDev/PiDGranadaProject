@@ -5,23 +5,23 @@ import { getTopicEpigraphs, createEpigraph, updateEpigraph, deleteEpigraph, getE
 import { EpigraphModal } from '../components/ContentModals';
 import { Plus, Trash2, Edit } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function TopicDetailScreen({ route, navigation }) {
   const { topic } = route.params;
+  const { t } = useLanguage();
   
   const [epigraphs, setEpigraphs] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Estado para el modal
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingEpigraph, setEditingEpigraph] = useState(null); // Nuevo estado
+  const [editingEpigraph, setEditingEpigraph] = useState(null);
 
   const fetchEpigraphs = async () => {
     try {
       setLoading(true);
       const data = await getTopicEpigraphs(topic.id);
       const sorted = data.sort((a, b) => parseFloat(a.order_id) - parseFloat(b.order_id));
-      console.log(sorted);
       setEpigraphs(sorted);
     } catch (e) {
       console.error(e);
@@ -43,13 +43,12 @@ export default function TopicDetailScreen({ route, navigation }) {
       setEditingEpigraph(null); 
       fetchEpigraphs();
     } catch (e) { 
-      Alert.alert('Error', 'No se pudo guardar el epígrafe. Revisa si el ID de orden ya existe.'); 
+      Alert.alert(t('error'), t('error')); 
       console.error(e);
     }
   };
 
   const handleDelete = (orderId) => {
-    // Definimos la lógica de borrado para reutilizarla
     const performDelete = async () => {
       try {
         await deleteEpigraph(topic.id, orderId);
@@ -60,16 +59,14 @@ export default function TopicDetailScreen({ route, navigation }) {
     };
 
     if (Platform.OS === 'web') {
-      // Lógica para Navegador (usa el confirm nativo del browser)
-      if (window.confirm('Eliminar: ¿Seguro que quieres eliminar este epígrafe?')) {
+      if (window.confirm(t('deleteEpigraphConfirm'))) {
         performDelete();
       }
     } else {
-      // Lógica para Móvil (iOS/Android)
-      Alert.alert('Eliminar', '¿Seguro?', [
-        { text: 'Cancelar', style: 'cancel' },
+      Alert.alert(t('delete'), t('deleteEpigraphConfirm'), [
+        { text: t('cancel'), style: 'cancel' },
         { 
-          text: 'Eliminar', 
+          text: t('delete'), 
           style: 'destructive', 
           onPress: performDelete 
         }
@@ -85,12 +82,11 @@ export default function TopicDetailScreen({ route, navigation }) {
   const openEditModal = async (item) => {
     try {
       const detailedData = await getEpigraphDetail(topic.id, item.order_id);
-      console.log(detailedData);
       setEditingEpigraph(detailedData);
       setModalVisible(true);
     } catch (error) {
       console.error("Error fetching details:", error);
-      Alert.alert("Error", "No se pudieron cargar los detalles del epígrafe.");
+      Alert.alert(t('error'), t('error'));
     }
   };
 
@@ -105,32 +101,31 @@ export default function TopicDetailScreen({ route, navigation }) {
       
       <View style={styles.actions}>
         <TouchableOpacity onPress={() => openEditModal(item)} style={styles.iconBtn}>
-          <Edit size={20} color={COLORS.secondary || 'blue'} />
+          <Edit size={20} color={COLORS.secondary} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => handleDelete(item.order_id)} style={styles.iconBtn}>
-          <Trash2 size={20} color={COLORS.danger || 'red'} />
+          <Trash2 size={20} color={COLORS.danger} />
         </TouchableOpacity>
       </View>
-    
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.headerTitle}>Epígrafes de: {topic.title || topic.title_es}</Text>
+      <Text style={styles.headerTitle}>{t('epigraphs')}: {topic.title || topic.title_es}</Text>
       
       {loading ? <ActivityIndicator size="large" color={COLORS.primary} /> : (
         <FlatList 
           data={epigraphs}
           renderItem={renderItem}
           keyExtractor={(item) => item.id ? item.id.toString() : item.order_id.toString()}
-          ListEmptyComponent={<Text style={styles.empty}>No hay epígrafes definidos.</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>{t('noEpigraphs')}</Text>}
         />
       )}
 
       <TouchableOpacity style={styles.fab} onPress={openCreateModal}>
-        <Plus size={24} color="white" />
+        <Plus size={24} color={COLORS.white} />
       </TouchableOpacity>
 
       <EpigraphModal 
@@ -146,13 +141,13 @@ export default function TopicDetailScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: COLORS.background },
   headerTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: COLORS.primary },
-  card: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: 15, borderRadius: 8, marginBottom: 10, elevation: 1 },
+  card: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surface, padding: 15, borderRadius: 8, marginBottom: 10, elevation: 1 },
   info: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
-  orderId: { fontWeight: 'bold', marginRight: 10, fontSize: 16, color: '#555', minWidth: 30 },
-  name: { fontSize: 16, fontWeight: '600', color: '#333' },
-  desc: { fontSize: 12, color: 'gray' },
+  orderId: { fontWeight: 'bold', marginRight: 10, fontSize: 16, color: COLORS.textSecondary, minWidth: 30 },
+  name: { fontSize: 16, fontWeight: '600', color: COLORS.text },
+  desc: { fontSize: 12, color: COLORS.textSecondary },
   actions: { flexDirection: 'row', gap: 10 }, 
   iconBtn: { padding: 5 },
-  empty: { textAlign: 'center', marginTop: 20, color: 'gray' },
+  empty: { textAlign: 'center', marginTop: 20, color: COLORS.textSecondary },
   fab: { position: 'absolute', right: 20, bottom: 20, backgroundColor: COLORS.primary, width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 5 }
 });

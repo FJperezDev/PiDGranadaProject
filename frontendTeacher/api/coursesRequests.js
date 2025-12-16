@@ -11,6 +11,17 @@ export const getSubjects = async () => {
   }
 };
 
+export const getSubject = async (subjectId) => {
+  try{
+    const response = await apiClient.get('/subjects/' + subjectId + '/');
+    return response.data;
+  }  catch (error) {
+    console.error("Error fetching subject:", error.response?.data || error.message);
+    throw error;
+  }
+  return null;
+}
+
 export const getMyGroups = async () => {
   try {
     const response = await apiClient.get('/studentgroups/my-groups/');

@@ -31,17 +31,13 @@ export const CustomHeader = ({ routeName }) => {
   const [isPasswordMode, setIsPasswordMode] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Estados del formulario
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState(''); 
-  
-  // Estado para el mensaje de error del servidor
   const [serverError, setServerError] = useState(''); 
 
   const passwordsMatch = newPassword === confirmPassword;
   const showMismatchError = newPassword.length > 0 && confirmPassword.length > 0 && !passwordsMatch;
-
   const isHome = routeName === 'Home';
   
   const handleGoBack = () => {
@@ -55,72 +51,56 @@ export const CustomHeader = ({ routeName }) => {
     setOldPassword('');
     setNewPassword('');
     setConfirmPassword(''); 
-    setServerError(''); // Limpiar errores
+    setServerError('');
     setLoading(false);
   };
 
-  // Función auxiliar para limpiar errores al escribir
   const handleInputChange = (setter) => (text) => {
       setter(text);
-      if (serverError) setServerError(''); // Ocultar error si el usuario edita
+      if (serverError) setServerError('');
   };
 
   const handlePasswordChange = async () => {
-    // 1. Validaciones locales
     if (!oldPassword || !newPassword || !confirmPassword) {
-      setServerError(t('fillAllFields') || 'Por favor rellena todos los campos');
+      setServerError(t('fillAllFields'));
       return;
     }
 
     if (!passwordsMatch) {
-      setServerError(t('passwordsDoNotMatch') || 'Las contraseñas no coinciden');
+      setServerError(t('passwordsDoNotMatch'));
       return;
     }
 
     setLoading(true);
-    setServerError(''); // Limpiar errores previos
+    setServerError('');
 
-    // 2. Llamada a API
     const encryptedOld = await encryptPassword(oldPassword);
     const encryptedNew = await encryptPassword(newPassword);
 
     const result = await changePassword(encryptedOld, encryptedNew); 
     setLoading(false);
 
-    // 3. Manejo de Respuesta
     if (result.success) {
-      Alert.alert('Éxito', t('passwordChanged') || 'Contraseña actualizada correctamente');
+      Alert.alert(t('success'), t('passwordChanged'));
       handleCloseModal();
     } else {
-      // --- LOGICA DE EXTRACCIÓN LIMPIA ---
-      let errorMessage = 'Error al cambiar la contraseña';
+      let errorMessage = t('error');
       const errData = result.error;
 
       if (errData) {
-          // A. Error específico de Django en la contraseña NUEVA (ej: muy común, muy corta)
           if (errData.new_password && Array.isArray(errData.new_password)) {
               errorMessage = errData.new_password[0]; 
           } 
-          // B. Error específico en la contraseña ANTIGUA (ej: incorrecta)
           else if (errData.old_password && Array.isArray(errData.old_password)) {
               errorMessage = errData.old_password[0];
           } 
-          // C. Error genérico (detail)
           else if (errData.detail) {
               errorMessage = errData.detail;
           }
-          // D. Si devuelve un mensaje directo
           else if (typeof errData.message === 'string') {
               errorMessage = errData.message;
           }
       }
-      
-      // Traducción manual de errores comunes de Django (Opcional, para que quede más bonito)
-      if (errorMessage.includes("too common")) errorMessage = "La contraseña es demasiado común.";
-      if (errorMessage.includes("too short")) errorMessage = "La contraseña es muy corta.";
-      if (errorMessage.includes("entirely numeric")) errorMessage = "La contraseña no puede ser solo números.";
-
-      // Seteamos el estado
       setServerError(errorMessage);
     }
   };
@@ -131,12 +111,21 @@ export const CustomHeader = ({ routeName }) => {
       <View style={styles.leftSection}>
         {loggedUser.username ? (
           isHome ? (
-            <View style={styles.iconButton}><BookMarked size={28} color={COLORS.black} /></View>
+            <StyledButton variant="ghost" style={styles.iconButton} disabled={true}>
+                <BookMarked size={28} color={COLORS.black} />
+            </StyledButton>
           ) : (
-            <StyledButton onPress={handleGoBack} activeOpacity={0.7} style={styles.iconButton} icon={<ChevronLeft size={28} color={COLORS.black} />} />
+            <StyledButton 
+                onPress={handleGoBack} 
+                variant="ghost" 
+                style={styles.iconButton} 
+                icon={<ChevronLeft size={28} color={COLORS.black} />} 
+            />
           )
         ) : (
-          <View style={styles.iconButton}><BookMarked size={28} color={COLORS.black} /></View>
+            <StyledButton variant="ghost" style={styles.iconButton} disabled={true}>
+                <BookMarked size={28} color={COLORS.black} />
+            </StyledButton>
         )}
       </View>
 
@@ -152,6 +141,7 @@ export const CustomHeader = ({ routeName }) => {
         {loggedUser.username ? (
           <StyledButton 
             onPress={() => setModalVisible(true)} 
+            variant="ghost"
             style={styles.settingsButton} 
             icon={<Settings size={26} color={COLORS.black} />}
           />
@@ -184,15 +174,17 @@ export const CustomHeader = ({ routeName }) => {
                   onPress={() => setIsPasswordMode(false)} 
                   icon={<ArrowLeft size={24} color={COLORS.text} />} 
                   style={styles.backButton}
+                  variant="ghost"
                 >
-                  <Text style={styles.backButtonText}>{t('back') || 'Volver'}</Text>
+                  <Text style={styles.backButtonText}>{t('back')}</Text>
                 </StyledButton>
               ) : (
-                <Text style={styles.modalTitle}>{t('settings') || 'Ajustes'}</Text>
+                <Text style={styles.modalTitle}>{t('settings')}</Text>
               )}
               <StyledButton 
                 onPress={handleCloseModal}
-                icon={<X size={24} color={COLORS.textSecondary || '#666'} />}
+                icon={<X size={24} color={COLORS.textSecondary} />}
+                variant="ghost"
                 style={styles.closeButton}
               />
             </View>
@@ -208,7 +200,7 @@ export const CustomHeader = ({ routeName }) => {
                   <View style={styles.cardItem}>
                     <View style={styles.rowLabel}>
                       <Globe size={20} color={COLORS.primary} />
-                      <Text style={styles.modalLabel}>{t('language') || 'Idioma'}</Text>
+                      <Text style={styles.modalLabel}>{t('language')}</Text>
                     </View>
                     <View style={{ transform: [{ scale: 0.9 }], marginRight: -10 }}>
                         <LanguageSwitcher /> 
@@ -218,12 +210,13 @@ export const CustomHeader = ({ routeName }) => {
                   <StyledButton 
                     style={styles.menuButton} 
                     onPress={() => setIsPasswordMode(true)}
+                    variant="ghost"
                   >
                     <View style={styles.rowLabel}>
                       <Lock size={20} color={COLORS.text} />
-                      <Text style={styles.modalButtonText}>{t('changePassword') || 'Cambiar Contraseña'}</Text>
+                      <Text style={styles.modalButtonText}>{t('changePassword')}</Text>
                     </View>
-                    <ChevronLeft size={20} color={COLORS.textSecondary || '#ccc'} style={{ transform: [{ rotate: '180deg' }] }} />
+                    <ChevronLeft size={20} color={COLORS.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
                   </StyledButton>
 
                   <View style={styles.divider} />
@@ -231,11 +224,12 @@ export const CustomHeader = ({ routeName }) => {
                   <StyledButton
                     style={[styles.menuButton, styles.logoutButton]} 
                     onPress={() => { handleCloseModal(); logout(); }}
+                    variant="ghost"
                   >
                     <View style={styles.rowLabel}>
                       <LogOut size={20} color={COLORS.danger} />
                       <Text style={[styles.modalButtonText, {color: COLORS.danger}]}>
-                        {t('logout') || 'Cerrar Sesión'}
+                        {t('logout')}
                       </Text>
                     </View>
                   </StyledButton>
@@ -245,7 +239,7 @@ export const CustomHeader = ({ routeName }) => {
                 <View style={styles.formContainer}>
                   
                   {/* Password Actual */}
-                  <Text style={styles.inputLabel}>{t('currentPassword') || 'Contraseña Actual'}</Text>
+                  <Text style={styles.inputLabel}>{t('currentPassword')}</Text>
                   <TextInput 
                     style={styles.input}
                     secureTextEntry
@@ -256,7 +250,7 @@ export const CustomHeader = ({ routeName }) => {
                   />
 
                   {/* Password Nueva */}
-                  <Text style={styles.inputLabel}>{t('newPassword') || 'Nueva Contraseña'}</Text>
+                  <Text style={styles.inputLabel}>{t('newPassword')}</Text>
                   <TextInput 
                     style={styles.input}
                     secureTextEntry
@@ -267,7 +261,7 @@ export const CustomHeader = ({ routeName }) => {
                   />
 
                   {/* Confirmar Password */}
-                  <Text style={styles.inputLabel}>{t('confirmPassword') || 'Confirmar Nueva Contraseña'}</Text>
+                  <Text style={styles.inputLabel}>{t('confirmPassword')}</Text>
                   <TextInput 
                     style={[styles.input, showMismatchError && styles.inputError]} 
                     secureTextEntry
@@ -277,14 +271,12 @@ export const CustomHeader = ({ routeName }) => {
                     placeholderTextColor="#999"
                   />
 
-                  {/* Error de coincidencia (local) */}
                   {showMismatchError && (
                     <Text style={styles.errorText}>
-                      {t('passwordsDoNotMatch') || 'Las contraseñas no coinciden'}
+                      {t('passwordsDoNotMatch')}
                     </Text>
                   )}
 
-                  {/* ERROR DEL SERVIDOR (Aquí mostramos "Password too common") */}
                   {serverError ? (
                     <View style={styles.serverErrorBox}>
                          <Text style={styles.serverErrorText}>{serverError}</Text>
@@ -298,14 +290,12 @@ export const CustomHeader = ({ routeName }) => {
                     ]} 
                     onPress={handlePasswordChange}
                     disabled={loading || showMismatchError} 
+                    icon={loading ? null : <Save size={20} color={COLORS.surface} />}
                   >
                     {loading ? (
                       <ActivityIndicator color={COLORS.surface} />
                     ) : (
-                      <>
-                        <Save size={20} color={COLORS.surface} />
-                        <Text style={styles.saveButtonText}>{t('save') || 'Guardar'}</Text>
-                      </>
+                        <Text style={styles.saveButtonText}>{t('save')}</Text>
                     )}
                   </StyledButton>
                 </View>
@@ -319,7 +309,6 @@ export const CustomHeader = ({ routeName }) => {
 };
 
 const styles = StyleSheet.create({
-  // ... Tus estilos existentes ...
   container: { 
     width: '100%', 
     flexDirection: 'row', 
@@ -345,7 +334,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, 
     borderRadius: 8, 
     padding: 6, 
-    elevation: 2 
   },
   settingsButton: { padding: 8 },
 
@@ -406,7 +394,6 @@ const styles = StyleSheet.create({
   inputError: { borderColor: COLORS.danger, backgroundColor: '#FFF5F5' },
   errorText: { color: COLORS.danger, fontSize: 13, fontWeight: '600', marginLeft: 4 },
   
-  // ESTILOS NUEVOS PARA EL ERROR DEL SERVIDOR
   serverErrorBox: {
       backgroundColor: '#FEF2F2',
       borderWidth: 1,

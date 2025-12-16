@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { COLORS } from "../constants/colors";
 import { Users, FileQuestion, BookOpen, BarChart3, UserPlus, ClipboardList, UploadCloud } from "lucide-react-native";
 import * as DocumentPicker from 'expo-document-picker';
-import { importContentFromExcel } from '../api/backupRequests'; // Asegúrate de la ruta correcta
+import { importContentFromExcel } from '../api/backupRequests';
 
 export default function UserHomeScreen({ navigation }) {
   const { isSuper, onRefresh } = useContext(AuthContext);
@@ -17,7 +17,6 @@ export default function UserHomeScreen({ navigation }) {
     onRefresh();
   }, []);
 
-  // Función para manejar la subida del Excel
   const handleUploadExcel = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -33,15 +32,14 @@ export default function UserHomeScreen({ navigation }) {
       const file = result.assets[0];
       setUploading(true);
 
-      // En web 'file.file' es el objeto File real, en móvil usamos uri
       const fileToUpload = Platform.OS === 'web' ? file.file : file.uri;
 
       await importContentFromExcel(fileToUpload, file.name, file.mimeType);
       
-      Alert.alert(t('success') || "Éxito", "Contenido importado correctamente.");
+      Alert.alert(t('success'), t('importSuccess'));
     } catch (error) {
       console.error(error);
-      Alert.alert(t('error') || "Error", "Fallo al importar el contenido.");
+      Alert.alert(t('error'), t('importError'));
     } finally {
       setUploading(false);
     }
@@ -56,8 +54,7 @@ export default function UserHomeScreen({ navigation }) {
       ? [
           { title: t('inviteTeacher'), icon: UserPlus, onPress: () => navigation.navigate("InviteTeacher") },
           { title: t('logs'), icon: ClipboardList, onPress: () => navigation.navigate("BackupManager") },
-          // Nuevo botón para cargar excel
-          { title: "Cargar Excel", icon: UploadCloud, onPress: handleUploadExcel }, 
+          { title: t('importExcel'), icon: UploadCloud, onPress: handleUploadExcel }, 
         ]
       : []),
   ];
@@ -72,7 +69,7 @@ export default function UserHomeScreen({ navigation }) {
         {uploading && (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
-                <Text style={{marginTop: 10}}>Importando datos...</Text>
+                <Text style={{marginTop: 10, color: COLORS.text}}>{t('importing')}</Text>
             </View>
         )}
 
@@ -98,7 +95,7 @@ export default function UserHomeScreen({ navigation }) {
                 onPress={item.onPress}
                 disabled={uploading}
               >
-                <Icon size={40} color={COLORS.primaryDark || COLORS.primary} />
+                <Icon size={40} color={COLORS.primaryDark} />
                 <Text style={styles.menuText}>{item.title}</Text>
               </TouchableOpacity>
             );
@@ -115,18 +112,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
-    backgroundColor: COLORS.background || "#f7f9fa",
+    backgroundColor: COLORS.background,
   },
   container: {
     width: "100%",
     alignItems: "center",
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.surface,
     borderRadius: 16,
     padding: 24,
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 2px 4px rgba(0,0,0,0.1)' }
       : {
-          shadowColor: COLORS.black,
+          shadowColor: COLORS.shadow,
           shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
@@ -151,9 +148,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   menuButton: {
-    backgroundColor: COLORS.primaryLight || "#e0f7fa",
+    backgroundColor: COLORS.primaryLight,
     borderWidth: 1,
-    borderColor: COLORS.secondary || "#b2ebf2",
+    borderColor: COLORS.secondary,
     borderRadius: 14,
     paddingVertical: 24,
     paddingHorizontal: 16,
@@ -163,7 +160,7 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web'
       ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.08)' }
       : {
-          shadowColor: COLORS.black,
+          shadowColor: COLORS.shadow,
           shadowOffset: { width: 0, height: 1 },
           shadowOpacity: 0.08,
           shadowRadius: 3,

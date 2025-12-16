@@ -1,9 +1,7 @@
-import React, { useState, useContext, useCallback } from 'react';
+import React, { useState, useContext, useCallback, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, RefreshControl, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { 
-  getSubjects 
-} from '../api/coursesRequests';
+import { getSubjects } from '../api/coursesRequests';
 import {
   getTopics, createTopic, updateTopic, deleteTopic, 
   getAllConcepts, createConcept, updateConcept, deleteConcept,
@@ -13,19 +11,17 @@ import {
 import { TopicModal, ConceptModal } from '../components/ContentModals';
 import { BookOpen, Lightbulb, PlusCircle, Trash2, Edit, ChevronRight } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function ManageContentScreen({ navigation }) {
-  
-  // Datos
+  const { t, language } = useLanguage();
   const [topics, setTopics] = useState([]);
   const [concepts, setConcepts] = useState([]);
-  const [allSubjects, setAllSubjects] = useState([]); // Para el modal de Topics
+  const [allSubjects, setAllSubjects] = useState([]);
 
-  // Estado UI
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('topics'); // 'topics' | 'concepts'
+  const [activeTab, setActiveTab] = useState('topics'); 
   
-  // Estado Modales
   const [topicModalVisible, setTopicModalVisible] = useState(false);
   const [conceptModalVisible, setConceptModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -42,12 +38,16 @@ export default function ManageContentScreen({ navigation }) {
       setConcepts(cData);
       setAllSubjects(sData);
     } catch (error) {
-      Alert.alert('Error', 'No se pudo cargar el contenido');
+      Alert.alert(t('error'), t('error'));
       console.error(error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, [language]);
 
   useFocusEffect(useCallback(() => { fetchData(); }, []));
 
@@ -55,59 +55,37 @@ export default function ManageContentScreen({ navigation }) {
   const handleSaveTopic = async (data, originalSubjectIds = [], originalConceptIds = []) => {
     setLoading(true);
     try {
-      // 1. Preparar datos
       const currentSubjectIds = data.subject_ids || [];
       const currentConceptIds = data.concept_ids || [];
 
-      // Limpiamos el objeto para crear/editar el Tema (API no espera arrays de IDs en el body del topic)
       const dataToSave = { ...data };
       delete dataToSave.subject_ids;
       delete dataToSave.concept_ids;
 
       let topicId;
-      let topicName = data.title_es; // Necesario para las relaciones de Asignatura
+      let topicName = data.title_es; 
 
-      // 2. Guardar o Actualizar el TEMA
       if (editingItem) {
         await updateTopic(editingItem.id, dataToSave);
         topicId = editingItem.id;
-        topicName = dataToSave.title_es; // Actualizamos por si cambió el nombre
+        topicName = dataToSave.title_es; 
       } else {
         const newTopic = await createTopic(dataToSave);
         topicId = newTopic.id;
         topicName = newTopic.title_es;
       }
 
-      // ---------------------------------------------------------
-      // 3. GESTIÓN DE ASIGNATURAS (Subjects)
-      // ---------------------------------------------------------
-      
-      // A. Quitar (Estaban antes, ahora no)
+      // Subjects
       const subjectsToUnlink = originalSubjectIds.filter(id => !currentSubjectIds.includes(id));
-      // B. Añadir (No estaban antes, ahora sí)
       const subjectsToLink = currentSubjectIds.filter(id => !originalSubjectIds.includes(id));
 
-      const subjectUnlinkPromises = subjectsToUnlink.map(subId => {
-        // OJO: La API pide (subjectId, topicName)
-        return subjectIsNotAboutTopic(subId, topicName);
-      });
+      const subjectUnlinkPromises = subjectsToUnlink.map(subId => subjectIsNotAboutTopic(subId, topicName));
+      const subjectLinkPromises = subjectsToLink.map(subId => subjectIsAboutTopic(subId, topicName));
 
-      const subjectLinkPromises = subjectsToLink.map(subId => {
-        // OJO: La API pide (subjectId, topicName)
-        return subjectIsAboutTopic(subId, topicName);
-      });
-
-      // ---------------------------------------------------------
-      // 4. GESTIÓN DE CONCEPTOS (Concepts)
-      // ---------------------------------------------------------
-
-      // A. Quitar
+      // Concepts
       const conceptsToUnlink = originalConceptIds.filter(id => !currentConceptIds.includes(id));
-      // B. Añadir
       const conceptsToLink = currentConceptIds.filter(id => !originalConceptIds.includes(id));
 
-      // Helper para obtener nombre del concepto
-      
       const getConceptDataById = (id) => {
         const found = concepts.find(c => c.id === id);
         return found ? { name: found.name_es || found.name, id: found.id } : null;
@@ -115,25 +93,16 @@ export default function ManageContentScreen({ navigation }) {
 
       const conceptUnlinkPromises = conceptsToUnlink.map(cId => {
         const cData = getConceptDataById(cId);
-        // CORRECCIÓN: Pasamos el ID como tercer argumento
         if (cData) return topicIsNotAboutConcept(topicId, cData.name, cData.id);
         return Promise.resolve();
       });
 
       const conceptLinkPromises = conceptsToLink.map(cId => {
         const cData = getConceptDataById(cId);
-        // Para vincular usamos el nombre o creamos una función que acepte ID en el futuro
-        // Por ahora tu backend en POST concepts usa 'concept_name' para buscar o crear.
         if (cData) return topicIsAboutConcept(topicId, cData.name); 
         return Promise.resolve();
       });
       
-      const getConceptNameById = (id) => {
-        const found = concepts.find(c => c.id === id);
-        return found ? (found.name_es || found.name) : null;
-      };
-
-      // 5. Ejecutar TODO junto
       await Promise.all([
         ...subjectUnlinkPromises,
         ...subjectLinkPromises,
@@ -144,18 +113,17 @@ export default function ManageContentScreen({ navigation }) {
       setTopicModalVisible(false);
       setEditingItem(null);
       fetchData();
-      Alert.alert('Éxito', 'Tema guardado correctamente');
+      Alert.alert(t('success'), t('success'));
 
     } catch (e) {
       console.error(e);
-      Alert.alert('Error', 'Falló al guardar el tema o sus relaciones');
+      Alert.alert(t('error'), t('error'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteTopic = (orderId) => {
-      // Definimos la lógica de borrado para reutilizarla
       const performDelete = async () => {
         try {
           await deleteTopic(orderId);
@@ -166,16 +134,14 @@ export default function ManageContentScreen({ navigation }) {
       };
   
       if (Platform.OS === 'web') {
-        // Lógica para Navegador (usa el confirm nativo del browser)
-        if (window.confirm('Eliminar: ¿Seguro que quieres eliminar este tema?')) {
+        if (window.confirm(t('deleteGroupConfirm'))) {
           performDelete();
         }
       } else {
-        // Lógica para Móvil (iOS/Android)
-        Alert.alert('Eliminar', '¿Seguro?', [
-          { text: 'Cancelar', style: 'cancel' },
+        Alert.alert(t('delete'), t('deleteGroupConfirm'), [
+          { text: t('cancel'), style: 'cancel' },
           { 
-            text: 'Eliminar', 
+            text: t('delete'), 
             style: 'destructive', 
             onPress: performDelete 
           }
@@ -196,7 +162,6 @@ export default function ManageContentScreen({ navigation }) {
   
       let parentConceptId;
   
-      // 1. Guardar o Actualizar el Concepto Padre
       if (editingItem) {
         await updateConcept(editingItem.id, dataToSave);
         parentConceptId = editingItem.id;
@@ -205,14 +170,9 @@ export default function ManageContentScreen({ navigation }) {
         parentConceptId = newConcept.id;
       }
 
-      // 2. GESTIÓN DE RELACIONES
-      
-      // A. UNLINK: Estaban antes, pero ya no están en la lista actual
       const idsToUnlink = originalIdsFromModal.filter(id => !incomingIds.includes(id));
       const unlinkPromises = idsToUnlink.map(childId => unlinkConceptFromConcept(parentConceptId, childId));
   
-      // B. LINK: Son nuevos (están en la lista actual pero NO estaban antes)
-      // CORRECCIÓN CRÍTICA: Filtramos para no enviar POST de los que ya existen
       const relationsToLink = incomingRelations.filter(r => !originalIdsFromModal.includes(r.id));
 
       const linkPromises = relationsToLink.map(relation => {
@@ -224,26 +184,23 @@ export default function ManageContentScreen({ navigation }) {
         );
       });
   
-      // Ejecutar cambios
       await Promise.all([...unlinkPromises, ...linkPromises]);
   
       setConceptModalVisible(false);
       setEditingItem(null);
       fetchData(); 
-      Alert.alert('Éxito', 'Concepto guardado correctamente');
+      Alert.alert(t('success'), t('success'));
   
     } catch (e) { 
       console.error(e);
-      // Si el error viene del backend, mostramos el mensaje detallado
-      const msg = e.response?.data?.detail || 'Ocurrió un error al guardar';
-      Alert.alert('Error', msg); 
+      const msg = e.response?.data?.detail || t('error');
+      Alert.alert(t('error'), msg); 
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteConcept = (conceptId) => {
-      // Definimos la lógica de borrado para reutilizarla
       const performDelete = async () => {
         try {
           await deleteConcept(conceptId);
@@ -254,16 +211,14 @@ export default function ManageContentScreen({ navigation }) {
       };
   
       if (Platform.OS === 'web') {
-        // Lógica para Navegador (usa el confirm nativo del browser)
-        if (window.confirm('Eliminar: ¿Seguro que quieres eliminar este concepto?')) {
+        if (window.confirm(t('deleteGroupConfirm'))) {
           performDelete();
         }
       } else {
-        // Lógica para Móvil (iOS/Android)
-        Alert.alert('Eliminar', '¿Seguro?', [
-          { text: 'Cancelar', style: 'cancel' },
+        Alert.alert(t('delete'), t('deleteGroupConfirm'), [
+          { text: t('cancel'), style: 'cancel' },
           { 
-            text: 'Eliminar', 
+            text: t('delete'), 
             style: 'destructive', 
             onPress: performDelete 
           }
@@ -271,7 +226,6 @@ export default function ManageContentScreen({ navigation }) {
       }
     };
 
-  // --- ABRIR MODALES ---
   const openCreateModal = () => {
     setEditingItem(null);
     if (activeTab === 'topics') setTopicModalVisible(true);
@@ -284,11 +238,10 @@ export default function ManageContentScreen({ navigation }) {
     else setConceptModalVisible(true);
   };
 
-  // --- RENDERS ---
   const renderTopicItem = ({ item }) => (
     <TouchableOpacity 
       style={styles.card} 
-      onPress={() => navigation.navigate('TopicDetail', { topic: item })} // Navega a Epígrafes
+      onPress={() => navigation.navigate('TopicDetail', { topic: item })}
     >
       <View style={styles.cardContent}>
         <BookOpen size={24} color={COLORS.primary} />
@@ -302,9 +255,9 @@ export default function ManageContentScreen({ navigation }) {
           <Edit size={20} color={COLORS.secondary} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => handleDeleteTopic(item.id)} style={styles.iconBtn}>
-          <Trash2 size={20} color={COLORS.danger || 'red'} />
+          <Trash2 size={20} color={COLORS.danger} />
         </TouchableOpacity>
-        <ChevronRight size={20} color="gray" />
+        <ChevronRight size={20} color={COLORS.gray} />
       </View>
     </TouchableOpacity>
   );
@@ -316,7 +269,7 @@ export default function ManageContentScreen({ navigation }) {
         <View style={styles.textContainer}>
           <Text style={styles.cardTitle}>{item.name || item.name_es}</Text>
           {item.related_concepts && item.related_concepts.length > 0 && (
-             <Text style={styles.cardSub}>Relacionado con: {item.related_concepts.length}</Text>
+             <Text style={styles.cardSub}>{t('relatedTo')}: {item.related_concepts.length}</Text>
           )}
         </View>
       </View>
@@ -325,7 +278,7 @@ export default function ManageContentScreen({ navigation }) {
       </TouchableOpacity>
       <View style={styles.actions}>
         <TouchableOpacity onPress={() => handleDeleteConcept(item.id)} style={styles.iconBtn}>
-          <Trash2 size={20} color={COLORS.danger || 'red'} />
+          <Trash2 size={20} color={COLORS.danger} />
         </TouchableOpacity>
       </View>
     </View>
@@ -333,27 +286,25 @@ export default function ManageContentScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header con Título y Botón Crear */}
       <View style={styles.header}>
-        <Text style={styles.title}>Contenido Académico</Text>
+        <Text style={styles.title}>{t('academicContent')}</Text>
         <TouchableOpacity onPress={openCreateModal}>
-          <PlusCircle size={30} color={COLORS.secondary || 'blue'} />
+          <PlusCircle size={30} color={COLORS.secondary} />
         </TouchableOpacity>
       </View>
 
-      {/* Pestañas (Tabs) */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'topics' && styles.activeTab]} 
           onPress={() => setActiveTab('topics')}
         >
-          <Text style={[styles.tabText, activeTab === 'topics' && styles.activeTabText]}>Temas</Text>
+          <Text style={[styles.tabText, activeTab === 'topics' && styles.activeTabText]}>{t('topics')}</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'concepts' && styles.activeTab]} 
           onPress={() => setActiveTab('concepts')}
         >
-          <Text style={[styles.tabText, activeTab === 'concepts' && styles.activeTabText]}>Conceptos</Text>
+          <Text style={[styles.tabText, activeTab === 'concepts' && styles.activeTabText]}>{t('concepts')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -365,19 +316,18 @@ export default function ManageContentScreen({ navigation }) {
           renderItem={activeTab === 'topics' ? renderTopicItem : renderConceptItem}
           keyExtractor={item => item.id.toString()}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}
-          ListEmptyComponent={<Text style={styles.empty}>No hay {activeTab === 'topics' ? 'temas' : 'conceptos'} creados.</Text>}
+          ListEmptyComponent={<Text style={styles.empty}>{t('noContent')}</Text>}
           contentContainerStyle={{ paddingBottom: 20 }}
         />
       )}
 
-      {/* Modales */}
       <TopicModal 
         visible={topicModalVisible} 
         onClose={() => setTopicModalVisible(false)} 
         onSubmit={handleSaveTopic} 
         editingTopic={editingItem}
         allSubjects={allSubjects}
-        allConcepts={concepts} // Pasamos todos los conceptos para poder vincularlos al Tema
+        allConcepts={concepts}
       />
 
       <ConceptModal 
@@ -385,29 +335,29 @@ export default function ManageContentScreen({ navigation }) {
         onClose={() => setConceptModalVisible(false)} 
         onSubmit={handleSaveConcept} 
         editingConcept={editingItem}
-        allConcepts={concepts} // Pasamos los conceptos para vincular entre sí
+        allConcepts={concepts}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: COLORS.background || '#f7f9fa' },
+  container: { flex: 1, padding: 20, backgroundColor: COLORS.background },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   title: { fontSize: 24, fontWeight: 'bold', color: COLORS.text },
   
-  tabsContainer: { flexDirection: 'row', marginBottom: 15, backgroundColor: '#e0e0e0', borderRadius: 8, padding: 2 },
+  tabsContainer: { flexDirection: 'row', marginBottom: 15, backgroundColor: COLORS.lightGray, borderRadius: 8, padding: 2 },
   tab: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6 },
-  activeTab: { backgroundColor: 'white', elevation: 2 },
-  tabText: { fontWeight: '600', color: 'gray' },
+  activeTab: { backgroundColor: COLORS.surface, elevation: 2 },
+  tabText: { fontWeight: '600', color: COLORS.textSecondary },
   activeTabText: { color: COLORS.primary },
 
-  card: { backgroundColor: 'white', padding: 15, borderRadius: 10, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2 },
+  card: { backgroundColor: COLORS.surface, padding: 15, borderRadius: 10, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2 },
   cardContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   textContainer: { marginLeft: 15, flex: 1 },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.text },
-  cardSub: { fontSize: 12, color: 'gray', marginTop: 2 },
+  cardSub: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   iconBtn: { padding: 5 },
-  empty: { textAlign: 'center', marginTop: 30, color: 'gray' }
+  empty: { textAlign: 'center', marginTop: 30, color: COLORS.textSecondary }
 });
