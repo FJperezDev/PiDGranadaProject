@@ -73,7 +73,7 @@ export default function LoginScreen({ navigation }) {
                 onChangeText={setPassword}
               />
               <StyledButton
-		            testId="toggle-login-visibility"
+		testID="toggle-login-visibility"
                 onPress={() => setShowPassword(!showPassword)}
                 variant="ghost"
                 style={styles.eyeButton}
@@ -83,7 +83,7 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           <StyledButton
-            testId="button-login"
+            testID="button-login"
             title={t('login')}
             onPress={handleLogin}
             loading={loading}
