@@ -49,6 +49,7 @@ export default function LoginScreen({ navigation }) {
           <View style={styles.inputGroup}>
             <Text style={styles.label}>{t('email')}</Text>
             <TextInput
+              testID="input-login-email"
               style={styles.input}
               placeholder="example@email.com"
               placeholderTextColor={COLORS.textSecondary}
@@ -63,6 +64,7 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.label}>{t('password')}</Text>
             <View style={styles.passwordContainer}>
               <TextInput
+                testID="input-login-password"
                 style={styles.passwordInput}
                 secureTextEntry={!showPassword}
                 placeholder="******"
@@ -80,6 +82,7 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           <StyledButton
+            testID="button-login"
             title={t('login')}
             onPress={handleLogin}
             loading={loading}
