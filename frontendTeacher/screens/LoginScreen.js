@@ -73,7 +73,7 @@ export default function LoginScreen({ navigation }) {
                 onChangeText={setPassword}
               />
               <StyledButton
-		            testID="toggle-login-visibility"
+		testID="toggle-login-visibility"
                 onPress={() => setShowPassword(!showPassword)}
                 variant="ghost"
                 style={styles.eyeButton}
