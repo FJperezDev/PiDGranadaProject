@@ -2,6 +2,7 @@ import { TouchableOpacity, Text, View, StyleSheet, Platform, ActivityIndicator }
 import { COLORS } from '../constants/colors';
 
 export const StyledButton = ({
+  testID,
   title,
   onPress,
   variant = 'primary',
@@ -63,6 +64,7 @@ export const StyledButton = ({
 
   return (
     <TouchableOpacity
+      testID={testID}
       style={buttonStyles}
       onPress={onPress}
       disabled={disabled || loading}
