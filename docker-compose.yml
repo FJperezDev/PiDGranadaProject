@@ -60,7 +60,7 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: prometheus
+    container_name: prometheusPiD
     restart: unless-stopped
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml 
@@ -73,7 +73,7 @@ services:
 
   node-exporter:
     image: prom/node-exporter:latest
-    container_name: node_exporter
+    container_name: node_exporterPiD
     restart: unless-stopped
     volumes:
       - /proc:/host/proc:ro
@@ -89,7 +89,7 @@ services:
   
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.0 # Versión estable, funciona bien en arm64
-    container_name: cadvisor
+    container_name: cadvisorPiD
     restart: unless-stopped
     privileged: true 
     devices:
@@ -105,7 +105,7 @@ services:
       
   grafana:
     image: grafana/grafana:latest
-    container_name: grafana
+    container_name: grafanaPiD
     restart: unless-stopped
     volumes:
       - grafana_data:/var/lib/grafana

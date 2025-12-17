@@ -2,17 +2,17 @@ global:
   scrape_interval: 15s
 
 scrape_configs:
-  - job_name: 'prometheus'
+  - job_name: 'prometheusPiD'
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: 'node-exporter' # RPI
+  - job_name: 'node-exporterPiD' # RPI
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ['node_exporterPiD:9100']
 
-  - job_name: 'cadvisor' # Docker containers
+  - job_name: 'cadvisorPiD' # Docker containers
     static_configs:
-      - targets: ['cadvisor:8080']
+      - targets: ['cadvisorPiD:8080']
 
   - job_name: 'traefik' # Web traefik
     static_configs:
