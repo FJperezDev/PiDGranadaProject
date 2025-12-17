@@ -83,7 +83,6 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           <StyledButton
-            testID="button-login"
             title={t('login')}
             onPress={handleLogin}
             loading={loading}
