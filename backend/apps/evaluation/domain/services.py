@@ -179,41 +179,51 @@ def evaluate_question(student_group: StudentGroup, question: Question, answer: A
 def create_exam(topics: set[Topic], num_questions: int) -> list[Question]:
     exam_questions = []
     
-    # 1. PREPARACIÓN: Organizar preguntas candidatas por tema
-    # Creamos una lista de listas. Cada sub-lista tiene preguntas aleatorias de un tema.
-    # Pedimos 'num_questions' para CADA tema para tener un "colchón" de seguridad
-    # por si los otros temas se quedan sin preguntas.
-    topic_pools = []
+    # 1. CREAR MAZOS: Traemos TODAS las preguntas posibles de cada tema
+    # y las mezclamos aleatoriamente.
+    topic_decks = []
     for topic in topics:
-        # Asumo que esta función devuelve una lista de preguntas únicas del tema.
-        # Pedimos 'num_questions' como límite para asegurar que tenemos suficientes
-        # si hace falta cubrir huecos de otros temas.
-        candidates = evaluation_selectors.get_random_questions_from_topics({topic}, num_questions)
-        if candidates:
-            # Convertimos a lista para poder manipularla (hacer pop)
-            topic_pools.append(list(candidates))
-    
-    # 2. SELECCIÓN ROUND-ROBIN (Cíclica)
-    # Mientras nos falten preguntas y queden temas con preguntas disponibles...
-    while len(exam_questions) < num_questions and topic_pools:
+        # Usamos tu selector base que trae todas, y añadimos order_by('?')
+        # Convertimos a list() para poder sacar cartas del mazo en Python
+        questions_queryset = content_selectors.get_questions_for_topic(topic).order_by('?')
+        deck = list(questions_queryset)
         
-        # Iteramos sobre una copia de la lista para poder eliminar temas vacíos de la original
-        for current_pool in list(topic_pools):
+        if deck:
+            topic_decks.append(deck)
+    
+    # Si no hay preguntas en ningún tema, salimos ya
+    if not topic_decks:
+        return []
+
+    # 2. REPARTO ROUND-ROBIN (Cíclico)
+    # Mientras nos falten preguntas para llegar al objetivo...
+    while len(exam_questions) < num_questions:
+        
+        initial_count = len(exam_questions)
+        
+        # Recorremos cada mazo (tema) disponible
+        # Usamos list(topic_decks) para poder borrar mazos vacíos mientras iteramos
+        for deck in list(topic_decks):
             
-            if not current_pool:
-                topic_pools.remove(current_pool)
+            if not deck:
+                topic_decks.remove(deck) # Si el tema se queda seco, lo quitamos
                 continue
             
-            # Cogemos la primera pregunta disponible de este tema
-            question = current_pool.pop(0)
+            # Sacamos la primera carta (pregunta) del mazo
+            question = deck.pop(0)
             
-            # Verificamos duplicados (Prioridad: Distintas)
+            # Chequeo de duplicados (por si una pregunta pertenece a dos temas a la vez)
             if question not in exam_questions:
                 exam_questions.append(question)
             
-            # Verificamos si ya hemos cumplido la meta (Prioridad 1: Cantidad exacta)
+            # Si ya llegamos al número, paramos INMEDIATAMENTE
             if len(exam_questions) == num_questions:
                 return exam_questions
+        
+        # SEGURIDAD: Si dimos una vuelta entera a todos los temas y no añadimos nada
+        # (porque se acabaron todas las preguntas de la base de datos), rompemos para no colgar el server.
+        if len(exam_questions) == initial_count and not topic_decks:
+            break
 
     return exam_questions
 
