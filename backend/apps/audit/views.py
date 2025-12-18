@@ -1,39 +1,99 @@
 from apps.content.domain import selectors as content_selectors
 from apps.courses.domain import selectors as courses_selectors
 from apps.evaluation.domain import selectors as evaluation_selectors
-
 from apps.utils.permissions import IsSuperTeacher
-from .models import BackupFile
-from .serializers import BackupFileSerializer
-from .utils import generate_excel_backup, restore_excel_backup
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
+from django.http import FileResponse
+from django.conf import settings
+from django.utils import timezone
+
+import os
+import datetime
+
 from .models import BackupFile
 from .serializers import BackupFileSerializer
 from .utils import generate_excel_backup, restore_excel_backup, import_content_from_excel
-from rest_framework.parsers import MultiPartParser, FormParser
-
-from django.http import FileResponse
-import os
 
 class BackupViewSet(viewsets.ModelViewSet):
     """
-    Endpoints:
-    GET /backups/          -> Lista backups (getBackups)
-    POST /backups/         -> Genera nuevo backup (generateBackup)
-    DELETE /backups/{id}/  -> Borra backup (deleteBackup)
-    POST /backups/{id}/restore/ -> Restaura backup (restoreBackup)
+    Endpoints para gestión de backups.
+    Incluye sincronización automática con el sistema de archivos.
     """
     queryset = BackupFile.objects.all()
     serializer_class = BackupFileSerializer
-
     parser_classes = (MultiPartParser, FormParser)
-    # Sobreescribimos create para mapear "POST /backups/" a la lógica de generar Excel
+    permission_classes = [IsSuperTeacher] # Asegurar permisos
+
+    def _sync_filesystem_backups(self):
+        """
+        Método privado para sincronizar la carpeta física con la base de datos.
+        1. Detecta archivos en disco que no están en DB -> Los crea como 'Auto'.
+        2. Detecta registros en DB que no están en disco -> Los borra.
+        """
+        backup_dir = os.path.join(settings.MEDIA_ROOT, 'backups')
+        
+        # Asegurar que el directorio existe
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir, exist_ok=True)
+
+        # 1. Obtener archivos físicos
+        try:
+            physical_files = [f for f in os.listdir(backup_dir) if f.endswith('.xlsx')]
+        except FileNotFoundError:
+            physical_files = []
+
+        # 2. Obtener archivos conocidos en DB (solo el nombre base)
+        # file.name suele guardar 'backups/archivo.xlsx', queremos solo 'archivo.xlsx'
+        db_backups = BackupFile.objects.all()
+        db_files_map = {os.path.basename(b.file.name): b for b in db_backups}
+
+        # --- A. REGISTRAR NUEVOS (SISTEMA) ---
+        for filename in physical_files:
+            if filename not in db_files_map:
+                # Es un archivo nuevo (ej: puesto por un cronjob)
+                file_path = os.path.join(backup_dir, filename)
+                
+                # Intentamos obtener la fecha de creación del archivo real
+                try:
+                    timestamp = os.path.getctime(file_path)
+                    created_date = datetime.datetime.fromtimestamp(timestamp, tz=timezone.get_current_timezone())
+                except Exception:
+                    created_date = timezone.now()
+
+                # Creamos el registro en DB
+                # Nota: Django FileField espera la ruta relativa desde MEDIA_ROOT
+                relative_path = os.path.join('backups', filename)
+                
+                backup_obj = BackupFile.objects.create(
+                    file=relative_path,
+                    is_auto_generated=True, # <--- IMPORTANTE: Lo marcamos como automático
+                )
+                # Forzamos la fecha real del archivo (si no, pondría 'ahora')
+                backup_obj.created_at = created_date
+                backup_obj.save()
+
+        # --- B. LIMPIAR HUÉRFANOS (Borrar de DB si no existen en disco) ---
+        for filename, backup_obj in db_files_map.items():
+            full_path = os.path.join(settings.MEDIA_ROOT, backup_obj.file.name)
+            if not os.path.exists(full_path):
+                # El archivo físico no existe, borramos la referencia en DB
+                # Usamos .delete() del queryset para no disparar el borrado de archivo os.remove (que fallaría)
+                BackupFile.objects.filter(id=backup_obj.id).delete()
+
+    def list(self, request, *args, **kwargs):
+        """
+        Sobreescribimos list para sincronizar antes de devolver la respuesta.
+        """
+        self._sync_filesystem_backups()
+        return super().list(request, *args, **kwargs)
+
     def create(self, request, *args, **kwargs):
         try:
-            # Generamos el backup on-demand
+            # Generamos el backup on-demand (Manual)
             backup = generate_excel_backup(is_auto=False)
             serializer = self.get_serializer(backup)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -45,16 +105,11 @@ class BackupViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='import-content')
     def import_content(self, request):
-        """
-        Endpoint para subir un Excel y cargar contenido masivo (Subjects, Topics, etc.)
-        mimicando el script de carga.
-        """
         file_obj = request.FILES.get('file')
         if not file_obj:
             return Response({"error": "No se proporcionó ningún archivo."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Llamamos a la función de utilidad
             import_content_from_excel(file_obj, teacher=request.user)
             return Response(
                 {"status": "success", "message": "Contenido importado correctamente."}, 
@@ -68,9 +123,7 @@ class BackupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def restore(self, request, pk=None):
-        """Restaura la base de datos a partir de este archivo Excel"""
         try:
-            # Llamamos a la utilidad que hace el trabajo sucio
             restore_excel_backup(pk)
             return Response(
                 {"status": "success", "message": "Base de datos restaurada correctamente."}, 
@@ -84,10 +137,6 @@ class BackupViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
-        """
-        Descarga segura del archivo de backup.
-        GET /backups/{id}/download/
-        """
         try:
             backup = self.get_object()
             if not backup.file:
@@ -97,10 +146,7 @@ class BackupViewSet(viewsets.ModelViewSet):
             if not os.path.exists(file_path):
                  return Response({"error": "Archivo físico no encontrado en el servidor."}, status=status.HTTP_404_NOT_FOUND)
 
-            # FileResponse se encarga de abrir y streamear el archivo de forma eficiente
             response = FileResponse(open(file_path, 'rb'), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            
-            # Forzar la descarga con el nombre correcto
             filename = os.path.basename(file_path)
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             return response

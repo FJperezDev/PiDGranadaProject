@@ -27,7 +27,7 @@ class BackupFileSerializer(serializers.ModelSerializer):
 
     def get_file_size(self, obj):
         try:
-            if obj.file:
+            if obj.file and os.path.exists(obj.file.path):
                 size_in_bytes = obj.file.size
                 if size_in_bytes < 1024:
                     return f"{size_in_bytes} B"
