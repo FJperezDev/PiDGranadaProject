@@ -19,6 +19,8 @@ services:
       - .env
     depends_on:
       - db
+    volumes:
+      - django_media:/app/media
     environment:
       - DATABASE_URL=postgresql://django:django123@db:5432/django_db
     networks:
@@ -125,3 +127,4 @@ volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
+  django_media:

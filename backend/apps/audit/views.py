@@ -79,6 +79,32 @@ class BackupViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        """
+        Descarga segura del archivo de backup.
+        GET /backups/{id}/download/
+        """
+        try:
+            backup = self.get_object()
+            if not backup.file:
+                return Response({"error": "El archivo no existe."}, status=status.HTTP_404_NOT_FOUND)
+
+            file_path = backup.file.path
+            if not os.path.exists(file_path):
+                 return Response({"error": "Archivo físico no encontrado en el servidor."}, status=status.HTTP_404_NOT_FOUND)
+
+            # FileResponse se encarga de abrir y streamear el archivo de forma eficiente
+            response = FileResponse(open(file_path, 'rb'), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            
+            # Forzar la descarga con el nombre correcto
+            filename = os.path.basename(file_path)
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class AuditViewSet(viewsets.ViewSet):
     permission_classes = [IsSuperTeacher]
     

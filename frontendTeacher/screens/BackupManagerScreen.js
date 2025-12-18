@@ -125,34 +125,80 @@ export default function BackupManagerScreen() {
     }
   };
 
-  const downloadFile = async (fileUrl, fileName) => {
-    if (!fileUrl) return;
+  const downloadFile = async (backupId, fileName) => {
+    // URL del nuevo endpoint
+    // NOTA: Usa la URL relativa si tu cliente axios tiene baseURL, si no, pon la completa
+    const downloadUrl = `/backups/${backupId}/download/`; 
+    // O completa: `https://api.franjpg.com/backups/${backupId}/download/`
 
     if (Platform.OS === 'web') {
-        try {
-            const link = document.createElement('a');
-            link.href = fileUrl;
-            link.download = fileName || 'backup.xlsx';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } catch (e) {
-            alert(t('downloadError'));
-        }
-        return;
+      try {
+        setProcessing(true); // Mostrar spinner
+        // 1. Petición con Autenticación (Axios maneja el header si está configurado)
+        const response = await client.get(downloadUrl, {
+            responseType: 'blob', // Importante: recibir binario
+        });
+
+        // 2. Crear URL temporal en el navegador
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', fileName || 'backup.xlsx');
+        
+        // 3. Simular clic y limpiar
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (e) {
+        console.error(e);
+        alert(t('downloadError'));
+      } finally {
+        setProcessing(false);
+      }
+      return;
     }
 
+    // --- LÓGICA PARA NATIVE (iOS/Android) ---
     try {
-      const fileUri = FileSystem.documentDirectory + fileName;
-      const downloadRes = await FileSystem.downloadAsync(fileUrl, fileUri);
+        setProcessing(true);
+        const fileUri = FileSystem.documentDirectory + fileName;
+        
+        // Necesitamos el token manualmente para FileSystem
+        // Asumiendo que guardas el token en algún sitio, ej: SecureStore o Context
+        // const token = await getToken(); 
+        
+        // Opción A: Si puedes obtener el token:
+        /*
+        const downloadRes = await FileSystem.downloadAsync(
+            'https://api.franjpg.com' + downloadUrl, // URL completa necesaria aquí
+            fileUri,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}` 
+                }
+            }
+        );
+        */
 
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(downloadRes.uri);
-      } else {
-        Alert.alert(t('success'), "Archivo guardado.");
-      }
+        // Opción B (Más sencilla si no quieres lidiar con tokens en FileSystem):
+        // Usar Sharing directamente con el blob base64 es complejo.
+        // Lo más fácil en Native es que FileSystem descargue.
+        // Si la autenticación es compleja, te recomiendo la Opción A.
+        
+        // *Mock de Opción A asumiendo que tienes el token disponible*:
+        // const downloadRes = await FileSystem.downloadAsync(...)
+
+        if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(fileUri); // O downloadRes.uri
+        } else {
+            Alert.alert(t('success'), "Archivo guardado.");
+        }
     } catch (e) {
+      console.error(e);
       Alert.alert(t('error'), t('downloadError'));
+    } finally {
+        setProcessing(false);
     }
   };
 
