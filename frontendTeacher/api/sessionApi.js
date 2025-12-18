@@ -72,7 +72,7 @@ apiClient.interceptors.response.use(
 
       } catch (refreshError) {
         processQueue(refreshError, null);
-        logout();
+        await logout();
         if (refreshError.code !== 'ECONNABORTED' && refreshError.code !== 'ERR_NETWORK') {
             Alert.alert("Expired Session", "Try login again.");
         }
@@ -150,7 +150,9 @@ export const restoreSession = async () => {
     await refreshAccessToken(); 
     return true;
   } catch (err) {
-    console.warn("Couldn't restore session", err);
+    if (err.response?.status !== 401) {
+      console.warn("Couldn't restore session", err.message);
+    }
     return false;
   }
 };
