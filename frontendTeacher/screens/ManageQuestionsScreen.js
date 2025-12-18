@@ -113,7 +113,7 @@ export default function ManageQuestionsScreen({ navigation }) {
       }
     };
 
-    const confirmMsg = t('deleteGroupConfirm'); 
+    const confirmMsg = t('deleteQuestionConfirm'); 
     if (Platform.OS === 'web') {
       if (window.confirm(confirmMsg)) {
         performDelete();
@@ -157,7 +157,7 @@ export default function ManageQuestionsScreen({ navigation }) {
             <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconBtn}>
                 <Edit size={22} color={COLORS.primary} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.iconBtn}>
+            <TouchableOpacity testID={ "deleteQuestion" + item.statement } onPress={() => handleDelete(item.id)} style={styles.iconBtn}>
                 <Trash2 size={22} color={COLORS.danger} />
             </TouchableOpacity>
         </View>
@@ -170,7 +170,7 @@ export default function ManageQuestionsScreen({ navigation }) {
       <View style={styles.topHeader}>
          <Text style={styles.screenTitle}>{t('questions')}</Text>
          <View style={styles.headerButtons}>
-             <TouchableOpacity style={styles.addBtn} onPress={handleCreate}>
+             <TouchableOpacity testID="newQuestionBtn" style={styles.addBtn} onPress={handleCreate}>
                  <Plus size={20} color="white" />
                  <Text style={styles.btnText}>{t('newQuestion')}</Text>
              </TouchableOpacity>

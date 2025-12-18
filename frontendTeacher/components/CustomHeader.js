@@ -111,7 +111,7 @@ export const CustomHeader = ({ routeName }) => {
       <View style={styles.leftSection}>
         {loggedUser.username ? (
           isHome ? (
-            <StyledButton variant="ghost" style={styles.iconButton} disabled={true}>
+            <StyledButton testID="login-icon" variant="ghost" style={styles.iconButton} disabled={true}>
                 <BookMarked size={28} color={COLORS.black} />
             </StyledButton>
           ) : (
@@ -140,6 +140,7 @@ export const CustomHeader = ({ routeName }) => {
       <View style={styles.rightSection}>
         {loggedUser.username ? (
           <StyledButton 
+            testID="settingsBtn"
             onPress={() => setModalVisible(true)} 
             variant="ghost"
             style={styles.settingsButton} 

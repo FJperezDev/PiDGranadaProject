@@ -261,7 +261,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
         
         <Text style={styles.label}>{t('subject')}</Text>
         <View style={styles.pickerWrapper}>
-            <Picker selectedValue={selectedSubject ?? ""} onValueChange={handleSubjectChange}>
+            <Picker testID="subjectsPicker" selectedValue={selectedSubject ?? ""} onValueChange={handleSubjectChange}>
                 {!selectedSubject && <Picker.Item label={t('select')} value="" enabled={false} />}
                 {subjects.map(s => <Picker.Item key={s.id} label={s.name} value={s.id} />)}
             </Picker>
@@ -276,6 +276,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                     const isSelected = selectedTopicTitles.includes(topicTitle);
                     return (
                         <StyledButton 
+                          testID={t.title + "Btn"}
                           key={i} 
                           style={[styles.topicChip, isSelected && styles.topicChipSelected]} 
                           onPress={() => toggleTopic(topicTitle)}
@@ -300,6 +301,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                             const isSelected = selectedConceptNames.includes(cName);
                             return (
                                 <StyledButton 
+                                  testID={c.name + "Btn"}
                                   key={i} 
                                   style={[styles.conceptChip, isSelected && styles.conceptChipSelected]} 
                                   onPress={() => toggleConcept(cName)}
@@ -317,7 +319,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
 
         <Text style={styles.label}>{t('questionType')}</Text>
         <View style={styles.pickerWrapper}>
-            <Picker selectedValue={questionType ?? "multiple"} onValueChange={setQuestionType}>
+            <Picker testID="questionTypePicker" selectedValue={questionType ?? "multiple"} onValueChange={setQuestionType}>
                 <Picker.Item label={t('multipleChoice')} value="multiple" />
                 <Picker.Item label={t('trueFalse')} value="boolean" />
             </Picker>
@@ -329,12 +331,12 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
     <ScrollView style={styles.stepContainer}>
         <Text style={styles.sectionHeader}>{t('spanishVersion')}</Text>
         <Text style={styles.label}>{t('statement')}</Text>
-        <TextInput style={[styles.input, { height: 80 }]} multiline value={statementES} onChangeText={setStatementES} placeholder="..." />
+        <TextInput testID="statementInput" style={[styles.input, { height: 80 }]} multiline value={statementES} onChangeText={setStatementES} placeholder="..." />
         <Text style={styles.label}>{t('answers')}</Text>
         {answers.map((ans, index) => (
             <View key={ans.id || ans.tempId} style={styles.answerRow}>
-                    <Switch value={ans.is_correct} onValueChange={() => handleCorrectChange(index)} trackColor={{false:"#767577", true:COLORS.success}} />
-                    <TextInput style={styles.answerInput} placeholder={`${t('option')} ${index + 1}`} value={ans.text_es} onChangeText={(text) => handleAnswerChangeES(text, index)} />
+                    <Switch testID={"answerSwitch" + ans.tempId} value={ans.is_correct} onValueChange={() => handleCorrectChange(index)} trackColor={{false:"#767577", true:COLORS.success}} />
+                    <TextInput testID={"answerInput" + ans.tempId} style={styles.answerInput} placeholder={`${t('option')} ${index + 1}`} value={ans.text_es} onChangeText={(text) => handleAnswerChangeES(text, index)} />
                     {questionType === 'multiple' && (
                         <StyledButton 
                           onPress={() => handleRemoveAnswer(index)}
@@ -362,7 +364,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
         <Text style={styles.sectionHeader}>{t('englishVersion')}</Text>
         <Text style={styles.label}>{t('statement')}</Text>
         <Text style={styles.helperText}>{statementES}</Text>
-        <TextInput style={[styles.input, { height: 80 }]} multiline value={statementEN} onChangeText={setStatementEN} placeholder="..." />
+        <TextInput testID={"statementInput"} style={[styles.input, { height: 80 }]} multiline value={statementEN} onChangeText={setStatementEN} placeholder="..." />
         <Text style={styles.label}>{t('answers')}</Text>
         {answers.map((ans, index) => (
             <View key={ans.id || ans.tempId} style={styles.answerRowTranslation}>
@@ -370,7 +372,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                     <Text style={styles.originalTextLabel}>{ans.text_es}</Text>
                     {ans.is_correct && <Text style={styles.correctBadge}>{t('correct')}</Text>}
                     </View>
-                    <TextInput style={styles.answerInput} placeholder={`${t('option')} ${index + 1}`} value={ans.text_en} onChangeText={(text) => handleAnswerChangeEN(text, index)} />
+                    <TextInput testID={"answerInput" + ans.tempId} style={styles.answerInput} placeholder={`${t('option')} ${index + 1}`} value={ans.text_en} onChangeText={(text) => handleAnswerChangeEN(text, index)} />
             </View>
         ))}
     </ScrollView>
@@ -389,12 +391,14 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
             <View style={{flexDirection: 'row', gap: 10, flex: 1, justifyContent: 'flex-end'}}>
                 {step > 1 && 
                   <StyledButton 
+                    testID="nextBtn"
                     style={styles.backBtn} 
                     onPress={() => setStep(step - 1)}
                     icon={<ArrowLeft size={20} color={COLORS.surface} />}
                   />}
                 {step < 3 ? (
                     <StyledButton 
+                      testID="createBtn"
                       style={styles.nextBtn} 
                       onPress={handleNext}
                       icon={<ArrowRight size={20} color={COLORS.surface} />}
@@ -403,6 +407,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                     </StyledButton>
                 ) : (
                     <StyledButton 
+                      testID="saveBtn"
                       style={styles.saveBtn} 
                       onPress={handleSubmit} 
                       disabled={loading}

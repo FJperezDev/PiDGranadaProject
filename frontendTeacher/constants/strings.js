@@ -144,6 +144,7 @@ export const STRINGS = {
     missingTranslation: 'Missing English translations.',
     saved: 'Saved successfully.',
     new: 'New',
+    deleteQuestionConfirm: 'Are you sure deleting this question?',
 
     // --- Manage Users ---
     users: 'Users',
@@ -312,6 +313,7 @@ export const STRINGS = {
     missingTranslation: 'Faltan traducciones al inglés.',
     saved: 'Guardado correctamente.',
     new: 'Nueva',
+    deleteQuestionConfirm: '¿Estás seguro de que quieres eliminar esta pregunta?',
 
     // --- Manage Users ---
     users: 'Usuarios',

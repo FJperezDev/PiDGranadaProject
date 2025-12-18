@@ -46,15 +46,15 @@ export default function UserHomeScreen({ navigation }) {
   };
 
   const menuItems = [
-    { title: t('manageGroups'), icon: Users, onPress: () => navigation.navigate("ManageGroups") },
-    { title: t('manageQuestions'), icon: FileQuestion, onPress: () => navigation.navigate("ManageQuestions") },
-    { title: t('manageContent'), icon: BookOpen, onPress: () => navigation.navigate("ManageContent") },
-    { title: t('statistics'), icon: BarChart3, onPress: () => navigation.navigate("Analytics") },
+    { title: t('manageGroups'), icon: Users, testID:"manageGroupsBtn", onPress: () => navigation.navigate("ManageGroups") },
+    { title: t('manageQuestions'), icon: FileQuestion, testID:"manageQuestionsBtn", onPress: () => navigation.navigate("ManageQuestions") },
+    { title: t('manageContent'), icon: BookOpen, testID:"manageContentBtn", onPress: () => navigation.navigate("ManageContent") },
+    { title: t('statistics'), icon: BarChart3, testID:"statisticsBtn", onPress: () => navigation.navigate("Analytics") },
     ...(isSuper
       ? [
-          { title: t('inviteTeacher'), icon: UserPlus, onPress: () => navigation.navigate("InviteTeacher") },
-          { title: t('logs'), icon: ClipboardList, onPress: () => navigation.navigate("BackupManager") },
-          { title: t('importExcel'), icon: UploadCloud, onPress: handleUploadExcel }, 
+          { title: t('inviteTeacher'), icon: UserPlus, testID:"inviteTeacherBtn", onPress: () => navigation.navigate("InviteTeacher") },
+          { title: t('logs'), icon: ClipboardList, testID:"logsBtn", onPress: () => navigation.navigate("BackupManager") },
+          { title: t('importExcel'), icon: UploadCloud, testID:"importExcelBtn", onPress: handleUploadExcel }, 
         ]
       : []),
   ];
@@ -86,6 +86,7 @@ export default function UserHomeScreen({ navigation }) {
             const Icon = item.icon;
             return (
               <TouchableOpacity
+                testID={item.testID}
                 key={index}
                 style={[
                   styles.menuButton,
