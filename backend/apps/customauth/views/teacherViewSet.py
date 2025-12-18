@@ -6,6 +6,11 @@ from ..serializers import CustomTeacherSerializer, CustomTeacherManageSerializer
 from ...utils.permissions import IsSuperTeacher
 from rest_framework.decorators import action
 
+from apps.utils.permissions import IsSuperTeacher
+from django.core.mail import send_mail
+from django.conf import settings
+from apps.customauth.serializers import CustomTeacherInviteSerializer
+
 class TeacherViewSet(viewsets.ModelViewSet):
 
     queryset = CustomTeacher.objects.all()
@@ -52,18 +57,56 @@ class TeacherViewSet(viewsets.ModelViewSet):
         user_to_delete.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-    # @action(detail=False, methods=['post'], url_path='invite', permission_classes=[IsSuperTeacher])
-    # def invite(self, request):
-    #     """
-    #     Permite a SuperTeacher crear un usuario con una contraseña temporal 
-    #     sin pasar por las validaciones de complejidad de Django.
-    #     Endpoint: POST /users/invite/
-    #     """
-    #     serializer = CustomTeacherInviteSerializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-        
-    #     # El método create del serializer creará el usuario y hasheará la contraseña
-    #     user = serializer.save()
+    @action(detail=False, methods=['post'], permission_classes=[IsSuperTeacher])
+    def invite(self, request):
+        # 1. Seguridad: Verificar si el usuario que invita es SuperAdmin
+        if not request.user.is_super:
+             return Response(
+                 {'detail': 'No tienes permisos para invitar usuarios.'}, 
+                 status=status.HTTP_403_FORBIDDEN
+             )
 
-    #     response_serializer = CustomTeacherSerializer(user, context={'request': request})
-    #     return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        # 2. Validar datos con tu Serializer existente
+        serializer = CustomTeacherInviteSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            # Guardamos el usuario (se crea en DB)
+            user = serializer.save()
+            
+            # Recupertamos la contraseña original (sin hashear) que viene del request
+            # para enviarla por correo.
+            raw_password = request.data.get('password')
+            
+            # 3. Lógica de Envío de Correo
+            asunto = 'Bienvenido a la Plataforma - Tus credenciales'
+            mensaje = f"""
+            Hola {user.username},
+
+            El administrador te ha invitado a unirte a la plataforma.
+            
+            Tus credenciales de acceso son:
+            Email: {user.email}
+            Contraseña temporal: {raw_password}
+
+            Por favor, inicia sesión y cambia tu contraseña lo antes posible.
+            """
+            
+            try:
+                send_mail(
+                    subject=asunto,
+                    message=mensaje,
+                    from_email=settings.EMAIL_HOST_USER,
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+                email_status = "Correo enviado correctamente."
+            except Exception as e:
+                print(f"Error enviando correo: {e}")
+                email_status = "Usuario creado, pero falló el envío del correo."
+
+            return Response({
+                'message': f'Usuario creado exitosamente. {email_status}',
+                'user': serializer.data
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

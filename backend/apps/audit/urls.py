@@ -1,5 +1,5 @@
 from rest_framework.routers import DefaultRouter
-from apps.audit.views import AuditViewSet, BackupViewSet, InviteUserView
+from apps.audit.views import AuditViewSet, BackupViewSet
 from django.urls import path
 
 router = DefaultRouter()
