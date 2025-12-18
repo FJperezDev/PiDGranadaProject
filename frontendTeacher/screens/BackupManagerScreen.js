@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center' },
   sizeText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '500' },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginRight: 8 },
-  badgeAuto: { backgroundColor: COLORS.successBg },   
+  badgeAuto: { backgroundColor: COLORS.dangerBg },   
   badgeManual: { backgroundColor: COLORS.primaryLight }, 
   badgeText: { fontSize: 10, fontWeight: '700', color: COLORS.text },
   actionsContainer: { flexDirection: 'row', gap: 8 },
