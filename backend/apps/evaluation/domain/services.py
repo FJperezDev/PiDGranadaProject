@@ -179,20 +179,41 @@ def evaluate_question(student_group: StudentGroup, question: Question, answer: A
 def create_exam(topics: set[Topic], num_questions: int) -> list[Question]:
     exam_questions = []
     
+    # 1. PREPARACIÓN: Organizar preguntas candidatas por tema
+    # Creamos una lista de listas. Cada sub-lista tiene preguntas aleatorias de un tema.
+    # Pedimos 'num_questions' para CADA tema para tener un "colchón" de seguridad
+    # por si los otros temas se quedan sin preguntas.
+    topic_pools = []
     for topic in topics:
-        question = evaluation_selectors.get_random_question_from_topic(topic)
-        if question and question not in exam_questions:
-            exam_questions.append(question)
-    if len(exam_questions) >= num_questions:
-        return exam_questions[:num_questions]
-
-    remaining_questions_needed = num_questions - len(exam_questions)
-    additional_questions = evaluation_selectors.get_random_questions_from_topics(topics, remaining_questions_needed)
-    for question in additional_questions:
-        if question not in exam_questions:
-            exam_questions.append(question)
-        if len(exam_questions) >= num_questions:
-            break
+        # Asumo que esta función devuelve una lista de preguntas únicas del tema.
+        # Pedimos 'num_questions' como límite para asegurar que tenemos suficientes
+        # si hace falta cubrir huecos de otros temas.
+        candidates = evaluation_selectors.get_random_questions_from_topics({topic}, num_questions)
+        if candidates:
+            # Convertimos a lista para poder manipularla (hacer pop)
+            topic_pools.append(list(candidates))
+    
+    # 2. SELECCIÓN ROUND-ROBIN (Cíclica)
+    # Mientras nos falten preguntas y queden temas con preguntas disponibles...
+    while len(exam_questions) < num_questions and topic_pools:
+        
+        # Iteramos sobre una copia de la lista para poder eliminar temas vacíos de la original
+        for current_pool in list(topic_pools):
+            
+            if not current_pool:
+                topic_pools.remove(current_pool)
+                continue
+            
+            # Cogemos la primera pregunta disponible de este tema
+            question = current_pool.pop(0)
+            
+            # Verificamos duplicados (Prioridad: Distintas)
+            if question not in exam_questions:
+                exam_questions.append(question)
+            
+            # Verificamos si ya hemos cumplido la meta (Prioridad 1: Cantidad exacta)
+            if len(exam_questions) == num_questions:
+                return exam_questions
 
     return exam_questions
 
