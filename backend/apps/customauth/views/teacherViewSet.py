@@ -52,18 +52,18 @@ class TeacherViewSet(viewsets.ModelViewSet):
         user_to_delete.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-    @action(detail=False, methods=['post'], url_path='invite', permission_classes=[IsSuperTeacher])
-    def invite(self, request):
-        """
-        Permite a SuperTeacher crear un usuario con una contraseña temporal 
-        sin pasar por las validaciones de complejidad de Django.
-        Endpoint: POST /users/invite/
-        """
-        serializer = CustomTeacherInviteSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+    # @action(detail=False, methods=['post'], url_path='invite', permission_classes=[IsSuperTeacher])
+    # def invite(self, request):
+    #     """
+    #     Permite a SuperTeacher crear un usuario con una contraseña temporal 
+    #     sin pasar por las validaciones de complejidad de Django.
+    #     Endpoint: POST /users/invite/
+    #     """
+    #     serializer = CustomTeacherInviteSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
         
-        # El método create del serializer creará el usuario y hasheará la contraseña
-        user = serializer.save()
+    #     # El método create del serializer creará el usuario y hasheará la contraseña
+    #     user = serializer.save()
 
-        response_serializer = CustomTeacherSerializer(user, context={'request': request})
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+    #     response_serializer = CustomTeacherSerializer(user, context={'request': request})
+    #     return Response(response_serializer.data, status=status.HTTP_201_CREATED)

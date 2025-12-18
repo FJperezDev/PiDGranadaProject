@@ -5,4 +5,5 @@ from .authenticationView import (
     LoggedUserView,
     LoginView,
     ChangePasswordView,
+    InviteUserView,
 )

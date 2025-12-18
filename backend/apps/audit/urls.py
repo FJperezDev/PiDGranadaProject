@@ -7,6 +7,3 @@ router.register(r'audits', AuditViewSet, basename='audit')
 router.register(r'backups', BackupViewSet, basename='backup')
 
 urlpatterns = router.urls
-urlpatterns += [
-    path('users/invite/', InviteUserView.as_view(), name='invite_user'),
-]
