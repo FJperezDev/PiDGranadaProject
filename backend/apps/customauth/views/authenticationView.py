@@ -91,7 +91,7 @@ class InviteUserView(APIView):
                 send_mail(
                     subject=asunto,
                     message=mensaje,
-                    from_email=settings.EMAIL_HOST_USER, # Remitente configurado en settings
+                    from_email=settings.EMAIL_HOST_USER,
                     recipient_list=[user.email],
                     fail_silently=False,
                 )
