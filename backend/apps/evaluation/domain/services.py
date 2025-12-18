@@ -185,7 +185,7 @@ def create_exam(topics: set[Topic], num_questions: int) -> list[Question]:
     for topic in topics:
         # Usamos tu selector base que trae todas, y añadimos order_by('?')
         # Convertimos a list() para poder sacar cartas del mazo en Python
-        questions_queryset = content_selectors.get_questions_for_topic(topic).order_by('?')
+        questions_queryset = evaluation_selectors.get_questions_for_topic(topic).order_by('?')
         deck = list(questions_queryset)
         
         if deck:
