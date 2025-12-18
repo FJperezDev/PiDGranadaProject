@@ -13,6 +13,7 @@ import {
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { getBackups, generateBackup, restoreBackup, deleteBackup } from '../api/backupRequests';
+import { apiClient } from "../api/api.js"
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -135,7 +136,7 @@ export default function BackupManagerScreen() {
       try {
         setProcessing(true); // Mostrar spinner
         // 1. Petición con Autenticación (Axios maneja el header si está configurado)
-        const response = await client.get(downloadUrl, {
+        const response = await apiClient.get(downloadUrl, {
             responseType: 'blob', // Importante: recibir binario
         });
 
@@ -221,7 +222,7 @@ export default function BackupManagerScreen() {
       </View>
 
       <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => downloadFile(item.file, item.file_name)}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => downloadFile(item.id, item.file_name)}>
             <Text style={styles.actionIcon}>📥</Text>
         </TouchableOpacity>
         

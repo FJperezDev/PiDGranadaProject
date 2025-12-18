@@ -46,23 +46,44 @@ export default function ManageUsersScreen({ navigation }) {
 
     const handleCreateUser = async (userData) => {
         try {
-            await createUser(userData);
+            // 1. Llamada a la API (que ahora envía el email)
+            const response = await createUser(userData);
+            
             setModalVisible(false);
-            Alert.alert(t('success'), `${t('userCreated')} ${userData.password}`);
+            
+            // 2. Mensaje de éxito actualizado
+            // Ya no mostramos la contraseña en pantalla, es más seguro.
+            const successTitle = t('success');
+            const successMsg = `${t('userCreated')} ${t('emailSentTo')} ${userData.email}`;
+
+            if (Platform.OS === 'web') {
+                window.alert(`${successTitle}: ${successMsg}`);
+            } else {
+                Alert.alert(successTitle, successMsg);
+            }
+
+            // 3. Recargar la lista
             fetchUsers();
+
         } catch (error) {
             let errorMessage = t('error');
             if (error.response && error.response.data) {
-                const errors = error.response.data;
-                for (const key in errors) {
-                    if (Array.isArray(errors[key])) {
-                         errorMessage = `${key.toUpperCase()}: ${errors[key][0]}`;
-                         break; 
+                // ... (tu lógica existente de manejo de errores) ...
+                 const errors = error.response.data;
+                 // Si el backend devuelve un mensaje específico (ej: error SMTP), úsalo
+                 if (errors.detail) {
+                     errorMessage = errors.detail;
+                 } else {
+                    for (const key in errors) {
+                        if (Array.isArray(errors[key])) {
+                             errorMessage = `${key.toUpperCase()}: ${errors[key][0]}`;
+                             break; 
+                        }
                     }
-                }
+                 }
             }
             Alert.alert(t('error'), errorMessage);
-            throw error; 
+            // No hacemos throw error aquí para evitar crasheos no controlados si no hay catch superior
         }
     };
 

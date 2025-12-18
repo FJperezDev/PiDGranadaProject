@@ -15,6 +15,14 @@ from .serializers import BackupFileSerializer
 from .utils import generate_excel_backup, restore_excel_backup, import_content_from_excel
 from rest_framework.parsers import MultiPartParser, FormParser
 
+from django.http import FileResponse
+import os
+
+from rest_framework.views import APIView
+from django.core.mail import send_mail
+from django.conf import settings
+from apps.customauth.serializers import CustomTeacherInviteSerializer
+
 class BackupViewSet(viewsets.ModelViewSet):
     """
     Endpoints:
@@ -104,6 +112,63 @@ class BackupViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class InviteUserView(APIView):
+    # Solo usuarios autenticados pueden invitar
+    permission_classes = [IsSuperTeacher] 
+
+    def post(self, request):
+        # 1. Seguridad: Verificar si el usuario que invita es SuperAdmin
+        if not request.user.is_super:
+             return Response(
+                 {'detail': 'No tienes permisos para invitar usuarios.'}, 
+                 status=status.HTTP_403_FORBIDDEN
+             )
+
+        # 2. Validar datos con tu Serializer existente
+        serializer = CustomTeacherInviteSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            # Guardamos el usuario (se crea en DB)
+            user = serializer.save()
+            
+            # Recupertamos la contraseña original (sin hashear) que viene del request
+            # para enviarla por correo.
+            raw_password = request.data.get('password')
+            
+            # 3. Lógica de Envío de Correo
+            asunto = 'Bienvenido a la Plataforma - Tus credenciales'
+            mensaje = f"""
+            Hola {user.username},
+
+            El administrador te ha invitado a unirte a la plataforma.
+            
+            Tus credenciales de acceso son:
+            Email: {user.email}
+            Contraseña temporal: {raw_password}
+
+            Por favor, inicia sesión y cambia tu contraseña lo antes posible.
+            """
+            
+            try:
+                send_mail(
+                    subject=asunto,
+                    message=mensaje,
+                    from_email=settings.EMAIL_HOST_USER, # Remitente configurado en settings
+                    recipient_list=[user.email],
+                    fail_silently=False,
+                )
+                email_status = "Correo enviado correctamente."
+            except Exception as e:
+                print(f"Error enviando correo: {e}")
+                email_status = "Usuario creado, pero falló el envío del correo."
+
+            return Response({
+                'message': f'Usuario creado exitosamente. {email_status}',
+                'user': serializer.data
+            }, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class AuditViewSet(viewsets.ViewSet):
     permission_classes = [IsSuperTeacher]

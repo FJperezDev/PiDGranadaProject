@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Modal, StyleSheet, Alert, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Modal, StyleSheet, Alert, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { COLORS } from '../constants/colors';
 import { StyledButton } from '../components/StyledButton'; 
@@ -114,6 +114,12 @@ export default function InviteUserModal({ visible, onClose, onSubmit }) {
                         </Picker>
                     </View>
 
+                    {/* --- AQUI ESTA EL TEXTO NUEVO --- */}
+                    <Text style={{color: COLORS.textSecondary, fontSize: 12, marginBottom: 20, textAlign: 'center'}}>
+                        {t('emailWillBeSent')}
+                    </Text>
+                    {/* -------------------------------- */}
+
                     <View style={styles.buttonRow}>
                         <StyledButton title={t('cancel')} onPress={handleClose} variant='danger' style={{flex: 1, marginRight: 10}} />
                         <StyledButton 
@@ -180,7 +186,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: COLORS.border,
         borderRadius: 5,
-        marginBottom: 25,
+        marginBottom: 15, // Reducido un poco ya que ahora hay texto abajo
     },
     picker: {
         width: '100%',
