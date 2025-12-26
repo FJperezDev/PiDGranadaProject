@@ -560,7 +560,6 @@ def import_content_from_excel(file_obj, teacher):
             for index, row in xls["topics"].iterrows():
                 try:
                     t_code = clean_str(row.get("topic_code"))
-                    s_code = clean_str(row.get("subject_code"))
                     
                     if not t_code: continue
 
@@ -575,14 +574,36 @@ def import_content_from_excel(file_obj, teacher):
                     )
                     topics_map[t_code] = obj
 
-                    subject_obj = subjects_map.get(s_code)
-                    if subject_obj:
-                        SubjectIsAboutTopic.objects.get_or_create(
-                            subject=subject_obj, topic=obj,
-                            defaults={'order_id': int(row.get('order_id', 1) or 1)}
-                        )
                 except Exception as e:
                     print(f"❌ [Topics] Fila {index+2}: {e}")
+
+        # --- SUBJECT_ABOUT_TOPICS (VINCULACIÓN) ---
+        if "subject_topics" in xls:
+            print("🔗 Vinculando Subjects con Topics...")
+            for index, row in xls["subject_topics"].iterrows():
+                excel_row = index + 2
+                try:
+                    s_code = clean_str(row.get("subject_code"))
+                    t_code = clean_str(row.get("topic_code"))
+                    order_id = int(row.get('order_id', 1) or 1)
+
+                    subject_obj = subjects_map.get(s_code)
+                    topic_obj = topics_map.get(t_code)
+
+                    if subject_obj and topic_obj:
+                        SubjectIsAboutTopic.objects.create(
+                            subject=subject_obj, 
+                            topic=topic_obj, 
+                            order_id=order_id
+                        )
+                    else:
+                        missing = []
+                        if not subject_obj: missing.append(f"Subject '{s_code}'")
+                        if not topic_obj: missing.append(f"Topic '{t_code}'")
+                        print(f"⚠️ [Subject-Topic] Fila {excel_row}: No vinculada. Faltan: {', '.join(missing)}")
+
+                except Exception as e:
+                    print(f"❌ [Subject-Topic] Fila {excel_row}: {e}")
 
         # --- 3. CONCEPTS ---
         if "concepts" in xls:
