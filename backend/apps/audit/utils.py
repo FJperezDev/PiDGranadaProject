@@ -15,7 +15,8 @@ from apps.courses.api.models import (
     Subject, StudentGroup, SubjectIsAboutTopic 
 )
 from apps.evaluation.api.models import (
-    Question, Answer, QuestionBelongsToTopic, QuestionRelatedToConcept
+    Question, Answer, QuestionBelongsToTopic, QuestionRelatedToConcept,
+    QuestionEvaluationGroup  # <--- IMPORTANTE: Asegúrate de importar esto
 )
 from apps.customauth.models import CustomTeacher as Teacher 
 
@@ -34,10 +35,9 @@ def clean_str(val):
 #   GENERACIÓN (EXPORTAR BD -> EXCEL)
 # ==========================================
 def generate_excel_backup(is_auto=False):
-    print("🔄 Iniciando generación de backup COMPLETO...")
+    print("🔄 Iniciando generación de backup COMPLETO (+Analytics)...")
     try:
         output = BytesIO()
-        # CORRECCIÓN: 'openypxl' -> 'openpyxl'
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             
             # 1. SUBJECTS
@@ -192,6 +192,25 @@ def generate_excel_backup(is_auto=False):
             else:
                 pd.DataFrame(columns=['group_code', 'name_es', 'name_en', 'groupCode', 'subject_code', 'teacher_email']).to_excel(writer, sheet_name='student_groups', index=False)
 
+            # 11. QUESTION EVALUATION GROUPS (ANALYTICS) - NUEVO
+            print("   - Exportando Analytics (QuestionEvaluationGroup)...")
+            qs_eval = QuestionEvaluationGroup.objects.all().values(
+                'group__id',
+                'question__id',
+                'ev_count',
+                'correct_count'
+            )
+            df_eval = pd.DataFrame(list(qs_eval))
+            if not df_eval.empty:
+                df_eval.rename(columns={
+                    'group__id': 'group_code',
+                    'question__id': 'question_code'
+                }, inplace=True)
+                df_eval.to_excel(writer, sheet_name='analytics', index=False)
+            else:
+                pd.DataFrame(columns=['group_code', 'question_code', 'ev_count', 'correct_count']).to_excel(writer, sheet_name='analytics', index=False)
+
+
         output.seek(0)
         print("💾 Guardando archivo...")
         filename = f"backup_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
@@ -206,7 +225,6 @@ def generate_excel_backup(is_auto=False):
         print("\n❌❌ ERROR CRÍTICO EN GENERATE_BACKUP ❌❌")
         traceback.print_exc()
         raise e
-
 
 # ==========================================
 #   RESTAURACIÓN (IMPORTAR EXCEL -> BD)
@@ -227,6 +245,9 @@ def restore_excel_backup(backup_id):
         print("⚠️ Iniciando restauración. Borrando datos actuales...")
         
         # 1. FLUSH DE DATOS (IMPORTANTE: Borrar intermedias primero)
+        # Borramos las evaluaciones primero porque dependen de StudentGroup y Question
+        QuestionEvaluationGroup.objects.all().delete()
+        
         SubjectIsAboutTopic.objects.all().delete()
         TopicIsAboutConcept.objects.all().delete()
         ConceptIsRelatedToConcept.objects.all().delete()
@@ -250,7 +271,8 @@ def restore_excel_backup(backup_id):
         topics_map = {} 
         concepts_map = {} 
         concepts_name_map = {} 
-        questions_map = {} 
+        questions_map = {}
+        groups_map = {} # NUEVO: Mapa para guardar grupos por su ID antiguo
         teachers_cache = {} # Cache para teachers
 
         # --- 2. SUBJECTS ---
@@ -283,7 +305,7 @@ def restore_excel_backup(backup_id):
                 
         # --- 4. SUBJECT_TOPICS ---
         if "subject_topics" in xls:
-            print("   > Procesando vínculos Subject-Topics...")
+            print("   > Procesando vínculos Subject-Topics...")
             for _, row in xls["subject_topics"].iterrows():
                 s_code = clean_str(row.get("subject_code"))
                 t_code = clean_str(row.get("topic_code"))
@@ -314,7 +336,6 @@ def restore_excel_backup(backup_id):
                 if 'name_es' in clean_payload:
                     concepts_name_map[clean_payload['name_es']] = obj
 
-                # CORRECCIÓN: Tabla intermedia Topic-Concept
                 if topic_obj:
                     TopicIsAboutConcept.objects.create(topic=topic_obj, concept=obj, order_id=1)
 
@@ -364,7 +385,7 @@ def restore_excel_backup(backup_id):
                 
         # --- 9. QUESTION VINCULOS (TOPIC) ---
         if "question_topics" in xls:
-            print("   > Procesando vínculos Question-Topic...")
+            print("   > Procesando vínculos Question-Topic...")
             for _, row in xls["question_topics"].iterrows():
                 q_code = clean_str(row.get("question_code"))
                 t_code = clean_str(row.get("topic_code"))
@@ -377,7 +398,7 @@ def restore_excel_backup(backup_id):
         
         # --- 10. QUESTION VINCULOS (CONCEPT) ---
         if "question_concepts" in xls:
-            print("   > Procesando vínculos Question-Concept...")
+            print("   > Procesando vínculos Question-Concept...")
             for _, row in xls["question_concepts"].iterrows():
                 q_code = clean_str(row.get("question_code"))
                 c_code = clean_str(row.get("concept_code"))
@@ -402,12 +423,15 @@ def restore_excel_backup(backup_id):
 
         # --- 12. STUDENT GROUPS (ASIGNACIÓN DE TEACHER) ---
         if "student_groups" in xls:
-            print("   > Procesando Student Groups y asignando Teachers...")
+            print("   > Procesando Student Groups y asignando Teachers...")
             for _, row in xls["student_groups"].iterrows():
                 payload = row.to_dict()
-                payload.pop("group_code", None)
+                
+                # IMPORTANTE: Capturamos el ID antiguo para mapearlo luego en analytics
+                g_old_code = clean_str(payload.pop("group_code", None))
+                
                 s_code = clean_str(payload.pop("subject_code", None))
-                teacher_email = clean_str(row.get("teacher_email")) # Nuevo campo
+                teacher_email = clean_str(row.get("teacher_email")) 
                 
                 subject_obj = subjects_map.get(s_code)
                 teacher_obj = None
@@ -436,6 +460,33 @@ def restore_excel_backup(backup_id):
 
                 # Crear el grupo
                 obj = StudentGroup.objects.create(**clean_payload)
+                
+                # Guardamos en mapa: ID Antiguo -> Objeto Nuevo
+                if g_old_code:
+                    groups_map[g_old_code] = obj
+
+        # --- 13. QUESTION EVALUATION GROUPS (ANALYTICS) ---
+        if "analytics" in xls:
+            print("   > Procesando Analytics (QuestionEvaluationGroup)...")
+            count_evals = 0
+            for _, row in xls["analytics"].iterrows():
+                # Recuperamos los códigos antiguos
+                g_code = clean_str(row.get("group_code"))
+                q_code = clean_str(row.get("question_code"))
+                
+                # Buscamos los objetos nuevos usando los mapas
+                group_obj = groups_map.get(g_code)
+                question_obj = questions_map.get(q_code)
+                
+                if group_obj and question_obj:
+                    QuestionEvaluationGroup.objects.create(
+                        group=group_obj,
+                        question=question_obj,
+                        ev_count=int(row.get('ev_count', 0)),
+                        correct_count=int(row.get('correct_count', 0))
+                    )
+                    count_evals += 1
+            print(f"     -> {count_evals} registros de analítica restaurados.")
 
         print("🏁 Restauración completada exitosamente.")
 
