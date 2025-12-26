@@ -71,9 +71,3 @@ else
     echo "🚀 Levantando infraestructura base..."
     docker compose up -d --build
 fi
-
-echo "✅ Claves generadas e inyectadas en .env"
-echo "🚀 Levantando Docker Compose..."
-
-# 6. Levantar
-docker compose up -d --build
