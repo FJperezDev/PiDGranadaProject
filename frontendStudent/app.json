@@ -21,7 +21,10 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.fran1763.frontendStudent"
+      "package": "com.fran1763.frontendStudent",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,6 +37,11 @@
           "speechRecognitionPermission": "Permite el reconocimiento de voz para validar tus respuestas."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "1805b3e9-0f93-4c80-97ff-1f5ffc31a1ce"
+      }
+    }
   }
 }

@@ -6,7 +6,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "postinstall": "npx jetifier"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
@@ -30,5 +31,8 @@
     "js-yaml": "^4.1.0",
     "xml2js": "^0.6.2",
     "xmldom": "npm:@xmldom/xmldom@^0.8.10"
+  },
+  "devDependencies": {
+    "jetifier": "^2.0.0"
   }
 }

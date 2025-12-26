@@ -2,20 +2,27 @@ import forge from 'node-forge';
 import { Buffer } from 'buffer';
 
 // Decodificamos de Base64 a string normal PEM
-let publicKey = process.env.EXPO_PUBLIC_KEY_B64;
+const RAW_KEY = process.env.EXPO_PUBLIC_KEY_B64;
 
 // CAMBIO AQUÍ: 'let' en lugar de 'const' para poder modificarlo abajo
 let PUBLIC_KEY_PEM = null; 
 
-if (publicKey)
-  PUBLIC_KEY_PEM = Buffer.from(process.env.EXPO_PUBLIC_KEY_B64, 'base64').toString('utf-8');
+if (RAW_KEY) {
+  try {
+    PUBLIC_KEY_PEM = Buffer.from(RAW_KEY, 'base64').toString('utf-8');
+  } catch (error) {
+    console.error("Error decoding public key from Base64:", error);
+  }
+} else {
+  console.log("Public key not found in environment variables. Debug Mode");
+}
 
 export const encryptPassword = (password) => {
   if (!password) return null;
   
   if (!PUBLIC_KEY_PEM) {
-    console.log("Public key not loaded. Debug Mode");
-    return password;
+    console.error("Encryption failed: No Public Key available.");
+    throw new Error("Security configuration error: Missing Encryption Key");
   }
 
   try {
