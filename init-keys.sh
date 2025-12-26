@@ -60,16 +60,14 @@ if [ ! -z "$EXPO_TOKEN_INPUT" ]; then
     touch ./backend/media/apks/student.apk
     chmod -R 777 ./backend/media/apks
 
-    echo "🏗️  Construyendo imágenes secuencialmente (Optimizado para Pi)..."
+    echo "🏗️  Construyendo imágenes secuencialmente (Sin BuildKit para estabilidad)..."
     
-    # Construir builders APK primero
+    # Construir builders APK primero (Forzando legacy builder)
     echo "   - Building APK Builders..."
-    docker compose build --build-arg EXPO_TOKEN=$EXPO_TOKEN_INPUT teacher_apk_builder
-    docker compose build --build-arg EXPO_TOKEN=$EXPO_TOKEN_INPUT student_apk_builder
+    DOCKER_BUILDKIT=0 docker compose build --build-arg EXPO_TOKEN=$EXPO_TOKEN_INPUT teacher_apk_builder
+    DOCKER_BUILDKIT=0 docker compose build --build-arg EXPO_TOKEN=$EXPO_TOKEN_INPUT student_apk_builder
 
     echo "🚀 Generando APKs (Profile 'apks')..."
-    # Ejecutamos SOLO los builders y esperamos a que terminen (sin -d)
-    # Al no poner -d, el script esperará a que terminen su tarea y salgan.
     docker compose --profile apks up
     
     echo "✅ Generación de APKs finalizada."
@@ -78,9 +76,9 @@ else
 fi
 
 echo "🏗️  Construyendo imágenes de infraestructura..."
-docker compose build backend
-docker compose build frontend_teacher
-docker compose build frontend_student
+DOCKER_BUILDKIT=0 docker compose build backend
+DOCKER_BUILDKIT=0 docker compose build frontend_teacher
+DOCKER_BUILDKIT=0 docker compose build frontend_student
 
 echo "🚀 Levantando infraestructura final (Profile 'build')..."
 # Levantamos el resto de servicios en segundo plano
