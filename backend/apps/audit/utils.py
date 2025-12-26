@@ -130,7 +130,7 @@ def generate_excel_backup(is_auto=False):
 
             # 7. QUESTIONS
             print("   - Exportando Questions...")
-            qs_quest = Question.objects.all().values('id', 'statement_es', 'statement_en')
+            qs_quest = Question.objects.all().values('id', 'statement_es', 'statement_en') # CHECK THIS OUT
             df_quest = pd.DataFrame(list(qs_quest))
             if not df_quest.empty:
                 df_quest.rename(columns={'id': 'question_code'}, inplace=True)
