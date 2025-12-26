@@ -700,9 +700,7 @@ def import_content_from_excel(file_obj, teacher):
                         'explanation_es': clean_str(row.get('explanation_es')), 
                         'explanation_en': clean_str(row.get('explanation_en')),
                     }
-                    q_obj, _ = Question.objects.update_or_create(
-                        statement_es=payload['statement_es'], defaults=payload
-                    )
+                    q_obj = Question.objects.create(**payload)
                     questions_map[q_code] = q_obj
 
                     if t_code:
