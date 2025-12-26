@@ -130,13 +130,13 @@ def generate_excel_backup(is_auto=False):
 
             # 7. QUESTIONS
             print("   - Exportando Questions...")
-            qs_quest = Question.objects.all().values('id', 'statement_es', 'statement_en') # CHECK THIS OUT
+            qs_quest = Question.objects.all().values('id', 'statement_es', 'statement_en', 'explanation_es', 'explanation_en') 
             df_quest = pd.DataFrame(list(qs_quest))
             if not df_quest.empty:
                 df_quest.rename(columns={'id': 'question_code'}, inplace=True)
                 df_quest.to_excel(writer, sheet_name='questions', index=False)
             else:
-                pd.DataFrame(columns=['question_code', 'statement_es']).to_excel(writer, sheet_name='questions', index=False)
+                pd.DataFrame(columns=['question_code', 'statement_es', 'statement_en', 'explanation_es', 'explanation_en']).to_excel(writer, sheet_name='questions', index=False)
 
             # 8. RELACIONES QUESTION-TOPIC y QUESTION-CONCEPT
             print("   - Exportando Vínculos Question-Topic/Concept...")
@@ -690,11 +690,15 @@ def import_content_from_excel(file_obj, teacher):
                     t_code = clean_str(row.get("topic_code"))
                     c_code = clean_str(row.get("concept_code"))
                     
-                    if not q_code: continue
+                    if not q_code: 
+                        print(f"❌ [Questions] Fila {index+2}: Código de pregunta vacío.")
+                        continue
 
                     payload = {
-                        'statement_es': row.get('statement_es'),
-                        'statement_en': row.get('statement_en'),
+                        'statement_es': clean_str(row.get('statement_es')),
+                        'statement_en': clean_str(row.get('statement_en')),
+                        'explanation_es': clean_str(row.get('explanation_es')), 
+                        'explanation_en': clean_str(row.get('explanation_en')),
                     }
                     q_obj, _ = Question.objects.update_or_create(
                         statement_es=payload['statement_es'], defaults=payload
