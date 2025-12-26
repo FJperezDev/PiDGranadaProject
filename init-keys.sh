@@ -44,44 +44,8 @@ EOF
 rm private.pem public.pem
 # No hace falta borrar secret.pem porque no lo creamos :)
 
-echo "📱 Configuración de Expo (Para generar APKs)"
-echo "   Necesitas una cuenta en expo.dev y generar un Access Token en tus ajustes."
-echo "   Si no tienes cuenta, deja esto vacío (no se generarán APKs)."
-read -p "Introduce tu EXPO_TOKEN: " EXPO_TOKEN_INPUT
+echo "✅ Claves generadas e inyectadas en .env"
+echo "🚀 Levantando Docker Compose..."
 
-if [ ! -z "$EXPO_TOKEN_INPUT" ]; then
-    # Añadimos el token al .env
-    echo "EXPO_TOKEN=$EXPO_TOKEN_INPUT" >> .env
-    
-    # Preparamos la carpeta de destino
-    mkdir -p ./backend/media/apks
-    # Creamos archivos vacíos para que Docker pueda montar los volúmenes (truco de docker)
-    touch ./backend/media/apks/teacher.apk
-    touch ./backend/media/apks/student.apk
-    chmod -R 777 ./backend/media/apks
-
-    echo "🏗️  Construyendo imágenes secuencialmente (Sin BuildKit para estabilidad)..."
-    
-    # Construir builders APK primero (Forzando legacy builder)
-    echo "   - Building APK Builders..."
-    DOCKER_BUILDKIT=0 docker compose build --build-arg EXPO_TOKEN=$EXPO_TOKEN_INPUT teacher_apk_builder
-    DOCKER_BUILDKIT=0 docker compose build --build-arg EXPO_TOKEN=$EXPO_TOKEN_INPUT student_apk_builder
-
-    echo "🚀 Generando APKs (Profile 'apks')..."
-    docker compose --profile apks up
-    
-    echo "✅ Generación de APKs finalizada."
-else
-    echo "⚠️  Sin EXPO_TOKEN. Se levantará el sistema SIN generar nuevos APKs."
-fi
-
-echo "🏗️  Construyendo imágenes de infraestructura..."
-DOCKER_BUILDKIT=0 docker compose build backend
-DOCKER_BUILDKIT=0 docker compose build frontend_teacher
-DOCKER_BUILDKIT=0 docker compose build frontend_student
-
-echo "🚀 Levantando infraestructura final (Profile 'build')..."
-# Levantamos el resto de servicios en segundo plano
-docker compose --profile build up -d
-
-echo "🎉 ¡Todo listo! Tu sistema está corriendo."
+# 6. Levantar
+docker compose up -d --build

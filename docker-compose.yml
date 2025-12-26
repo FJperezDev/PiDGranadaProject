@@ -10,7 +10,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - proxy
-    profiles: ["build"]
 
   backend:
     build: ./backend
@@ -35,7 +34,6 @@ services:
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowheaders=Authorization,Content-Type"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowcredentials=true"
-    profiles: ["build"]
 
   frontend_student:
     build: ./frontendStudent
@@ -47,7 +45,6 @@ services:
       - "traefik.http.routers.frontendStudent.entrypoints=websecure"
     depends_on:
       - backend
-    profiles: ["build"]
 
   frontend_teacher:
     build:
@@ -62,7 +59,6 @@ services:
       - "traefik.http.routers.frontendTeacher.entrypoints=websecure"
     depends_on:
       - backend
-    profiles: ["build"]
 
   prometheus:
     image: prom/prometheus:latest
@@ -76,7 +72,6 @@ services:
       - '--storage.tsdb.retention.time=15d' 
     networks:
       - proxy
-    profiles: ["build"]
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -93,7 +88,6 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
       - proxy
-    profiles: ["build"]
   
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.0 # Versión estable, funciona bien en arm64
@@ -110,7 +104,6 @@ services:
       - /dev/disk/:/dev/disk:ro
     networks:
       - proxy  
-    profiles: ["build"]
       
   grafana:
     image: grafana/grafana:latest
@@ -125,36 +118,6 @@ services:
       - "traefik.http.routers.grafana.rule=Host(`monitor.franjpg.com`)" 
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-    depends_on:
-      - prometheus
-    profiles: ["build"]
-
-  teacher_apk_builder:
-    build:
-      context: ./frontendTeacher
-      dockerfile: Dockerfile.apk # Usamos el Dockerfile específico
-      args:
-        - EXPO_TOKEN=${EXPO_TOKEN} # Necesitas añadir esto al .env
-        - EXPO_PUBLIC_KEY_B64=${RSA_PUBLIC_KEY_B64}
-    volumes:
-      # Mapeamos la salida del contenedor a la carpeta de APKs del backend
-      - ./backend/media/apks/teacher.apk:/output/app.apk 
-    networks:
-      - proxy
-    profiles: ["apks"] # Solo se ejecuta si usamos --profile apks
-
-  student_apk_builder:
-    build:
-      context: ./frontendStudent
-      dockerfile: Dockerfile.apk
-      args:
-        - EXPO_TOKEN=${EXPO_TOKEN}
-        - EXPO_PUBLIC_KEY_B64=${RSA_PUBLIC_KEY_B64}
-    volumes:
-      - ./backend/media/apks/student.apk:/output/app.apk
-    networks:
-      - proxy
-    profiles: ["apks"]
 
 networks:
   proxy:
