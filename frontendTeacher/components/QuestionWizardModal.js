@@ -33,6 +33,10 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
 
   const [statementES, setStatementES] = useState('');
   const [statementEN, setStatementEN] = useState('');
+  
+  const [explanationES, setExplanationES] = useState('');
+  const [explanationEN, setExplanationEN] = useState('');
+
   const [deletedAnswerIds, setDeletedAnswerIds] = useState([]);
   const [answers, setAnswers] = useState([
     { text_es: '', text_en: '', is_correct: false, tempId: 1 },
@@ -71,6 +75,8 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
     setQuestionType('multiple');
     setStatementES('');
     setStatementEN('');
+    setExplanationES('');
+    setExplanationEN('');
     setDeletedAnswerIds([]); 
     setAnswers([
       { text_es: '', text_en: '', is_correct: false, tempId: 1 },
@@ -125,6 +131,10 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
     setDeletedAnswerIds([]); 
     setStatementES(editingQuestion.statement_es);
     setStatementEN(editingQuestion.statement_en || '');
+    
+    setExplanationES(editingQuestion.explanation_es || '');
+    setExplanationEN(editingQuestion.explanation_en || '');
+
     setQuestionType(editingQuestion.type);
 
     if (editingQuestion.topics && Array.isArray(editingQuestion.topics)) {
@@ -200,12 +210,14 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
         if (!answers.some(a => a.is_correct)) return Alert.alert(t('error'), t('missingCorrect'));
         if (answers.some(a => !a.text_es.trim())) return Alert.alert(t('error'), t('fillAllFields'));
         setStep(3);
+      } else if (step === 3) {
+        if (!statementEN.trim()) return Alert.alert(t('error'), t('missingTranslation'));
+        if (answers.some(a => !a.text_en.trim())) return Alert.alert(t('error'), t('missingTranslation'));
+        setStep(4); // Ir al nuevo paso de explicaciones
       }
   }
 
   const handleSubmit = async () => {
-    if (!statementEN.trim()) return Alert.alert(t('error'), t('missingTranslation'));
-    if (answers.some(a => !a.text_en.trim())) return Alert.alert(t('error'), t('missingTranslation'));
 
     setLoading(true);
     try {
@@ -213,6 +225,8 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
             type: questionType,
             statement_es: statementES,
             statement_en: statementEN,
+            explanation_es: explanationES,
+            explanation_en: explanationEN,
             topics: selectedTopicTitles,
             concepts: selectedConceptNames
         };
@@ -361,6 +375,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
 
   const renderStep3 = () => (
       <ScrollView style={styles.stepContainer}>
+        {/* ... (Contenido Step 3 igual) ... */}
         <Text style={styles.sectionHeader}>{t('englishVersion')}</Text>
         <Text style={styles.label}>{t('statement')}</Text>
         <Text style={styles.helperText}>{statementES}</Text>
@@ -378,14 +393,44 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
     </ScrollView>
   );
 
+  const renderStep4 = () => (
+    <ScrollView style={styles.stepContainer}>
+        <Text style={styles.sectionHeader}>{t('feedback') || 'Explicación'}</Text>
+        
+        <Text style={styles.label}>{t('explanationES') || 'Explicación (Español)'}</Text>
+        <Text style={styles.helperText}>Texto que verá el alumno al fallar/acertar</Text>
+        <TextInput 
+            testID="explanationESInput" 
+            style={[styles.input, { height: 100 }]} 
+            multiline 
+            value={explanationES} 
+            onChangeText={setExplanationES} 
+            placeholder="Escribe la explicación aquí..." 
+        />
+
+        <Text style={styles.label}>{t('explanationEN') || 'Explicación (Inglés)'}</Text>
+        <TextInput 
+            testID="explanationENInput" 
+            style={[styles.input, { height: 100 }]} 
+            multiline 
+            value={explanationEN} 
+            onChangeText={setExplanationEN} 
+            placeholder="Write the explanation here..." 
+        />
+    </ScrollView>
+  );
+  
+
   return (
     <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>{editingQuestion ? t('edit') : t('new')} ({step}/3)</Text>
+          <Text style={styles.modalTitle}>{editingQuestion ? t('edit') : t('new')} ({step}/4)</Text>
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
+          {step === 4 && renderStep4()} 
+          
           <View style={styles.buttonRow}>
             <StyledButton title={t('cancel')} variant='danger' onPress={onClose} style={{flex: 1, marginRight: 5}} />
             <View style={{flexDirection: 'row', gap: 10, flex: 1, justifyContent: 'flex-end'}}>
@@ -396,7 +441,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                     onPress={() => setStep(step - 1)}
                     icon={<ArrowLeft size={20} color={COLORS.surface} />}
                   />}
-                {step < 3 ? (
+                {step < 4 ? ( // Ahora cambiamos a 4
                     <StyledButton 
                       testID="createBtn"
                       style={styles.nextBtn} 

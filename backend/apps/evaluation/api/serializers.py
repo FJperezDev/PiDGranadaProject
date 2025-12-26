@@ -66,6 +66,8 @@ class QuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     statement_es = serializers.SerializerMethodField()
     statement_en = serializers.SerializerMethodField()
     explanation = serializers.SerializerMethodField()
+    explanation_es = serializers.SerializerMethodField()
+    explanation_en = serializers.SerializerMethodField()
 
     class Meta:
         model = Question
@@ -101,6 +103,12 @@ class QuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
         lang = self.get_lang()
         return getattr(obj, f'explanation_{lang}', None)
     
+    def get_explanation_es(self, obj):
+        return obj.explanation_es
+    
+    def get_explanation_en(self, obj):
+        return obj.explanation_en
+
     def get_statement_es(self, obj):
         return obj.statement_es
     
