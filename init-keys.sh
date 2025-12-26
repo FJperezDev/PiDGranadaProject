@@ -44,6 +44,34 @@ EOF
 rm private.pem public.pem
 # No hace falta borrar secret.pem porque no lo creamos :)
 
+echo "📱 Configuración de Expo (Para generar APKs)"
+echo "   Necesitas una cuenta en expo.dev y generar un Access Token en tus ajustes."
+echo "   Si no tienes cuenta, deja esto vacío (no se generarán APKs)."
+read -p "Introduce tu EXPO_TOKEN: " EXPO_TOKEN_INPUT
+
+if [ ! -z "$EXPO_TOKEN_INPUT" ]; then
+    # Añadimos el token al .env
+    echo "EXPO_TOKEN=$EXPO_TOKEN_INPUT" >> .env
+    
+    # Preparamos la carpeta de destino
+    mkdir -p ./backend/media/apks
+    # Creamos archivos vacíos para que Docker pueda montar los volúmenes (truco de docker)
+    touch ./backend/media/apks/teacher.apk
+    touch ./backend/media/apks/student.apk
+    chmod -R 777 ./backend/media/apks
+
+    echo "🚀 Levantando infraestructura + Generadores de APK..."
+    # --profile apks activa los contenedores builders
+    docker compose --profile apks up -d --build
+    
+    echo "⏳ Los APKs se están compilando en segundo plano."
+    echo "   Puedes ver el progreso con: docker compose logs -f teacher_apk_builder"
+else
+    echo "⚠️  Sin EXPO_TOKEN. Se levantará el sistema SIN generar nuevos APKs."
+    echo "🚀 Levantando infraestructura base..."
+    docker compose up -d --build
+fi
+
 echo "✅ Claves generadas e inyectadas en .env"
 echo "🚀 Levantando Docker Compose..."
 

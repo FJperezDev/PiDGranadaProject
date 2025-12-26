@@ -1,3 +1,4 @@
+import os
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
@@ -7,7 +8,7 @@ from ...utils.permissions import IsSuperTeacher
 from rest_framework.decorators import action
 
 from apps.utils.permissions import IsSuperTeacher
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
 from django.conf import settings
 from apps.customauth.serializers import CustomTeacherInviteSerializer
 
@@ -90,16 +91,31 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
             Por favor, inicia sesión y cambia tu contraseña lo antes posible.
             """
+
+            email = EmailMultiAlternatives(
+                subject=asunto,
+                body=mensaje,
+                from_email=settings.EMAIL_HOST_USER,
+                to=[user.email]
+            )
+
+            apk_dir = os.path.join(settings.MEDIA_ROOT, 'apks')
+
+            teacher_apk = os.path.join(apk_dir, 'teacher.apk')
+            if os.path.exists(teacher_apk):
+                email.attach_file(teacher_apk)
+            else:
+                print(f"⚠️ Alerta: No se encontró {teacher_apk}")
+
+            student_apk = os.path.join(apk_dir, 'student.apk')
+            if os.path.exists(student_apk):
+                email.attach_file(student_apk)
+            else:
+                print(f"⚠️ Alerta: No se encontró {student_apk}")
             
             try:
-                send_mail(
-                    subject=asunto,
-                    message=mensaje,
-                    from_email=settings.EMAIL_HOST_USER,
-                    recipient_list=[user.email],
-                    fail_silently=False,
-                )
-                email_status = "Correo enviado correctamente."
+                email.send(fail_silently=False)
+                email_status = "Correo enviado con APKs."
             except Exception as e:
                 print(f"Error enviando correo: {e}")
                 email_status = "Usuario creado, pero falló el envío del correo."

@@ -119,6 +119,33 @@ services:
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
+  teacher_apk_builder:
+    build:
+      context: ./frontendTeacher
+      dockerfile: Dockerfile.apk # Usamos el Dockerfile específico
+      args:
+        - EXPO_TOKEN=${EXPO_TOKEN} # Necesitas añadir esto al .env
+        - EXPO_PUBLIC_KEY_B64=${RSA_PUBLIC_KEY_B64}
+    volumes:
+      # Mapeamos la salida del contenedor a la carpeta de APKs del backend
+      - ./backend/media/apks/teacher.apk:/output/app.apk 
+    networks:
+      - proxy
+    profiles: ["apks"] # Solo se ejecuta si usamos --profile apks
+
+  student_apk_builder:
+    build:
+      context: ./frontendStudent
+      dockerfile: Dockerfile.apk
+      args:
+        - EXPO_TOKEN=${EXPO_TOKEN}
+        - EXPO_PUBLIC_KEY_B64=${RSA_PUBLIC_KEY_B64}
+    volumes:
+      - ./backend/media/apks/student.apk:/output/app.apk
+    networks:
+      - proxy
+    profiles: ["apks"]
+
 networks:
   proxy:
     external: true
