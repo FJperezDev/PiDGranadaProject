@@ -78,8 +78,8 @@ class TeacherViewSet(viewsets.ModelViewSet):
             # En lugar de adjuntar, construimos las URLs públicas
             # Asumimos que tu servidor sirve la carpeta media en /media/
             base_url = "https://api.franjpg.com" # O tu dominio configurado
-            teacher_link = f"{base_url}{settings.MEDIA_URL}apks/teacher.apk"
-            student_link = f"{base_url}{settings.MEDIA_URL}apks/student.apk"
+            teacher_link = f"{base_url}{settings.STATIC_URL}apks/teacher.apk"
+            student_link = f"{base_url}{settings.STATIC_URL}apks/student.apk"
 
             asunto = 'Bienvenido a la Plataforma - Descarga la App'
             
