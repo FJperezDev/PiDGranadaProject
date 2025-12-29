@@ -4,9 +4,9 @@
     "slug": "frontendStudent",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/studentIcon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -17,10 +17,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/studentIcon.png",
+        "backgroundColor": "#003594"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.fran1763.frontendStudent",
       "permissions": [
         "android.permission.RECORD_AUDIO"
@@ -30,17 +29,28 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./withManifestFix.js",
+      "./withDependencyFix.js",
       [
         "@react-native-voice/voice",
         {
-          "microphonePermission": "Permite el acceso al micrófono para responder las preguntas del examen por voz.",
-          "speechRecognitionPermission": "Permite el reconocimiento de voz para validar tus respuestas."
+          "microphonePermission": "Permite el acceso al micrófono...",
+          "speechRecognitionPermission": "Permite el reconocimiento de voz..."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "useAndroidX": true,
+            "enableJetifier": true
+          }
         }
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "1805b3e9-0f93-4c80-97ff-1f5ffc31a1ce"
+        "projectId": "6a01833f-8e6a-4c56-b268-92f9447461e9"
       }
     }
   }

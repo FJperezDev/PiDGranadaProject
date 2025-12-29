@@ -71,25 +71,34 @@ class TeacherViewSet(viewsets.ModelViewSet):
         serializer = CustomTeacherInviteSerializer(data=request.data)
         
         if serializer.is_valid():
-            # Guardamos el usuario (se crea en DB)
             user = serializer.save()
-            
-            # Recupertamos la contraseña original (sin hashear) que viene del request
-            # para enviarla por correo.
             raw_password = request.data.get('password')
+
+            # --- CAMBIO AQUÍ ---
+            # En lugar de adjuntar, construimos las URLs públicas
+            # Asumimos que tu servidor sirve la carpeta media en /media/
+            base_url = "https://api.franjpg.com" # O tu dominio configurado
+            teacher_link = f"{base_url}{settings.MEDIA_URL}apks/teacher.apk"
+            student_link = f"{base_url}{settings.MEDIA_URL}apks/student.apk"
+
+            asunto = 'Bienvenido a la Plataforma - Descarga la App'
             
-            # 3. Lógica de Envío de Correo
-            asunto = 'Bienvenido a la Plataforma - Tus credenciales'
+            # Mensaje mejorado con links
             mensaje = f"""
             Hola {user.username},
 
             El administrador te ha invitado a unirte a la plataforma.
             
-            Tus credenciales de acceso son:
-            Email: {user.email}
-            Contraseña temporal: {raw_password}
+            1. Tus credenciales:
+               Email: {user.email}
+               Password: {raw_password}
 
-            Por favor, inicia sesión y cambia tu contraseña lo antes posible.
+            2. Descarga la aplicación aquí:
+               
+               👉 Versión Profesor: {teacher_link}
+               👉 Versión Estudiante: {student_link}
+
+            Por favor, inicia sesión y cambia tu contraseña.
             """
 
             email = EmailMultiAlternatives(
@@ -99,20 +108,6 @@ class TeacherViewSet(viewsets.ModelViewSet):
                 to=[user.email]
             )
 
-            apk_dir = os.path.join(settings.MEDIA_ROOT, 'apks')
-
-            teacher_apk = os.path.join(apk_dir, 'teacher.apk')
-            if os.path.exists(teacher_apk):
-                email.attach_file(teacher_apk)
-            else:
-                print(f"⚠️ Alerta: No se encontró {teacher_apk}")
-
-            student_apk = os.path.join(apk_dir, 'student.apk')
-            if os.path.exists(student_apk):
-                email.attach_file(student_apk)
-            else:
-                print(f"⚠️ Alerta: No se encontró {student_apk}")
-            
             try:
                 email.send(fail_silently=False)
                 email_status = "Correo enviado con APKs."
@@ -125,4 +120,5 @@ class TeacherViewSet(viewsets.ModelViewSet):
                 'user': serializer.data
             }, status=status.HTTP_201_CREATED)
         
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

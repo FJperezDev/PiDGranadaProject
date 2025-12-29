@@ -4,7 +4,7 @@
     "slug": "frontendTeacher",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/teacherIcon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -17,8 +17,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/teacherIcon.png",
+        "backgroundColor": "#003594"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.fran1763.frontendTeacher"
@@ -31,7 +31,7 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "980e6140-3602-462b-9e10-82ddf13b1cbe"
+        "projectId": "29604f23-4995-47b8-90c4-11b0e0156fee"
       }
     }
   }
