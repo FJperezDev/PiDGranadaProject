@@ -13,6 +13,8 @@ echo "Base de datos disponible ✅"
 echo "Iniciando servicio cron..."
 /usr/sbin/cron &
 
+python manage.py collectstatic --noinput
+
 # 2. Ejecutamos migraciones COMO USUARIO DJANGO (usando gosu)
 echo "Ejecutando migraciones..."
 gosu django python manage.py makemigrations --noinput
