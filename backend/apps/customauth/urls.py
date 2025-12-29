@@ -1,6 +1,8 @@
 from django.urls import path
 from rest_framework import routers
 from .views import TeacherViewSet, RegisterView, LogoutView, LoggedUserView, LoginView, ChangePasswordView
+from django.conf import settings
+from django.conf.urls.static import static
 
 # from django.contrib.auth.views import LoginView, LogoutView
 
@@ -33,5 +35,6 @@ urlpatterns += [
     path('account/profile/', LoggedUserView.as_view(), name='profile'),
 ]
 
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # This will automatically create the URL patterns for the ProjectViewSet, allowing CRUD operations on the Project model.
