@@ -127,30 +127,23 @@ export default function BackupManagerScreen() {
   };
 
   const downloadFile = async (backupId, fileName) => {
-    // URL del nuevo endpoint
-    // NOTA: Usa la URL relativa si tu cliente axios tiene baseURL, si no, pon la completa
-    const downloadUrl = `/backups/${backupId}/download/`; 
-    // O completa: `https://api.franjpg.com/backups/${backupId}/download/`
+    // Ruta relativa
+    const downloadPath = `/backups/${backupId}/download/`; 
 
+    // ------------------------------------------------
+    // 1. LÓGICA WEB (Se queda igual, usa apiClient)
+    // ------------------------------------------------
     if (Platform.OS === 'web') {
       try {
-        setProcessing(true); // Mostrar spinner
-        // 1. Petición con Autenticación (Axios maneja el header si está configurado)
-        const response = await apiClient.get(downloadUrl, {
-            responseType: 'blob', // Importante: recibir binario
-        });
-
-        // 2. Crear URL temporal en el navegador
+        setProcessing(true);
+        const response = await apiClient.get(downloadPath, { responseType: 'blob' });
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
         link.setAttribute('download', fileName || 'backup.xlsx');
-        
-        // 3. Simular clic y limpiar
         document.body.appendChild(link);
         link.click();
         link.parentNode.removeChild(link);
-        window.URL.revokeObjectURL(url);
       } catch (e) {
         console.error(e);
         alert(t('downloadError'));
@@ -160,43 +153,55 @@ export default function BackupManagerScreen() {
       return;
     }
 
-    // --- LÓGICA PARA NATIVE (iOS/Android) ---
+    // ------------------------------------------------
+    // 2. LÓGICA NATIVE (iOS / Android)
+    // ------------------------------------------------
     try {
         setProcessing(true);
+        
+        // A: Definir ruta local donde se guardará temporalmente
         const fileUri = FileSystem.documentDirectory + fileName;
-        
-        // Necesitamos el token manualmente para FileSystem
-        // Asumiendo que guardas el token en algún sitio, ej: SecureStore o Context
-        // const token = await getToken(); 
-        
-        // Opción A: Si puedes obtener el token:
-        /*
+
+        // B: Recuperar el Token manualmente 
+        // (Esto es CRÍTICO porque FileSystem no usa tu apiClient)
+        // Opción 1: Si usas SecureStore:
+        const token = await SecureStore.getItemAsync('access_token'); 
+        // Opción 2: Si lo tienes en el contexto, úsalo directamente: auth.token
+
+        if (!token) {
+            throw new Error("No hay token de autenticación");
+        }
+
+        // C: URL Completa necesaria
+        const fullUrl = `${API_BASE_URL}${downloadPath}`;
+
+        // D: Descargar usando FileSystem con Headers manuales
         const downloadRes = await FileSystem.downloadAsync(
-            'https://api.franjpg.com' + downloadUrl, // URL completa necesaria aquí
+            fullUrl,
             fileUri,
             {
                 headers: {
-                    Authorization: `Bearer ${token}` 
+                    'Authorization': `Bearer ${token}`, // <--- LA CLAVE ESTÁ AQUÍ
                 }
             }
         );
-        */
 
-        // Opción B (Más sencilla si no quieres lidiar con tokens en FileSystem):
-        // Usar Sharing directamente con el blob base64 es complejo.
-        // Lo más fácil en Native es que FileSystem descargue.
-        // Si la autenticación es compleja, te recomiendo la Opción A.
-        
-        // *Mock de Opción A asumiendo que tienes el token disponible*:
-        // const downloadRes = await FileSystem.downloadAsync(...)
-
-        if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(fileUri); // O downloadRes.uri
-        } else {
-            Alert.alert(t('success'), "Archivo guardado.");
+        if (downloadRes.status !== 200) {
+            throw new Error("Error en la descarga del servidor");
         }
+
+        // E: Compartir / Guardar archivo
+        if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(downloadRes.uri, {
+                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // Opcional, ayuda a Android
+                dialogTitle: 'Guardar Backup'
+            });
+        } else {
+            Alert.alert(t('success'), "Archivo descargado en: " + downloadRes.uri);
+        }
+
     } catch (e) {
-      console.error(e);
+      console.error("Error download native:", e);
       Alert.alert(t('error'), t('downloadError'));
     } finally {
         setProcessing(false);
