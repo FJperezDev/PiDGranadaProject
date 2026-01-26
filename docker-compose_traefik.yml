@@ -1,0 +1,183 @@
+services:
+  # --- TRAEFIK (Reverse Proxy & SSL) ---
+  traefik:
+    image: traefik:v3
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - TZ=Europe/Madrid
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
+      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN}
+      - CREDENCIALES_DASHBOARD=${CREDENCIALES_DASHBOARD}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/traefik.yml:ro
+      - ./acme.json:/acme.json
+      - ./logs:/var/log/traefik
+    labels:
+      - "traefik.enable=true"
+      # Router HTTP (Redirección global suele ir en traefik.yml, pero esto expone el dashboard)
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.franjpg.com`)"
+      - "traefik.http.routers.traefik.middlewares=traefik-basic-auth"
+      
+      # Router HTTPS (Dashboard Seguro)
+      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.franjpg.com`)"
+      - "traefik.http.routers.traefik-secure.tls=true"
+      - "traefik.http.routers.traefik-secure.tls.certresolver=cloudflarev2"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      - "traefik.http.routers.traefik-secure.middlewares=traefik-secure-basic-auth"
+      
+      # Middleware Auth
+      - "traefik.http.middlewares.traefik-secure-basic-auth.basicauth.users=${CREDENCIALES_DASHBOARD}"
+
+  # --- APLICACIÓN ---
+  db:
+    image: postgres:16
+    container_name: django_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - proxy
+
+  backend:
+    build: ./backend
+    container_name: django_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - db
+    volumes:
+      - django_media:/app/media
+    environment:
+      - DATABASE_URL=postgresql://django:django123@db:5432/django_db
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.django.rule=Host(`api.franjpg.com`)"
+      - "traefik.http.routers.django.entrypoints=websecure"
+      - "traefik.http.routers.django.tls=true"
+      - "traefik.http.routers.django.tls.certresolver=cloudflarev2"
+      
+      # CORS Middleware
+      - "traefik.http.routers.django.middlewares=cors-header@docker" 
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolalloworiginlist=https://teacher.franjpg.com,https://student.franjpg.com"
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowheaders=Authorization,Content-Type"
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowcredentials=true"
+
+  frontend_student:
+    build: ./frontendStudent
+    container_name: frontend_student
+    networks:
+      - proxy
+    depends_on:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontendStudent.rule=Host(`student.franjpg.com`)"
+      - "traefik.http.routers.frontendStudent.entrypoints=websecure"
+      - "traefik.http.routers.frontendStudent.tls=true"
+      - "traefik.http.routers.frontendStudent.tls.certresolver=cloudflarev2"
+
+  frontend_teacher:
+    build:
+      context: ./frontendTeacher
+      args:
+        - EXPO_PUBLIC_KEY_B64=${RSA_PUBLIC_KEY_B64}
+    container_name: frontend_teacher
+    networks:
+      - proxy
+    depends_on:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontendTeacher.rule=Host(`teacher.franjpg.com`)"
+      - "traefik.http.routers.frontendTeacher.entrypoints=websecure"
+      - "traefik.http.routers.frontendTeacher.tls=true"
+      - "traefik.http.routers.frontendTeacher.tls.certresolver=cloudflarev2"
+
+  # --- MONITORIZACIÓN ---
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheusPiD
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml 
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d' 
+    networks:
+      - proxy
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporterPiD
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - proxy
+  
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: cadvisorPiD
+    restart: unless-stopped
+    privileged: true 
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - proxy  
+      
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafanaPiD
+    restart: unless-stopped
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`monitor.franjpg.com`)" 
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=cloudflarev2"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+  django_media:

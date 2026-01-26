@@ -1,4 +1,3 @@
----
 services:
   db:
     image: postgres:16
@@ -8,8 +7,10 @@ services:
       - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432" # Opcional: solo si necesitas acceder a la DB desde tu PC
     networks:
-      - proxy
+      - internal_net
 
   backend:
     build: ./backend
@@ -23,42 +24,33 @@ services:
       - django_media:/app/media
     environment:
       - DATABASE_URL=postgresql://django:django123@db:5432/django_db
+    ports:
+      - "8000:8000" # Django suele correr en el 8000
     networks:
-      - proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.django.rule=Host(`api.franjpg.com`)"
-      - "traefik.http.routers.django.entrypoints=websecure"
-      - "traefik.http.routers.django.middlewares=cors-header@docker" 
-      - "traefik.http.middlewares.cors-header.headers.accesscontrolalloworiginlist=https://teacher.franjpg.com,https://student.franjpg.com"
-      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
-      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowheaders=Authorization,Content-Type"
-      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowcredentials=true"
+      - internal_net
 
   frontend_student:
     build: ./frontendStudent
+    container_name: frontend_student
     networks:
-      - proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontendStudent.rule=Host(`student.franjpg.com`)"
-      - "traefik.http.routers.frontendStudent.entrypoints=websecure"
+      - internal_net
     depends_on:
       - backend
+    ports:
+      - "8081:80" # Mapea localhost:3001 al puerto 80 del contenedor (asumiendo nginx)
 
   frontend_teacher:
     build:
       context: ./frontendTeacher
       args:
         - EXPO_PUBLIC_KEY_B64=${RSA_PUBLIC_KEY_B64}
+    container_name: frontend_teacher
     networks:
-      - proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.frontendTeacher.rule=Host(`teacher.franjpg.com`)"
-      - "traefik.http.routers.frontendTeacher.entrypoints=websecure"
+      - internal_net
     depends_on:
       - backend
+    ports:
+      - "8082:80" # Mapea localhost:3002 al puerto 80 del contenedor
 
   prometheus:
     image: prom/prometheus:latest
@@ -70,8 +62,10 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=15d' 
+    ports:
+      - "9090:9090"
     networks:
-      - proxy
+      - internal_net
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -80,17 +74,19 @@ services:
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
-      - /:/rootfs:ro
+      - /:/roots:ro
     command:
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
     networks:
-      - proxy
+      - internal_net
   
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.0 # Versión estable, funciona bien en arm64
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
     container_name: cadvisorPiD
     restart: unless-stopped
     privileged: true 
@@ -102,8 +98,10 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
+    ports:
+      - "8080:8080"
     networks:
-      - proxy  
+      - internal_net  
       
   grafana:
     image: grafana/grafana:latest
@@ -111,17 +109,14 @@ services:
     restart: unless-stopped
     volumes:
       - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
     networks:
-      - proxy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`monitor.franjpg.com`)" 
-      - "traefik.http.routers.grafana.entrypoints=websecure"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - internal_net
 
 networks:
-  proxy:
-    external: true
+  internal_net:
+    driver: bridge
 
 volumes:
   postgres_data:
