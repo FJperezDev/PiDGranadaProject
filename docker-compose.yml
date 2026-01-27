@@ -1,4 +1,6 @@
 services:
+
+  # --- APLICACIÓN ---
   db:
     image: postgres:16
     container_name: django_db
@@ -39,7 +41,7 @@ services:
     ports:
       - "6432:5432" # Escucha en el 6432
     networks:
-      - internal_net
+      - proxy
 
   backend:
     build: ./backend
@@ -59,16 +61,37 @@ services:
       - "8000:8000"
     networks:
       - internal_net
+      - DATABASE_URL=postgresql://django:django123@db:5432/django_db
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.django.rule=Host(`api.franjpg.com`)"
+      - "traefik.http.routers.django.entrypoints=websecure"
+      - "traefik.http.routers.django.tls=true"
+      - "traefik.http.routers.django.tls.certresolver=cloudflarev2"
       
+      # CORS Middleware
+      - "traefik.http.routers.django.middlewares=cors-header@docker" 
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolalloworiginlist=https://teacher.franjpg.com,https://student.franjpg.com"
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowheaders=Authorization,Content-Type"
+      - "traefik.http.middlewares.cors-header.headers.accesscontrolallowcredentials=true"
+
+>>>>>>> d8fc332 (rebase)
   frontend_student:
     build: ./frontendStudent
     container_name: frontend_student
     networks:
-      - internal_net
+      - proxy
     depends_on:
       - backend
-    ports:
-      - "8081:80" # Mapea localhost:3001 al puerto 80 del contenedor (asumiendo nginx)
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontendStudent.rule=Host(`student.franjpg.com`)"
+      - "traefik.http.routers.frontendStudent.entrypoints=websecure"
+      - "traefik.http.routers.frontendStudent.tls=true"
+      - "traefik.http.routers.frontendStudent.tls.certresolver=cloudflarev2"
 
   frontend_teacher:
     build:
@@ -77,12 +100,17 @@ services:
         - EXPO_PUBLIC_KEY_B64=${RSA_PUBLIC_KEY_B64}
     container_name: frontend_teacher
     networks:
-      - internal_net
+      - proxy
     depends_on:
       - backend
-    ports:
-      - "8082:80" # Mapea localhost:3002 al puerto 80 del contenedor
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontendTeacher.rule=Host(`teacher.franjpg.com`)"
+      - "traefik.http.routers.frontendTeacher.entrypoints=websecure"
+      - "traefik.http.routers.frontendTeacher.tls=true"
+      - "traefik.http.routers.frontendTeacher.tls.certresolver=cloudflarev2"
 
+  # --- MONITORIZACIÓN ---
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheusPiD
@@ -93,10 +121,8 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=15d' 
-    ports:
-      - "9090:9090"
     networks:
-      - internal_net
+      - proxy
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -105,16 +131,14 @@ services:
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
-      - /:/roots:ro
+      - /:/rootfs:ro
     command:
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    ports:
-      - "9100:9100"
     networks:
-      - internal_net
+      - proxy
   
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.0
@@ -129,10 +153,8 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
-    ports:
-      - "8080:8080"
     networks:
-      - internal_net  
+      - proxy  
       
   grafana:
     image: grafana/grafana:latest
@@ -140,14 +162,19 @@ services:
     restart: unless-stopped
     volumes:
       - grafana_data:/var/lib/grafana
-    ports:
-      - "3000:3000"
     networks:
-      - internal_net
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`monitor.franjpg.com`)" 
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=cloudflarev2"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
 networks:
-  internal_net:
-    driver: bridge
+  proxy:
+    external: true
 
 volumes:
   postgres_data:
