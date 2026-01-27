@@ -1,260 +1,216 @@
-import React, { useState, useContext, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform, ScrollView } from 'react-native';
+import React, { useState, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { AuthContext } from '../context/AuthContext'; 
-import { getMyGroups, getOtherGroups, getSubjects, createGroup, createSubject } from '../api/coursesRequests'; 
+import { getSubjects, createSubject, createGroup, deleteSubject, getSubjectGroups } from '../api/coursesRequests';
 import CreateGroupModal from '../components/CreateGroupModal';
 import CreateSubjectModal from '../components/CreateSubjectModal';
-import { PlusCircle, BookOpen } from 'lucide-react-native'; 
+import { Plus, Users, Book, Trash2, ChevronRight } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
+import { StyledButton } from '../components/StyledButton';
 
 export default function ManageGroupsScreen({ navigation }) {
-  const { isSuper } = useContext(AuthContext);
   const { t, language } = useLanguage();
-
-  const [myGroups, setMyGroups] = useState([]);
-  const [otherGroups, setOtherGroups] = useState([]);
   const [subjects, setSubjects] = useState([]);
+  const [groups, setGroups] = useState([]); 
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('groups');
+
   const [groupModalVisible, setGroupModalVisible] = useState(false);
   const [subjectModalVisible, setSubjectModalVisible] = useState(false);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const subjectsData = await getSubjects();
-      setSubjects(subjectsData);
-
-      const myGroupsData = await getMyGroups();
-      setMyGroups(myGroupsData);
+      const subData = await getSubjects();
+      setSubjects(subData);
       
-      if (isSuper) {
-        const otherGroupsData = await getOtherGroups();
-        setOtherGroups(otherGroupsData);
-      }
+      const allGroupsMap = new Map(); // Usamos un Mapa para evitar duplicados por ID
+
+      await Promise.all(subData.map(async (sub) => {
+          try {
+              const gData = await getSubjectGroups(sub.id);
+              // Si el backend devuelve grupos repetidos, el Mapa solo guardará la última versión (son idénticos)
+              gData.forEach(g => {
+                  allGroupsMap.set(g.id, { 
+                      ...g, 
+                      subjectName: sub.name, 
+                      subjectId: sub.id 
+                  });
+              });
+          } catch(e) {
+              console.log("Error cargando grupos de asignatura " + sub.id);
+          }
+      }));
+      
+      // Convertimos el mapa a array
+      setGroups(Array.from(allGroupsMap.values()));
+
     } catch (error) {
+      console.error(error);
       Alert.alert(t('error'), t('error'));
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [language]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-    }, [isSuper])
-  );
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchData();
-  };
-
-  const handleOpenGroupModal = () => {
-    if (subjects.length === 0) {
-      Alert.alert(t('error'), t('noSubjects'));
-      return;
-    }
-    setGroupModalVisible(true);
-  };
+  useEffect(() => { fetchData(); }, [language]);
+  useFocusEffect(useCallback(() => { fetchData(); }, []));
 
   const handleCreateGroup = async (subjectId, nameEs, nameEn) => {
     try {
-      await createGroup(subjectId, nameEs, nameEn);
+      // 1. Cerramos modal inmediatamente para evitar doble tap visual
       setGroupModalVisible(false);
+      setLoading(true); // Ponemos loading general
+      
+      await createGroup(subjectId, { name_es: nameEs, name_en: nameEn });
+      
       Alert.alert(t('success'), t('success'));
-      fetchData(); 
-    } catch (error) {
-      Alert.alert(t('error'), t('error'));
+      fetchData(); // Recargamos datos
+    } catch (error) { 
+        Alert.alert(t('error'), t('error')); 
+        setLoading(false); // Quitamos loading si falla
     }
-  };
-
-  const handleOpenSubjectModal = () => {
-    setSubjectModalVisible(true);
   };
 
   const handleCreateSubject = async (nameEs, nameEn, descEs, descEn) => {
     try {
-      await createSubject(nameEs, nameEn, descEs, descEn);
       setSubjectModalVisible(false);
+      setLoading(true);
+      
+      await createSubject({ name_es: nameEs, name_en: nameEn, description_es: descEs, description_en: descEn });
+      
       Alert.alert(t('success'), t('success'));
       fetchData();
-    } catch (error) {
-      Alert.alert(t('error'), t('error'));
+    } catch (error) { 
+        Alert.alert(t('error'), t('error'));
+        setLoading(false);
     }
   };
 
-  const renderGroup = ({ item }) => (
-    <TouchableOpacity
-      style={styles.groupButton}
-      onPress={() => navigation.navigate('GroupDetail', { group: item })}
+  const handleDeleteSubject = (id) => {
+      const doDelete = async () => { 
+          try { 
+              setLoading(true);
+              await deleteSubject(id); 
+              fetchData(); 
+          } catch(e){ 
+              Alert.alert(t('error'), t('error')); 
+              setLoading(false);
+          } 
+      };
+      Alert.alert(t('delete'), t('deleteGroupConfirm'), [{text: t('cancel')}, {text: t('delete'), style: 'destructive', onPress: doDelete}]);
+  };
+
+  const renderGroupItem = ({ item }) => (
+    <StyledButton 
+        variant="secondary"
+        style={styles.card}
+        onPress={() => navigation.navigate('GroupDetail', { group: item })}
     >
-      <Text style={styles.groupButtonText}>{item.name}</Text>
-    </TouchableOpacity>
+        <View style={styles.cardInner}>
+            <View style={styles.iconBox}>
+                <Users size={24} color={COLORS.primary} />
+            </View>
+            <View style={styles.textContainer}>
+                <Text style={styles.cardTitle}>{item.name}</Text>
+                {/* Mostramos a qué asignatura pertenece realmente */}
+                <Text style={styles.cardSub}>{item.subjectName || "Sin Asignatura"}</Text>
+            </View>
+            <ChevronRight size={20} color={COLORS.border} />
+        </View>
+    </StyledButton>
   );
 
-  const renderSubject = ({ item }) => (
-    <TouchableOpacity
-      style={[styles.groupButton, { borderLeftWidth: 5, borderLeftColor: COLORS.primary }]}
-      onPress={() => navigation.navigate('SubjectTopics', { subject: item })} 
+  const renderSubjectItem = ({ item }) => (
+    <StyledButton 
+        variant="secondary"
+        style={styles.card}
+        onPress={() => navigation.navigate('SubjectTopics', { subject: item })}
     >
-      <View style={{flexDirection: 'row', alignItems: 'center'}}>
-        <BookOpen size={24} color={COLORS.primary} style={{marginRight: 10}}/>
-        <Text style={styles.groupButtonText}>{item.name_es || item.name}</Text>
-      </View>
-    </TouchableOpacity>
+        <View style={styles.cardInner}>
+            <View style={[styles.iconBox, {backgroundColor: COLORS.secondaryLight}]}>
+                <Book size={24} color={COLORS.secondary} />
+            </View>
+            <View style={styles.textContainer}>
+                <Text style={styles.cardTitle}>{item.name}</Text>
+                <Text style={styles.cardSub} numberOfLines={1}>{item.description}</Text>
+            </View>
+            <StyledButton onPress={() => handleDeleteSubject(item.id)} variant="ghost" size="small" style={{padding: 8}}>
+                <Trash2 size={20} color={COLORS.danger} />
+            </StyledButton>
+        </View>
+    </StyledButton>
   );
-
-  if (loading && !refreshing) {
-    return <ActivityIndicator style={styles.loader} size="large" color={COLORS.primary} />;
-  }
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('teachingManagement')}</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>{t('teachingManagement')}</Text>
+        <View style={{flexDirection:'row', gap: 10}}>
+            <StyledButton onPress={() => setSubjectModalVisible(true)} size="small" variant="secondary" icon={<Plus size={18} color={COLORS.text}/>} title={t('subject')} />
+            <StyledButton onPress={() => setGroupModalVisible(true)} size="small" icon={<Plus size={18} color={COLORS.white}/>} title={t('group')} />
         </View>
+      </View>
 
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.sectionTitle}>{t('subjects')}</Text>
-            <Text style={styles.subtitle}>{t('touchToOrder')}</Text>
-          </View>
-          <TouchableOpacity onPress={handleOpenSubjectModal}>
-            <PlusCircle size={30} color={COLORS.secondary} />
-          </TouchableOpacity>
-        </View>
+      <View style={styles.tabsContainer}>
+        <StyledButton 
+            onPress={() => setActiveTab('groups')} 
+            variant={activeTab === 'groups' ? 'primary' : 'ghost'} 
+            style={styles.tab} 
+            title={t('myGroups')}
+            textStyle={activeTab !== 'groups' && {color: COLORS.textSecondary}}
+        />
+        <StyledButton 
+            onPress={() => setActiveTab('subjects')} 
+            variant={activeTab === 'subjects' ? 'primary' : 'ghost'} 
+            style={styles.tab} 
+            title={t('subjects')}
+            textStyle={activeTab !== 'subjects' && {color: COLORS.textSecondary}}
+        />
+      </View>
 
-        {subjects.length > 0 ? (
-          subjects.map((subject) => (
-            <View key={subject.id}>
-                {renderSubject({ item: subject })}
-            </View>
-          ))
-        ) : (
-            <Text style={styles.emptyText}>{t('noSubjects')}</Text>
-        )}
-
-        <View style={styles.divider} />
-
-        <View style={styles.header}>
-          <Text style={styles.sectionTitle}>{t('myGroups')}</Text>
-          <TouchableOpacity onPress={handleOpenGroupModal}>
-            <PlusCircle size={30} color={COLORS.secondary} />
-          </TouchableOpacity>
-        </View>
-        
-        {myGroups.length > 0 ? (
-             myGroups.map((group) => (
-                <View key={group.id}>{renderGroup({ item: group })}</View>
-             ))
-        ) : (
-            <Text style={styles.emptyText}>{t('noGroups')}</Text>
-        )}
-
-        {isSuper && (
-          <>
-            <View style={styles.divider} />
-            <Text style={styles.sectionTitle}>{t('otherGroups')}</Text>
-            {otherGroups.map((group) => (
-                <View key={group.id}>{renderGroup({ item: group })}</View>
-            ))}
-          </>
-        )}
-      </ScrollView>
-
-      {subjects.length > 0 && (
-        <CreateGroupModal
-          visible={groupModalVisible}
-          subjects={subjects}
-          onClose={() => setGroupModalVisible(false)}
-          onSubmit={handleCreateGroup}
+      {loading ? <ActivityIndicator size="large" color={COLORS.primary} style={{marginTop: 20}}/> : (
+        <FlatList
+          data={activeTab === 'groups' ? groups : subjects}
+          renderItem={activeTab === 'groups' ? renderGroupItem : renderSubjectItem}
+          keyExtractor={item => item.id.toString()}
+          contentContainerStyle={{ paddingBottom: 80, gap: 10 }}
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={fetchData} />}
+          ListEmptyComponent={<Text style={styles.empty}>{activeTab === 'groups' ? t('noGroups') : t('noSubjects')}</Text>}
         />
       )}
-      <CreateSubjectModal
-        visible={subjectModalVisible}
-        onClose={() => setSubjectModalVisible(false)}
-        onSubmit={handleCreateSubject}
+
+      {/* Importante: Pasar subjects al modal para que el Picker funcione */}
+      <CreateGroupModal 
+        visible={groupModalVisible} 
+        subjects={subjects} 
+        onClose={() => setGroupModalVisible(false)} 
+        onSubmit={handleCreateGroup} 
+      />
+      
+      <CreateSubjectModal 
+        visible={subjectModalVisible} 
+        onClose={() => setSubjectModalVisible(false)} 
+        onSubmit={handleCreateSubject} 
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: COLORS.background,
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  groupButton: {
-    backgroundColor: COLORS.surface,
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 15,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.1)' }
-      : {
-          shadowColor: COLORS.shadow,
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.1,
-          shadowRadius: 3,
-          elevation: 3,
-        }),
-  },
-  groupButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.primaryDark,
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 20,
-    marginBottom: 20,
-    fontSize: 16,
-    color: COLORS.textSecondary,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginTop: 10,
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginBottom: 15,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: 15,
-  }
+  container: { flex: 1, padding: 20, backgroundColor: COLORS.background },
+  header: { marginBottom: 20 },
+  title: { fontSize: 26, fontWeight: '800', color: COLORS.text, marginBottom: 15 },
+  
+  tabsContainer: { flexDirection: 'row', marginBottom: 20, backgroundColor: COLORS.surface, borderRadius: 12, padding: 4, borderWidth: 1, borderColor: COLORS.borderLight },
+  tab: { flex: 1, borderRadius: 8, paddingVertical: 8 },
+
+  card: { paddingHorizontal: 0, paddingVertical: 0, justifyContent: 'center', alignItems: 'stretch' },
+  cardInner: { flexDirection: 'row', alignItems: 'center', padding: 16, width: '100%' },
+  iconBox: { width: 48, height: 48, borderRadius: 12, backgroundColor: COLORS.primaryVeryLight, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  textContainer: { flex: 1 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 2 },
+  cardSub: { fontSize: 13, color: COLORS.textSecondary },
+  empty: { textAlign: 'center', marginTop: 40, color: COLORS.textSecondary, fontSize: 16 }
 });

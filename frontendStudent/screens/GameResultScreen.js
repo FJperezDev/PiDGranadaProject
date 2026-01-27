@@ -43,8 +43,7 @@ export const GameResultScreen = ({ route }) => {
     if (!transcript || !isFocused) return;
 
     const spoken = normalizeText(transcript);
-    console.log("Comando oído en GameResult:", spoken);
-
+    
     if (
         spoken.includes('imagen') || 
         spoken.includes('foto') || 
@@ -94,6 +93,7 @@ export const GameResultScreen = ({ route }) => {
           <Image
             source={{
               uri: GAME_SOLUTION[language][topThreeCodes]?.urlImage || GAME_SOLUTION[language][0]?.urlImage,
+              cache: 'force-cache',
             }}
             style={styles.image}
             resizeMode="cover"

@@ -1,7 +1,16 @@
-import { Text, View, StyleSheet, Platform, ScrollView } from "react-native";
+import React, { useEffect, useState } from "react";
+import { 
+  Text, 
+  View, 
+  StyleSheet, 
+  Platform, 
+  ScrollView, 
+  KeyboardAvoidingView, 
+  TouchableWithoutFeedback, 
+  Keyboard 
+} from "react-native";
 import { StyledButton } from "../components/StyledButton";
 import { useLanguage } from "../context/LanguageContext";
-import { useEffect, useState } from "react";
 import { StyledTextInput } from "../components/StyledTextInput";
 import { CheckSquare, Square } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
@@ -14,7 +23,7 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
   const { t, language } = useLanguage();
   const { transcript, setTranscript } = useVoiceControl();
   const isFocused = useIsFocused();
-  const [ topics, setTopics ] = useState([]);
+  const [topics, setTopics] = useState([]);
   const [selectedTopics, setSelectedTopics] = useState({});
   const [numQuestions, setNumQuestions] = useState(10);
   const navigation = useNavigation();
@@ -28,8 +37,7 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
     if (!transcript || !isFocused) return;
 
     const spoken = normalizeText(transcript);
-    console.log("Comando oído en Setup:", spoken);
-
+    
     // --- A. Generar Examen ---
     if (
         spoken.includes('generar') || 
@@ -55,20 +63,17 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
         return;
     }
 
-    // --- C. Detectar Números (Para cambiar cantidad de preguntas) ---
-    // Buscamos si hay dígitos en el comando (ej: "quiero 20 preguntas")
+    // --- C. Detectar Números ---
     const numberMatch = spoken.match(/\d+/); 
     if (numberMatch) {
         const num = parseInt(numberMatch[0], 10);
-        if (!isNaN(num) && num > 0 && num <= 100) { // Ponemos un límite razonable
+        if (!isNaN(num) && num > 0 && num <= 100) { 
             setNumQuestions(num);
-            // No hacemos return aquí para permitir decir "tema 1 y 20 preguntas" a la vez si quisieras
         }
     }
 
     // --- D. Seleccionar/Deseleccionar Temas ---
     if (topics.length > 0) {
-        // Buscamos si lo dicho coincide con algún título de tema
         const matchedTopic = topics.find(topic => {
             const normalizedTitle = normalizeText(topic.title);
             return spoken.includes(normalizedTitle) || normalizedTitle.includes(spoken);
@@ -80,7 +85,6 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
             return;
         }
         
-        // Opción extra: "Todos" o "Ninguno"
         if (spoken.includes('todos') || spoken.includes('all')) {
             const allSelected = topics.reduce((acc, t) => ({...acc, [t.id]: true}), {});
             setSelectedTopics(allSelected);
@@ -131,7 +135,6 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
       return;
     }
 
-    // Filtrar los topics seleccionados
     const chosenTopics = topics.filter((t) => selected.includes(String(t.id)));
 
     navigation.navigate("Exam", {
@@ -146,105 +149,152 @@ export const ExamSetupScreen = ({ route, setAlert }) => {
   )
 
   return (
-    <View style={styles.container}>
-      {/* Contenido principal */}
-      <View style={styles.scrollArea}>
-        <Text style={styles.sectionTitle}>{t("selectTopics")}</Text>
+    // 1. Evita que el teclado tape el contenido
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      {/* 2. Cierra el teclado al tocar fuera */}
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.container}>
+          <View style={styles.content}>
+            <Text style={styles.title}>{t("selectTopics")}</Text>
 
-        <ScrollView style={{ maxHeight: 450, marginBottom: 20 }}>
-          {topics.map((topic) => (
-            <StyledButton
-              key={topic.id}
-              onPress={() => toggleTopic(topic.id)}
-              style={styles.topicButton}
+            <ScrollView 
+              style={styles.listContainer} 
+              showsVerticalScrollIndicator={false}
+              // 3. Permite hacer click en los botones de temas incluso con el teclado abierto
+              keyboardShouldPersistTaps="handled"
             >
-              {selectedTopics[topic.id] ? (
-                <CheckSquare size={24} color={COLORS.primary} /> // cyan-500
-              ) : (
-                <Square size={24} color={COLORS.textLight} /> // slate-400
-              )}
-              <Text style={styles.topicText}>{topic.title}</Text>
-            </StyledButton>
-          ))}
-        </ScrollView>
+              {topics.map((topic) => {
+                 const isSelected = selectedTopics[topic.id];
+                 return (
+                  <StyledButton
+                    key={topic.id}
+                    onPress={() => toggleTopic(topic.id)}
+                    variant={isSelected ? "secondary" : "ghost"}
+                    style={[
+                      styles.topicButton, 
+                      isSelected && styles.topicSelected
+                    ]}
+                  >
+                    <View style={styles.topicRow}>
+                        {isSelected ? (
+                          <CheckSquare size={24} color={COLORS.primary} />
+                        ) : (
+                          <Square size={24} color={COLORS.textLight} />
+                        )}
+                        <Text style={[styles.topicText, isSelected && styles.topicTextSelected]}>
+                            {topic.title}
+                        </Text>
+                    </View>
+                  </StyledButton>
+                );
+              })}
+            </ScrollView>
 
-        <Text style={styles.sectionTitle}>{t("numQuestions")}</Text>
+            <View style={styles.settingRow}>
+                <Text style={styles.label}>{t("numQuestions")}</Text>
+                <StyledTextInput
+                  value={String(numQuestions)}
+                  onChangeText={setNumQuestions}
+                  keyboardType="numeric"
+                  style={styles.numberInput}
+                  // Cierra el teclado al pulsar "Intro" en el teclado
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+            </View>
+          </View>
 
-        <StyledTextInput
-          placeholder="10"
-          value={numQuestions}
-          onChange={setNumQuestions}
-          type="number"
-        />
-      </View>
-
-      {/* Footer con botones */}
-      <View style={styles.footer}>
-        <View></View>
-        <StyledButton
-          title={t("generateExam")}
-          onPress={handleGenerate}
-          style={styles.generateButton}
-        />
-      </View>
-    </View>
+          <View style={styles.footer}>
+            <StyledButton
+              title={t("generateExam")}
+              onPress={handleGenerate}
+              variant="primary"
+              size="large"
+              style={{ width: '100%' }}
+            />
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: "100%",
-    maxWidth: 700,
-    alignSelf: "center",
-    padding: 20,
     backgroundColor: COLORS.background,
   },
-  scrollArea: {
+  content: {
     flex: 1,
+    width: '100%',
+    maxWidth: 700,
+    alignSelf: 'center',
+    padding: 20,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginVertical: 16,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
     color: COLORS.text,
+    marginBottom: 20,
+  },
+  listContainer: {
+    flex: 1,
+    marginBottom: 20,
   },
   topicButton: {
-    flexDirection: "row",
-    alignItems: "center",
+    marginBottom: 10,
+    justifyContent: 'flex-start',
+    paddingHorizontal: 16,
     backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.borderLight, // slate-200
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 10,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.05)' }
-      : {
-          shadowColor: COLORS.shadow,
-          shadowOpacity: 0.05,
-          shadowRadius: 3,
-          elevation: 1,
-        }),
+    borderColor: COLORS.borderLight,
+  },
+  topicSelected: {
+    backgroundColor: COLORS.primaryVeryLight,
+    borderColor: COLORS.primary,
+  },
+  topicRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%'
   },
   topicText: {
     fontSize: 16,
     marginLeft: 12,
+    color: COLORS.textSecondary,
+    flex: 1, 
+  },
+  topicTextSelected: {
+    color: COLORS.text,
+    fontWeight: '600'
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surface,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
     color: COLORS.text,
   },
-  input: {
-    width: "100%",
-    maxWidth: 200,
+  numberInput: {
+    width: 80,
+    textAlign: 'center',
+    paddingVertical: 8,
   },
   footer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    padding: 20,
+    backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.borderLight,
-    paddingTop: 16,
-    marginTop: 20,
-  },
-  generateButton: {
-    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center'
   },
 });

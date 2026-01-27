@@ -160,7 +160,9 @@ class ExamViewSet(viewsets.GenericViewSet):
         
         topic_titles = topics_str.split(',')
         topic_titles = [title.strip() for title in topic_titles]
+        print(topic_titles)
         topics = [content_selectors.get_topic_by_title(title) for title in topic_titles]
+        print(topics)
         topics = [topic for topic in topics if topic] # Filter out any None topics
 
         if not topics:

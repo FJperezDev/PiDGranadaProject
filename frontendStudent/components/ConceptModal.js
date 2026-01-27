@@ -1,10 +1,11 @@
+import React from 'react';
 import { 
   Modal, 
   View, 
   Text, 
   StyleSheet, 
   ScrollView, 
-  Platform 
+  TouchableWithoutFeedback 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons'; 
 import { COLORS } from '../constants/colors';
@@ -12,7 +13,7 @@ import { StyledButton } from '../components/StyledButton';
 import { useLanguage } from '../context/LanguageContext';
 
 export const ConceptModal = ({ visible, onClose, concept, onRelatedPress }) => {
-  const { t } = useLanguage(); // Usamos el hook directamente aquí
+  const { t } = useLanguage();
   
   if (!concept) return null;
 
@@ -26,92 +27,120 @@ export const ConceptModal = ({ visible, onClose, concept, onRelatedPress }) => {
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
-      <View style={styles.overlay}>
-        <View style={styles.modalContainer}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerTitleContainer}>
-              <Ionicons name="bulb" size={24} color={COLORS.primary} />
-              <Text style={styles.title}>{concept.name}</Text>
-            </View>
-            <StyledButton onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close-circle" size={30} color={COLORS.secondaryLight} />
-            </StyledButton>
-          </View>
-
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            
-            {/* 1. Descripción */}
-            <View style={styles.section}>
-              <Text style={styles.label}>{t("description")}</Text>
-              <Text style={styles.description}>
-                {concept.description || t("noDescription")}
-              </Text>
-            </View>
-
-            {/* 2. Ejemplos */}
-            {examplesList.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.divider} />
-                <Text style={styles.label}>
-                  <Ionicons name="easel-outline" size={14} /> 
-                  {" "}{t("examples")}
-                </Text>
-                
-                {examplesList.map((example, index) => (
-                  <View key={index} style={styles.exampleCard}>
-                    <Ionicons name="checkmark-circle-outline" size={18} color={COLORS.exampleText} style={{marginTop: 2}} />
-                    <Text style={styles.exampleText}>{example.trim()}</Text>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.overlay}>
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContainer}>
+              
+              {/* Header */}
+              <View style={styles.header}>
+                <View style={styles.headerTitleContainer}>
+                  <View style={styles.iconContainer}>
+                    <Ionicons name="bulb" size={20} color={COLORS.primary} />
                   </View>
-                ))} 
+                  <Text style={styles.title} numberOfLines={2}>{concept.name}</Text>
+                </View>
+                
+                <StyledButton 
+                  onPress={onClose} 
+                  variant="ghost" 
+                  size="small"
+                  style={styles.closeButton}
+                >
+                  <Ionicons name="close" size={24} color={COLORS.text} />
+                </StyledButton>
               </View>
-            )}
 
-            {/* 3. Conceptos Relacionados */}
-            {concept.related_concepts && concept.related_concepts.length > 0 && (
-              <View style={styles.section}>
-                <View style={styles.divider} />
-                <Text style={styles.label}>
-                  <Ionicons name="git-network-outline" size={14} /> 
-                  {" "}{t("related_concepts")}
-                </Text>
+              <ScrollView 
+                contentContainerStyle={styles.scrollContent} 
+                showsVerticalScrollIndicator={true}
+              >
+                
+                {/* 1. Descripción */}
+                <View style={styles.section}>
+                  <Text style={styles.label}>{t("description")}</Text>
+                  <Text style={styles.description}>
+                    {concept.description || t("noDescription")}
+                  </Text>
+                </View>
 
-                {concept.related_concepts.map((relation, index) => {
-                  const targetName = typeof relation.concept_to === 'object' 
-                    ? relation.concept_to.name 
-                    : relation.concept_to;
-                  
-                  const targetObj = typeof relation.concept_to === 'object'
-                    ? relation.concept_to
-                    : { name: relation.concept_to };
-
-                  return (
-                    <StyledButton 
-                      key={index} 
-                      style={styles.relationCard}
-                      activeOpacity={0.7}
-                      onPress={() => onRelatedPress(targetObj)}
-                    >
-                      <View style={styles.relationHeader}>
-                        <Ionicons name="link" size={16} color={COLORS.primary} />
-                        <Text style={styles.relationTarget}>{targetName}</Text>
-                        <Ionicons name="chevron-forward" size={16} color={COLORS.primary} style={{marginLeft: 'auto'}}/>
+                {/* 2. Ejemplos */}
+                {examplesList.length > 0 && (
+                  <View style={styles.section}>
+                    <View style={styles.divider} />
+                    <Text style={styles.label}>
+                      <Ionicons name="easel-outline" size={14} /> 
+                      {" "}{t("examples")}
+                    </Text>
+                    
+                    {examplesList.map((example, index) => (
+                      <View key={index} style={styles.exampleCard}>
+                        <Ionicons name="checkmark-circle" size={20} color={COLORS.exampleText} style={{marginTop: 2}} />
+                        <Text style={styles.exampleText}>{example.trim()}</Text>
                       </View>
+                    ))} 
+                  </View>
+                )}
+
+                {/* 3. Conceptos Relacionados (MEJORADO) */}
+                {concept.related_concepts && concept.related_concepts.length > 0 && (
+                  <View style={styles.section}>
+                    <View style={styles.divider} />
+                    <Text style={styles.label}>
+                      <Ionicons name="git-network-outline" size={14} /> 
+                      {" "}{t("related_concepts")}
+                    </Text>
+
+                    {concept.related_concepts.map((relation, index) => {
+                      const targetName = typeof relation.concept_to === 'object' 
+                        ? relation.concept_to.name 
+                        : relation.concept_to;
                       
-                      {relation.description ? (
-                        <Text style={styles.relationDescription}>
-                          "{relation.description}"
-                        </Text>
-                      ) : null}
-                    </StyledButton>
-                  );
-                })}
-              </View>
-            )}
-          </ScrollView>
+                      const targetObj = typeof relation.concept_to === 'object'
+                        ? relation.concept_to
+                        : { name: relation.concept_to };
+
+                      return (
+                        <StyledButton 
+                          key={index} 
+                          variant="secondary"
+                          style={styles.relationButton}
+                          onPress={() => onRelatedPress(targetObj)}
+                        >
+                          {/* Contenedor interno flexible */}
+                          <View style={styles.relationContent}>
+                            
+                            {/* Fila superior: Icono + Título + Flecha */}
+                            <View style={styles.relationHeader}>
+                              <Ionicons name="link" size={18} color={COLORS.primary} style={{ marginTop: 2 }} />
+                              
+                              {/* flex: 1 obliga al texto a ocupar el espacio y saltar de línea si es necesario */}
+                              <Text style={styles.relationTarget}>
+                                {targetName}
+                              </Text>
+                              
+                              <Ionicons name="chevron-forward" size={18} color={COLORS.primaryLight} />
+                            </View>
+                            
+                            {/* Descripción abajo */}
+                            {relation.description ? (
+                              <Text style={styles.relationDescription} numberOfLines={3}>
+                                {relation.description}
+                              </Text>
+                            ) : null}
+                          </View>
+                        </StyledButton>
+                      );
+                    })}
+                  </View>
+                )}
+              </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 };
@@ -119,71 +148,86 @@ export const ConceptModal = ({ visible, onClose, concept, onRelatedPress }) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: COLORS.overlay,
+    backgroundColor: COLORS.overlay || 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 15,
+    padding: 20,
   },
   modalContainer: {
     width: '100%',
     maxWidth: 500,
+    maxHeight: '85%', 
     backgroundColor: COLORS.background,
-    borderRadius: 24,
-    maxHeight: '90%',
-    ...Platform.select({
-      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
-      android: { elevation: 10 },
-      web: { boxShadow: '0px 10px 30px rgba(0,0,0,0.2)' }
-    }),
+    borderRadius: 20,
+    elevation: 10,
+    shadowColor: COLORS.shadow,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.borderLight,
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   headerTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: 12,
+    marginRight: 10,
+  },
+  iconContainer: {
+    padding: 8,
+    backgroundColor: COLORS.primaryVeryLight,
+    borderRadius: 8,
+    marginRight: 12,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     color: COLORS.text,
     flex: 1,
   },
   closeButton: {
-    padding: 5,
-    backgroundColor: COLORS.primaryLight,
+    width: 40,
+    height: 40,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    borderRadius: 20,
   },
   scrollContent: {
-    padding: 24,
+    padding: 20,
     paddingTop: 10,
+    flexGrow: 1,
   },
   section: {
     marginBottom: 24,
   },
   label: {
     fontSize: 12,
-    fontWeight: '800',
-    color: COLORS.secondary,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
     marginBottom: 12,
-    letterSpacing: 1,
-    marginTop: 8,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   description: {
-    fontSize: 17,
-    lineHeight: 26,
+    fontSize: 16,
+    lineHeight: 24,
     color: COLORS.text,
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: 10,
+    backgroundColor: COLORS.borderLight,
+    marginBottom: 16,
+    marginTop: 8,
   },
   exampleCard: {
     flexDirection: 'row',
@@ -193,41 +237,49 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: COLORS.exampleBorder,
-    gap: 10,
+    gap: 12,
   },
   exampleText: {
     fontSize: 15,
-    color: COLORS.exampleText,
+    color: COLORS.text,
     flex: 1,
-    fontStyle: 'italic',
+    lineHeight: 22,
   },
-  relationCard: {
+  relationButton: {
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    // Importante para sobreescribir el centrado por defecto de StyledButton
+    justifyContent: 'flex-start', 
+    alignItems: 'stretch',
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
-    ...Platform.select({
-      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
-      android: { elevation: 2 },
-    }),
+    borderRadius: 12,
+  },
+  relationContent: {
+    width: '100%',
+    flexDirection: 'column',
   },
   relationHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-    gap: 8,
+    // 'flex-start' alinea arriba por si el texto ocupa 2 líneas
+    alignItems: 'flex-start', 
+    gap: 12,
   },
   relationTarget: {
     fontSize: 16,
     fontWeight: '700',
     color: COLORS.primary,
+    flex: 1, // Permite que el texto ocupe el espacio y empuje el resto
+    lineHeight: 22,
+    marginTop: 0, // Ajuste fino visual
   },
   relationDescription: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginLeft: 24, 
+    marginTop: 6,
+    marginLeft: 30, // Sangría para alinear con el texto del título (18 icono + 12 gap)
     lineHeight: 20,
   },
 });

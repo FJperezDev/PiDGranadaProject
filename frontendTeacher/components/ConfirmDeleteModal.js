@@ -8,12 +8,7 @@ export default function ConfirmDeleteModal({ visible, onClose, onConfirm, title,
   const { t } = useLanguage();
 
   return (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={visible}
-      onRequestClose={onClose}
-    >
+    <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <Text style={styles.modalTitle}>{title || t('delete')}</Text>
@@ -25,12 +20,13 @@ export default function ConfirmDeleteModal({ visible, onClose, onConfirm, title,
                 title={t('cancel')} 
                 onPress={onClose} 
                 variant='ghost' 
-                style={{ marginRight: 10 }} 
+                style={{ flex: 1, marginRight: 8 }} 
             />
             <StyledButton 
                 title={t('delete')} 
                 onPress={onConfirm} 
                 variant='danger' 
+                style={{ flex: 1, marginLeft: 8 }}
             />
           </View>
         </View>
@@ -45,37 +41,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.overlay,
+    padding: 20,
   },
   modalView: {
-    width: '90%',
+    width: '100%',
     maxWidth: 400,
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 24,
     alignItems: 'center',
-    ...Platform.select({
-      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
-      android: { elevation: 5 },
-      web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' }
-    }),
+    elevation: 10,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.25, 
+    shadowRadius: 8
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 12,
     color: COLORS.text,
+    textAlign: 'center'
   },
   modalText: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 25,
+    marginBottom: 24,
     color: COLORS.textSecondary,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   buttonRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     width: '100%',
-    gap: 10,
   },
 });

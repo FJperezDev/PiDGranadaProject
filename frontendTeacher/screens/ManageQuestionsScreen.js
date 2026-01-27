@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { 
     View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, 
     ActivityIndicator, Platform, ScrollView, LayoutAnimation, UIManager 
@@ -9,9 +9,11 @@ import { COLORS } from '../constants/colors';
 import { Edit, Trash2, Plus, Filter, X, Book, ChevronDown, ChevronUp } from 'lucide-react-native'; 
 import QuestionWizardModal from '../components/QuestionWizardModal';
 import { useLanguage } from '../context/LanguageContext';
+import { StyledButton } from '../components/StyledButton'; // Importamos el botón estandarizado
 
+// Habilitar LayoutAnimation en Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
+  UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 export default function ManageQuestionsScreen({ navigation }) {
@@ -21,6 +23,8 @@ export default function ManageQuestionsScreen({ navigation }) {
   
   const [selectedTopics, setSelectedTopics] = useState([]); 
   const [selectedSubjects, setSelectedSubjects] = useState([]); 
+  
+  // 1. CORRECCIÓN DEL ERROR: Usamos el nombre correcto del estado
   const [showFilters, setShowFilters] = useState(false); 
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -49,8 +53,9 @@ export default function ManageQuestionsScreen({ navigation }) {
   );
 
   const toggleFilters = () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setShowFilters(!showFilters);
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    // 2. CORRECCIÓN: Usamos la variable correcta (showFilters)
+    setShowFilters(!showFilters);
   };
 
   const getTopicsFromItem = (item) => {
@@ -154,12 +159,25 @@ export default function ManageQuestionsScreen({ navigation }) {
         </View>
 
         <View style={styles.actionsCol}>
-            <TouchableOpacity onPress={() => handleEdit(item)} style={styles.iconBtn}>
-                <Edit size={22} color={COLORS.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity testID={ "deleteQuestion" + item.statement } onPress={() => handleDelete(item.id)} style={styles.iconBtn}>
-                <Trash2 size={22} color={COLORS.danger} />
-            </TouchableOpacity>
+            {/* 3. MEJORA: Usamos StyledButton para las acciones */}
+            <StyledButton 
+                onPress={() => handleEdit(item)} 
+                variant="ghost" 
+                size="small" 
+                style={styles.iconBtn}
+            >
+                <Edit size={20} color={COLORS.textSecondary} />
+            </StyledButton>
+            
+            <StyledButton 
+                testID={"deleteQuestion" + item.statement}
+                onPress={() => handleDelete(item.id)} 
+                variant="ghost" 
+                size="small" 
+                style={styles.iconBtn}
+            >
+                <Trash2 size={20} color={COLORS.danger} />
+            </StyledButton>
         </View>
       </View>
     );
@@ -170,15 +188,19 @@ export default function ManageQuestionsScreen({ navigation }) {
       <View style={styles.topHeader}>
          <Text style={styles.screenTitle}>{t('questions')}</Text>
          <View style={styles.headerButtons}>
-             <TouchableOpacity testID="newQuestionBtn" style={styles.addBtn} onPress={handleCreate}>
-                 <Plus size={20} color="white" />
-                 <Text style={styles.btnText}>{t('newQuestion')}</Text>
-             </TouchableOpacity>
+             {/* 4. MEJORA: StyledButton para Crear */}
+             <StyledButton 
+                testID="newQuestionBtn"
+                onPress={handleCreate}
+                icon={<Plus size={20} color="white" />}
+                title={t('newQuestion')}
+                size="small"
+             />
          </View>
       </View>
 
       <View style={styles.filtersCard}>
-          <TouchableOpacity onPress={toggleFilters} style={styles.accordionHeader}>
+          <TouchableOpacity onPress={toggleFilters} style={styles.accordionHeader} activeOpacity={0.7}>
               <View style={{flexDirection: 'row', alignItems: 'center', gap: 8}}>
                   <Filter size={18} color={COLORS.text} />
                   <Text style={styles.accordionTitle}>{t('filters')}</Text>
@@ -193,6 +215,7 @@ export default function ManageQuestionsScreen({ navigation }) {
 
           {showFilters && (
             <View style={styles.accordionContent}>
+                {/* Sección Asignaturas */}
                 <View style={styles.filterSection}>
                     <View style={styles.sectionHeader}>
                         <Book size={14} color={COLORS.textSecondary} />
@@ -205,10 +228,16 @@ export default function ManageQuestionsScreen({ navigation }) {
                         {allUniqueSubjects.map((sub, index) => {
                             const isActive = selectedSubjects.includes(sub);
                             return (
-                                <TouchableOpacity key={index} onPress={() => toggleSubjectFilter(sub)} style={[styles.chip, isActive ? styles.chipActiveSub : styles.chipInactive]}>
+                                <StyledButton 
+                                    key={index} 
+                                    onPress={() => toggleSubjectFilter(sub)} 
+                                    variant={isActive ? 'primary' : 'outline'}
+                                    size="small"
+                                    style={[styles.chip, isActive && { backgroundColor: COLORS.success, borderColor: COLORS.success }]}
+                                >
                                     <Text style={[styles.chipText, isActive ? styles.chipTextActive : styles.chipTextInactive]}>{sub}</Text>
                                     {isActive && <X size={12} color="white" style={{marginLeft: 4}} />}
-                                </TouchableOpacity>
+                                </StyledButton>
                             );
                         })}
                     </ScrollView>
@@ -216,6 +245,7 @@ export default function ManageQuestionsScreen({ navigation }) {
 
                 <View style={styles.separator} />
 
+                {/* Sección Temas */}
                 <View style={styles.filterSection}>
                     <View style={styles.sectionHeader}>
                         <Filter size={14} color={COLORS.textSecondary} />
@@ -229,10 +259,16 @@ export default function ManageQuestionsScreen({ navigation }) {
                         {allUniqueTopics.map((topic, index) => {
                             const isActive = selectedTopics.includes(topic);
                             return (
-                                <TouchableOpacity key={index} onPress={() => toggleTopicFilter(topic)} style={[styles.chip, isActive ? styles.chipActive : styles.chipInactive]}>
+                                <StyledButton 
+                                    key={index} 
+                                    onPress={() => toggleTopicFilter(topic)} 
+                                    variant={isActive ? 'primary' : 'outline'}
+                                    size="small"
+                                    style={styles.chip}
+                                >
                                     <Text style={[styles.chipText, isActive ? styles.chipTextActive : styles.chipTextInactive]}>{topic}</Text>
                                     {isActive && <X size={12} color="white" style={{marginLeft: 4}} />}
-                                </TouchableOpacity>
+                                </StyledButton>
                             );
                         })}
                     </View>
@@ -254,7 +290,7 @@ export default function ManageQuestionsScreen({ navigation }) {
           data={filteredQuestions}
           renderItem={renderItem}
           keyExtractor={item => item.id.toString()}
-          contentContainerStyle={{ paddingBottom: 80 }}
+          contentContainerStyle={{ paddingBottom: 80, gap: 10 }} // Gap para separación moderna
           ListEmptyComponent={<View style={styles.emptyContainer}><Text style={styles.empty}>{t('noResults')}</Text></View>}
         />
       )}
@@ -270,50 +306,43 @@ export default function ManageQuestionsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: COLORS.background, padding: 16 }, // Padding general
   
-  topHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, backgroundColor: COLORS.surface, elevation: 2, zIndex: 10 },
-  screenTitle: { fontSize: 22, fontWeight: 'bold', color: COLORS.text },
+  topHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  screenTitle: { fontSize: 26, fontWeight: '800', color: COLORS.text },
   headerButtons: { flexDirection: 'row', gap: 10 },
-  addBtn: { flexDirection: 'row', backgroundColor: COLORS.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, alignItems: 'center', gap: 6 },
-  btnText: { color: COLORS.white, fontWeight: '600', fontSize: 13 },
 
   filtersCard: {
       backgroundColor: COLORS.surface,
-      marginHorizontal: 15,
-      marginTop: 15,
-      borderRadius: 10,
-      elevation: 2, 
-      shadowColor: COLORS.shadow,
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.1,
-      shadowRadius: 2,
-      overflow: 'hidden'
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: COLORS.borderLight,
+      overflow: 'hidden',
+      marginBottom: 15,
   },
   accordionHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: 15,
+      padding: 16,
       backgroundColor: COLORS.surface
   },
-  accordionTitle: { fontSize: 16, fontWeight: 'bold', color: COLORS.text },
+  accordionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text },
   accordionContent: {
       paddingBottom: 15,
       borderTopWidth: 1,
-      borderTopColor: COLORS.background
+      borderTopColor: COLORS.borderLight
   },
   badge: { backgroundColor: COLORS.primary, borderRadius: 10, width: 20, height: 20, justifyContent: 'center', alignItems: 'center' },
   badgeText: { color: COLORS.white, fontSize: 10, fontWeight: 'bold' },
 
   filterSection: { marginTop: 12 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, marginBottom: 8, gap: 6 },
-  sectionLabel: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '600', flex: 1 },
+  sectionLabel: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '700', flex: 1, textTransform: 'uppercase' },
   clearFilterText: { fontSize: 11, color: COLORS.primary, fontWeight: 'bold' },
-  separator: { height: 1, backgroundColor: COLORS.border, marginVertical: 5, marginHorizontal: 15 },
+  separator: { height: 1, backgroundColor: COLORS.borderLight, marginVertical: 8, marginHorizontal: 15 },
 
   chipsScroll: { paddingHorizontal: 15, gap: 8 },
-
   chipsWrapper: { 
       paddingHorizontal: 15, 
       flexDirection: 'row', 
@@ -321,36 +350,43 @@ const styles = StyleSheet.create({
       gap: 8 
   },
 
-  chip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  chipInactive: { backgroundColor: COLORS.surface, borderColor: COLORS.border },
-  chipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  chipActiveSub: { backgroundColor: COLORS.success, borderColor: COLORS.success },
-
-  chipText: { fontSize: 12, fontWeight: '500' },
+  // Ajustes de Chips (ya manejados por StyledButton styles, solo overrides aquí)
+  chip: { 
+      marginBottom: 4, 
+      paddingVertical: 6, 
+      paddingHorizontal: 10,
+      height: 'auto', // Asegurar que StyledButton no fuerce altura fija
+      borderRadius: 20,
+  },
+  chipText: { fontSize: 12, fontWeight: '600' },
   chipTextInactive: { color: COLORS.textSecondary },
   chipTextActive: { color: COLORS.white },
 
-  tableHeader: { paddingHorizontal: 20, paddingVertical: 10 },
-  tableHeadText: { fontWeight: 'bold', color: COLORS.textSecondary, fontSize: 12 },
+  tableHeader: { marginBottom: 10 },
+  tableHeadText: { fontWeight: '700', color: COLORS.textSecondary, fontSize: 14 },
   
   row: { 
       flexDirection: 'row', 
       backgroundColor: COLORS.surface, 
-      padding: 15, 
-      marginHorizontal: 15, 
-      marginBottom: 10, 
-      borderRadius: 10, 
-      elevation: 1,
-      shadowColor: COLORS.shadow, shadowOffset: {width: 0, height: 1}, shadowOpacity: 0.05, shadowRadius: 1
+      padding: 16, 
+      borderRadius: 12, 
+      borderWidth: 1,
+      borderColor: COLORS.borderLight,
+      // Sombra suave (Estilo del sistema de diseño)
+      shadowColor: COLORS.shadow, 
+      shadowOffset: { width: 0, height: 2 }, 
+      shadowOpacity: 0.05, 
+      shadowRadius: 3,
+      elevation: 2
   },
   infoCol: { flex: 1, marginRight: 10 },
   tagsRow: { flexDirection: 'row', marginBottom: 8, gap: 6, flexWrap: 'wrap' },
-  tagContainer: { backgroundColor: COLORS.primaryLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
-  tagText: { fontSize: 10, color: COLORS.primaryDark, fontWeight: '600' },
-  statement: { fontSize: 15, color: COLORS.text, lineHeight: 22 },
+  tagContainer: { backgroundColor: COLORS.primaryVeryLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  tagText: { fontSize: 11, color: COLORS.primaryDark, fontWeight: '700' },
+  statement: { fontSize: 15, color: COLORS.text, lineHeight: 22, fontWeight: '500' },
   
-  actionsCol: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconBtn: { padding: 8, backgroundColor: COLORS.background, borderRadius: 8 },
+  actionsCol: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  iconBtn: { paddingHorizontal: 8, paddingVertical: 8, width: 36, height: 36 },
   
   emptyContainer: { alignItems: 'center', marginTop: 40 },
   empty: { textAlign: 'center', color: COLORS.textSecondary, fontSize: 16 },

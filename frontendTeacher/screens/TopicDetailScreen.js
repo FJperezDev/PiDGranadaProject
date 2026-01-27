@@ -1,11 +1,12 @@
-import React, { useState, useContext, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, FlatList, StyleSheet, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { getTopicEpigraphs, createEpigraph, updateEpigraph, deleteEpigraph, getEpigraphDetail } from '../api/contentRequests';
 import { EpigraphModal } from '../components/ContentModals';
-import { Plus, Trash2, Edit } from 'lucide-react-native';
+import { Plus, Trash2, Edit, FileText } from 'lucide-react-native'; 
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
+import { StyledButton } from '../components/StyledButton';
 
 export default function TopicDetailScreen({ route, navigation }) {
   const { topic } = route.params;
@@ -92,21 +93,38 @@ export default function TopicDetailScreen({ route, navigation }) {
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
+      <View style={styles.iconBox}>
+         {/* AUMENTADO: Icono más grande (28) */}
+         <FileText size={28} color={COLORS.primary} />
+      </View>
+      
       <View style={styles.info}>
-        <View style={{flex: 1}}>
-          <Text style={styles.name}>{item.order_id + ". " + item.name}</Text>
-          {item.description_es && <Text style={styles.desc} numberOfLines={2}>{item.description_es}</Text>}
-        </View>
+          <Text style={styles.name}>{item.order_id + ". " +item.name}</Text>
+          {item.description_es && (
+            <Text style={styles.desc} numberOfLines={1}>
+                {item.description_es}
+            </Text>
+          )}
       </View>
       
       <View style={styles.actions}>
-        <TouchableOpacity onPress={() => openEditModal(item)} style={styles.iconBtn}>
-          <Edit size={20} color={COLORS.secondary} />
-        </TouchableOpacity>
+        <StyledButton 
+            onPress={() => openEditModal(item)} 
+            variant="ghost" 
+            size="small" 
+            style={styles.iconBtn}
+        >
+          <Edit size={22} color={COLORS.textSecondary} />
+        </StyledButton>
 
-        <TouchableOpacity onPress={() => handleDelete(item.order_id)} style={styles.iconBtn}>
-          <Trash2 size={20} color={COLORS.danger} />
-        </TouchableOpacity>
+        <StyledButton 
+            onPress={() => handleDelete(item.order_id)} 
+            variant="ghost" 
+            size="small" 
+            style={styles.iconBtn}
+        >
+          <Trash2 size={22} color={COLORS.danger} />
+        </StyledButton>
       </View>
     </View>
   );
@@ -115,18 +133,24 @@ export default function TopicDetailScreen({ route, navigation }) {
     <View style={styles.container}>
       <Text style={styles.headerTitle}>{t('epigraphs')}: {topic.title || topic.title_es}</Text>
       
-      {loading ? <ActivityIndicator size="large" color={COLORS.primary} /> : (
+      {loading ? (
+        <ActivityIndicator size="large" color={COLORS.primary} style={{marginTop: 20}} />
+      ) : (
         <FlatList 
           data={epigraphs}
           renderItem={renderItem}
           keyExtractor={(item) => item.id ? item.id.toString() : item.order_id.toString()}
           ListEmptyComponent={<Text style={styles.empty}>{t('noEpigraphs')}</Text>}
+          contentContainerStyle={{ paddingBottom: 80, gap: 10 }}
         />
       )}
 
-      <TouchableOpacity style={styles.fab} onPress={openCreateModal}>
-        <Plus size={24} color={COLORS.white} />
-      </TouchableOpacity>
+      {/* FAB usando StyledButton */}
+      <StyledButton 
+        onPress={openCreateModal}
+        style={styles.fab}
+        icon={<Plus size={28} color={COLORS.white} />}
+      />
 
       <EpigraphModal 
         visible={modalVisible} 
@@ -140,14 +164,75 @@ export default function TopicDetailScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: COLORS.background },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, color: COLORS.primary },
-  card: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surface, padding: 15, borderRadius: 8, marginBottom: 10, elevation: 1 },
-  info: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
-  orderId: { fontWeight: 'bold', marginRight: 10, fontSize: 16, color: COLORS.textSecondary, minWidth: 30 },
-  name: { fontSize: 16, fontWeight: '600', color: COLORS.text },
-  desc: { fontSize: 12, color: COLORS.textSecondary },
-  actions: { flexDirection: 'row', gap: 10 }, 
-  iconBtn: { padding: 5 },
-  empty: { textAlign: 'center', marginTop: 20, color: COLORS.textSecondary },
-  fab: { position: 'absolute', right: 20, bottom: 20, backgroundColor: COLORS.primary, width: 56, height: 56, borderRadius: 28, justifyContent: 'center', alignItems: 'center', elevation: 5 }
+  
+  headerTitle: { 
+      fontSize: 22, 
+      fontWeight: '800', 
+      marginBottom: 20, 
+      color: COLORS.text 
+  },
+  
+  card: { 
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      backgroundColor: COLORS.surface, 
+      padding: 16, 
+      borderRadius: 12, 
+      borderWidth: 1,
+      borderColor: COLORS.borderLight,
+      shadowColor: COLORS.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 3,
+      elevation: 2
+  },
+  
+  iconBox: {
+      // AUMENTADO: Caja más grande para que el icono respire
+      width: 48, 
+      height: 48, 
+      borderRadius: 12,
+      backgroundColor: COLORS.primaryVeryLight,
+      justifyContent: 'center', alignItems: 'center',
+      marginRight: 16
+  },
+
+  info: { flex: 1, marginRight: 10 },
+  
+  name: { 
+      fontSize: 16, 
+      fontWeight: '700', 
+      color: COLORS.text,
+      marginBottom: 4
+  },
+  
+  desc: { 
+      fontSize: 14, 
+      color: COLORS.textSecondary 
+  },
+  
+  actions: { flexDirection: 'row', gap: 4 }, 
+  
+  // AUMENTADO: Botones de acción un poco más grandes
+  iconBtn: { padding: 8, width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }, 
+  
+  empty: { textAlign: 'center', marginTop: 40, color: COLORS.textSecondary, fontSize: 16 },
+  
+  fab: { 
+      position: 'absolute', 
+      right: 20, 
+      bottom: 20, 
+      width: 60,  // AUMENTADO
+      height: 60, // AUMENTADO
+      borderRadius: 30, 
+      paddingHorizontal: 0, 
+      paddingVertical: 0,
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      elevation: 5,
+      shadowColor: COLORS.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4.65,
+  }
 });

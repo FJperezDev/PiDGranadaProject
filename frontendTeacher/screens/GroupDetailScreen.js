@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Button, Alert, TouchableOpacity, Share, Platform, Clipboard } from 'react-native';
+import { View, Text, StyleSheet, Button, Alert, TouchableOpacity, Share, Platform } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { deleteGroup } from '../api/coursesRequests'; 
 import ConfirmDeleteModal from '../components/ConfirmDeleteModal';
 import { COLORS } from '../constants/colors';
@@ -15,7 +16,7 @@ export default function GroupDetailScreen({ route, navigation }) {
 
   const handleDelete = async () => {
     try {
-      await deleteGroup(group.subject.id, group.id);
+      await deleteGroup(group.id);
       setModalVisible(false);
       Alert.alert(t('success'), t('success'));
       navigation.goBack();
@@ -25,8 +26,8 @@ export default function GroupDetailScreen({ route, navigation }) {
     }
   };
 
-  const copyToClipboard = () => {
-    Clipboard.setString(accessCode);
+  const copyToClipboard = async () => {
+    await Clipboard.setStringAsync(accessCode); // El método de Expo es asíncrono y se llama setStringAsync
     Alert.alert(t('success'), t('codeCopied'));
   };
   

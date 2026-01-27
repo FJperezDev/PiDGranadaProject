@@ -55,7 +55,7 @@ class SubjectSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
 
 class StudentGroupSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
     name = serializers.SerializerMethodField()
-    subject = SubjectSerializer(read_only=True)
+    subject = ShortSubjectSerializer(read_only=True)
     teacher = TeacherSerializer(read_only=True)
     groupCode = serializers.CharField(read_only=True)
 

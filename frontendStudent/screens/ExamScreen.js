@@ -30,8 +30,7 @@ export const ExamScreen = ({ route }) => {
     if (!transcript || !isFocused) return; 
 
     const spoken = normalizeText(transcript);
-    console.log("Comando oído:", spoken);
-
+    
     const cmdNext = language === 'en' ? 'next' : 'siguiente';
     const cmdPrev = language === 'en' ? 'previous' : 'anterior';
     const cmdFinish = language === 'en' ? 'finish' : 'finalizar';
@@ -190,42 +189,51 @@ export const ExamScreen = ({ route }) => {
       <View style={styles.optionsContainer}>
         {question.answers.map((opt) => {
           const isSelected = selectedAnswer === opt.id;
+          
           return (
             <StyledButton
               key={opt.id}
               onPress={() => handleSelectAnswer(question.id, opt.id)}
+              // Usamos variantes para manejar el estado visual
+              variant={isSelected ? "primary" : "secondary"}
               style={[
                 styles.optionButton,
-                isSelected ? styles.optionSelected : styles.optionDefault,
+                isSelected ? styles.selectedBorder : null
               ]}
-              textStyle={{ textAlign: "center", fontSize: 16, color: COLORS.text }}
+              textStyle={{ 
+                textAlign: "center", 
+                // El color del texto ya lo maneja StyledButton internamente según la variante
+              }}
             >
-              <Text style={{ textAlign: "center", fontSize: 16, color: COLORS.text }}>{opt.text}</Text>
+              <Text style={{ 
+                  textAlign: "center", 
+                  fontSize: 16,
+                  color: isSelected ? COLORS.text : COLORS.textSecondary 
+              }}>
+                  {opt.text}
+              </Text>
             </StyledButton>
           );
         })}
       </View>
 
-      {/* Navegación */}
       <View style={styles.navContainer}>
+        {/* Botón Anterior - Outline o Ghost para menor jerarquía */}
         <StyledButton
           title={t("previous")}
           onPress={handlePrev}
           disabled={currentQ === 0}
+          variant="ghost" 
+          style={{ width: '30%' }}
         />
-        {currentQ === questions.length - 1 ? (
-          <StyledButton
-            title={t("finishExam")}
-            onPress={handleFinish}
-            style={styles.finishButton}
-          />
-        ) : (
-          <StyledButton
-            title={t("next")}
-            onPress={handleNext}
-            style={styles.nextButton}
-          />
-        )}
+        
+        {/* Botón Siguiente/Finalizar - Primary o Success para acción principal */}
+        <StyledButton
+          title={currentQ === questions.length - 1 ? t("finishExam") : t("next")}
+          onPress={currentQ === questions.length - 1 ? handleFinish : handleNext}
+          variant={currentQ === questions.length - 1 ? "success" : "primary"}
+          style={{ width: '40%' }}
+        />
       </View>
     </View>
   );
@@ -270,39 +278,33 @@ const styles = StyleSheet.create({
   },
   questionText: {
     fontSize: 22,
-    fontWeight: "500",
+    fontWeight: "700", // Más peso para legibilidad
     textAlign: "center",
-    marginVertical: 40,
+    marginVertical: 32,
     color: COLORS.text,
+    lineHeight: 30,
   },
   optionsContainer: {
     width: "100%",
+    gap: 12, // Espacio uniforme entre opciones
   },
   optionButton: {
     width: "100%",
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderRadius: 8,
+    justifyContent: 'center',
+    paddingVertical: 16,
+    // Quitamos estilos manuales de borde/color porque lo hace el StyledButton
   },
-  optionDefault: {
-    backgroundColor: COLORS.surface,
-    borderColor: COLORS.border,
-  },
-  optionSelected: {
-    backgroundColor: COLORS.primaryVeryLight, 
-    borderColor: COLORS.primaryLight,
+  selectedBorder: {
+     borderColor: COLORS.primary, // Refuerzo visual
+     borderWidth: 2
   },
   navContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
-    marginTop: 32,
-  },
-  nextButton: {
-    backgroundColor: COLORS.primaryLight,
-  },
-  finishButton: {
-    backgroundColor: COLORS.success,
+    marginTop: 40,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight
   },
 });

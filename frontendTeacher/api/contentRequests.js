@@ -7,7 +7,7 @@ export const getTopicInfo = async (id) => (await apiClient.get(`/topics/${id}/`)
 export const createTopic = async (data) => (await apiClient.post('/topics/', data)).data;
 export const deleteTopic = async (id) => (await apiClient.delete(`/topics/${id}/`)).data;
 export const updateTopic = async (id, data) => (
-  console.log(data),
+  
   await apiClient.put(`/topics/${id}/`, data)).data;
 
 export const getSubjectTopics = async (subjectId) => 

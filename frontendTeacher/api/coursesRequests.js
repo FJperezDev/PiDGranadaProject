@@ -1,110 +1,56 @@
 import { apiClient } from './api'
 
-// --- Funciones existentes (MANTENER) ---
-export const getSubjects = async () => {
-  try {
-    const response = await apiClient.get('/subjects/');
+// --- GETTERS ---
+export const getSubjects = async () => (await apiClient.get('/subjects/')).data;
+
+export const getSubject = async (subjectId) => (await apiClient.get(`/subjects/${subjectId}/`)).data;
+
+export const getMyGroups = async () => (await apiClient.get('/studentgroups/my-groups/')).data;
+
+export const getOtherGroups = async () => (await apiClient.get('/studentgroups/others-groups/')).data;
+
+export const getSubjectGroups = async (subjectId) => (await apiClient.get(`/subjects/${subjectId}/groups/`)).data;
+
+export const getSubjectTopics = async (subjectId) => (await apiClient.get(`/subjects/${subjectId}/topics/`)).data;
+
+
+// --- ACCIONES (CREATE / DELETE / UPDATE) ---
+
+// Crear Asignatura
+export const createSubject = async (data) => {
+    // data: { name_es, name_en, description_es, description_en }
+    const response = await apiClient.post(`/subjects/`, data);
     return response.data;
-  } catch (error) {
-    console.error("Error fetching subjects:", error.response?.data || error.message);
-    throw error;
-  }
 };
 
-export const getSubject = async (subjectId) => {
-  try{
-    const response = await apiClient.get('/subjects/' + subjectId + '/');
-    return response.data;
-  }  catch (error) {
-    console.error("Error fetching subject:", error.response?.data || error.message);
-    throw error;
-  }
-  return null;
-}
-
-export const getMyGroups = async () => {
-  try {
-    const response = await apiClient.get('/studentgroups/my-groups/');
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching my groups:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-export const getOtherGroups = async () => {
-  try {
-    const response = await apiClient.get('/studentgroups/others-groups/');
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching others groups:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-export const createSubject = async (name_es, name_en, description_es, description_en) => {
-  try {
-    const payload = { name_es, name_en, description_es, description_en};
-    const response = await apiClient.post(`/subjects/`, payload);
-    return response.data;
-  } catch (error) {
-    console.error("Error creating subject:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
+// Borrar Asignatura
 export const deleteSubject = async (subjectId) => {
-  try {
     await apiClient.delete(`/subjects/${subjectId}/`);
-  } catch (error) {
-    console.error("Error deleting subject:", error.response?.data || error.message);
-    throw error;
-  }
 };
 
-export const createGroup = async (subjectId, name_es, name_en) => {
-  try {
-    const payload = { name_es, name_en };
-    const response = await apiClient.post(`/subjects/${subjectId}/groups/`, payload);
+// Crear Grupo
+export const createGroup = async (subjectId, data) => {
+    // data: { name_es, name_en }
+    const response = await apiClient.post(`/subjects/${subjectId}/groups/`, data);
     return response.data;
-  } catch (error) {
-    console.error("Error creating group:", error.response?.data || error.message);
-    throw error;
-  }
 };
 
-export const deleteGroup = async (subjectId, groupId) => {
+// Borrar Grupo
+export const deleteGroup = async (groupId) => {
   try {
-    await apiClient.delete(`/subjects/${subjectId}/groups/${groupId}/`);
+    // Atacamos directamente al ViewSet de StudentGroups
+    await apiClient.delete(`/studentgroups/${groupId}/`);
   } catch (error) {
     console.error("Error deleting group:", error.response?.data || error.message);
     throw error;
   }
 };
 
-// --- NUEVAS FUNCIONES PARA EL REORDENAMIENTO ---
-
-// Obtener temas de una asignatura
-export const getSubjectTopics = async (subjectId) => {
-  try {
-    const response = await apiClient.get(`/subjects/${subjectId}/topics/`);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching subject topics:", error.response?.data || error.message);
-    throw error;
-  }
-};
-
-// Intercambiar orden de temas (Swap)
+// Reordenar Temas
 export const swapTopicOrder = async (subjectId, topicA_Title, topicB_Title) => {
-  try {
     const response = await apiClient.put(`/subjects/${subjectId}/topics/`, {
       topicA: topicA_Title,
       topicB: topicB_Title
     });
     return response.data;
-  } catch (error) {
-    console.error("Error swapping topics:", error.response?.data || error.message);
-    throw error;
-  }
 };

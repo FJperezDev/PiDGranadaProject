@@ -3,6 +3,9 @@ import { Platform } from 'react-native';
 import Voice from '@react-native-voice/voice';
 import { useLanguage } from './LanguageContext';
 
+console.log("¿Módulo Voice cargado?:", !!Voice);
+console.log("¿Métodos disponibles?:", Object.keys(Voice || {}));
+
 const VoiceContext = createContext();
 
 export const VoiceProvider = ({ children }) => {
@@ -42,7 +45,6 @@ export const VoiceProvider = ({ children }) => {
     // CLAVE PARA WEB: Cuando el navegador corta la escucha, reiniciamos si sigue activo
     recognition.onend = () => {
       if (isListeningRef.current) {
-        console.log('Web Speech ended, restarting...');
         recognition.start();
       }
     };
@@ -69,9 +71,16 @@ export const VoiceProvider = ({ children }) => {
   // --- LÓGICA NATIVA ---
   const startNativeListening = async () => {
     try {
+      // Si Voice es null, esto petará aquí con un error más descriptivo
+      if (!Voice) {
+         alert("Error: El objeto Voice es undefined/null.");
+         return;
+      }
+      
       await Voice.start(locale);
     } catch (e) {
       console.error(e);
+      alert("Error nativo: " + e.message);
     }
   };
 
@@ -142,7 +151,6 @@ export const VoiceProvider = ({ children }) => {
 
       // Manejo de errores para evitar que muera silenciosamente
       const onSpeechError = (e) => {
-          console.log('Speech Error:', e);
           // Si es un error recuperable, reiniciamos
           if (isListeningRef.current) {
              setTimeout(() => {

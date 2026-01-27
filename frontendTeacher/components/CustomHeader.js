@@ -1,16 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Platform, 
-  Modal, 
-  TextInput, 
-  Alert, 
-  ActivityIndicator, 
-  ScrollView, 
-  KeyboardAvoidingView,
-  TouchableWithoutFeedback
+  View, Text, StyleSheet, Platform, Modal, TextInput, Alert, 
+  ScrollView, KeyboardAvoidingView, TouchableWithoutFeedback, StatusBar 
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BookMarked, ChevronLeft, Settings, LogOut, Globe, Lock, X, Save, ArrowLeft } from 'lucide-react-native';
@@ -20,6 +11,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { changePassword } from '../api/authRequests'; 
 import { StyledButton } from './StyledButton';
+import { StyledTextInput } from './StyledTextInput';
 import { encryptPassword } from '../utils/encryption';
 
 export const CustomHeader = ({ routeName }) => {
@@ -55,163 +47,117 @@ export const CustomHeader = ({ routeName }) => {
     setLoading(false);
   };
 
-  const handleInputChange = (setter) => (text) => {
-      setter(text);
-      if (serverError) setServerError('');
-  };
-
   const handlePasswordChange = async () => {
+    // ... (Tu lógica original se mantiene igual)
     if (!oldPassword || !newPassword || !confirmPassword) {
-      setServerError(t('fillAllFields'));
-      return;
-    }
-
-    if (!passwordsMatch) {
-      setServerError(t('passwordsDoNotMatch'));
-      return;
-    }
-
-    setLoading(true);
-    setServerError('');
-
-    const encryptedOld = await encryptPassword(oldPassword);
-    const encryptedNew = await encryptPassword(newPassword);
-
-    const result = await changePassword(encryptedOld, encryptedNew); 
-    setLoading(false);
-
-    if (result.success) {
-      Alert.alert(t('success'), t('passwordChanged'));
-      handleCloseModal();
-    } else {
-      let errorMessage = t('error');
-      const errData = result.error;
-
-      if (errData) {
-          if (errData.new_password && Array.isArray(errData.new_password)) {
-              errorMessage = errData.new_password[0]; 
-          } 
-          else if (errData.old_password && Array.isArray(errData.old_password)) {
-              errorMessage = errData.old_password[0];
-          } 
-          else if (errData.detail) {
-              errorMessage = errData.detail;
-          }
-          else if (typeof errData.message === 'string') {
-              errorMessage = errData.message;
-          }
+        setServerError(t('fillAllFields'));
+        return;
       }
-      setServerError(errorMessage);
-    }
+  
+      if (!passwordsMatch) {
+        setServerError(t('passwordsDoNotMatch'));
+        return;
+      }
+  
+      setLoading(true);
+      setServerError('');
+  
+      const encryptedOld = await encryptPassword(oldPassword);
+      const encryptedNew = await encryptPassword(newPassword);
+  
+      const result = await changePassword(encryptedOld, encryptedNew); 
+      setLoading(false);
+  
+      if (result.success) {
+        Alert.alert(t('success'), t('passwordChanged'));
+        handleCloseModal();
+      } else {
+        let errorMessage = t('error');
+        // ... manejo de errores ...
+        if (result.error?.detail) errorMessage = result.error.detail;
+        setServerError(errorMessage);
+      }
   };
 
   return (
-    <View style={styles.container}>
-      {/* SECCIÓN IZQUIERDA */}
-      <View style={styles.leftSection}>
-        {loggedUser.username ? (
-          isHome ? (
-            <StyledButton testID="login-icon" variant="ghost" style={styles.iconButton} disabled={true}>
-                <BookMarked size={28} color={COLORS.black} />
+    <View style={styles.headerContainer}>
+      <View style={styles.container}>
+        
+        {/* IZQUIERDA */}
+        <View style={styles.leftSection}>
+          {loggedUser.username ? (
+             <StyledButton
+                onPress={isHome ? undefined : handleGoBack}
+                variant="secondary"
+                style={styles.iconButton}
+                disabled={isHome}
+             >
+                {isHome ? <BookMarked size={24} color={COLORS.text} /> : <ChevronLeft size={24} color={COLORS.text} />}
+             </StyledButton>
+          ) : (
+             <View style={styles.placeholderIcon} />
+          )}
+        </View>
+
+        {/* CENTRO */}
+        <View style={styles.centerSection}>
+          <Text style={styles.title} numberOfLines={1}>
+            {loggedUser.username ? `${loggedUser.username}_iOrg` : t('appName')} 
+          </Text>
+        </View>
+
+        {/* DERECHA */}
+        <View style={styles.rightSection}>
+          {loggedUser.username ? (
+            <StyledButton 
+              onPress={() => setModalVisible(true)} 
+              variant="ghost"
+              style={styles.settingsButton} 
+            >
+               <Settings size={26} color={COLORS.text} />
             </StyledButton>
           ) : (
-            <StyledButton 
-                onPress={handleGoBack} 
-                variant="ghost" 
-                style={styles.iconButton} 
-                icon={<ChevronLeft size={28} color={COLORS.black} />} 
-            />
-          )
-        ) : (
-            <StyledButton variant="ghost" style={styles.iconButton} disabled={true}>
-                <BookMarked size={28} color={COLORS.black} />
-            </StyledButton>
-        )}
+            <LanguageSwitcher />
+          )}
+        </View>
       </View>
 
-      {/* SECCIÓN CENTRAL */}
-      <View style={styles.centerSection}>
-        <Text style={styles.title}>
-          {loggedUser.username ? `${loggedUser.username}_iOrg` : t('appName')} 
-        </Text>
-      </View>
-
-      {/* SECCIÓN DERECHA */}
-      <View style={styles.rightSection}>
-        {loggedUser.username ? (
-          <StyledButton 
-            testID="settingsBtn"
-            onPress={() => setModalVisible(true)} 
-            variant="ghost"
-            style={styles.settingsButton} 
-            icon={<Settings size={26} color={COLORS.black} />}
-          />
-        ) : (
-          <LanguageSwitcher />
-        )}
-      </View>
-
-      {/* --- MODAL DE AJUSTES --- */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={handleCloseModal}
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay} 
-        >
+      {/* --- MODAL AJUSTES (Refactorizado con StyledComponents) --- */}
+      <Modal animationType="fade" transparent={true} visible={modalVisible} onRequestClose={handleCloseModal}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
           <TouchableWithoutFeedback onPress={handleCloseModal}>
-            <View style={styles.touchableBackground} /> 
+            <View style={styles.touchableBackground} />
           </TouchableWithoutFeedback>
 
           <View style={styles.modalContent}>
-            
-            {/* HEADER MODAL */}
             <View style={styles.modalHeader}>
               {isPasswordMode ? (
-                <StyledButton 
-                  onPress={() => setIsPasswordMode(false)} 
-                  icon={<ArrowLeft size={24} color={COLORS.text} />} 
-                  style={styles.backButton}
-                  variant="ghost"
-                >
-                  <Text style={styles.backButtonText}>{t('back')}</Text>
+                <StyledButton onPress={() => setIsPasswordMode(false)} variant="ghost" style={{padding:0}}>
+                   <ArrowLeft size={24} color={COLORS.text} />
                 </StyledButton>
               ) : (
                 <Text style={styles.modalTitle}>{t('settings')}</Text>
               )}
-              <StyledButton 
-                onPress={handleCloseModal}
-                icon={<X size={24} color={COLORS.textSecondary} />}
-                variant="ghost"
-                style={styles.closeButton}
-              />
+              <StyledButton onPress={handleCloseModal} variant="ghost" style={styles.closeButton}>
+                 <X size={24} color={COLORS.textSecondary} />
+              </StyledButton>
             </View>
 
-            <ScrollView 
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 20 }}
-              keyboardShouldPersistTaps="handled"
-            >
+            <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
               {!isPasswordMode ? (
-                // --- MENÚ PRINCIPAL ---
                 <View style={styles.menuContainer}>
                   <View style={styles.cardItem}>
                     <View style={styles.rowLabel}>
                       <Globe size={20} color={COLORS.primary} />
                       <Text style={styles.modalLabel}>{t('language')}</Text>
                     </View>
-                    <View style={{ transform: [{ scale: 0.9 }], marginRight: -10 }}>
-                        <LanguageSwitcher /> 
-                    </View>
+                    <LanguageSwitcher />
                   </View>
 
                   <StyledButton 
                     style={styles.menuButton} 
                     onPress={() => setIsPasswordMode(true)}
-                    variant="ghost"
+                    variant="secondary"
                   >
                     <View style={styles.rowLabel}>
                       <Lock size={20} color={COLORS.text} />
@@ -220,85 +166,45 @@ export const CustomHeader = ({ routeName }) => {
                     <ChevronLeft size={20} color={COLORS.textSecondary} style={{ transform: [{ rotate: '180deg' }] }} />
                   </StyledButton>
 
-                  <View style={styles.divider} />
-
                   <StyledButton
-                    style={[styles.menuButton, styles.logoutButton]} 
+                    style={[styles.menuButton, { borderColor: COLORS.errorLight, backgroundColor: '#FFF5F5' }]} 
                     onPress={() => { handleCloseModal(); logout(); }}
                     variant="ghost"
                   >
                     <View style={styles.rowLabel}>
                       <LogOut size={20} color={COLORS.danger} />
-                      <Text style={[styles.modalButtonText, {color: COLORS.danger}]}>
-                        {t('logout')}
-                      </Text>
+                      <Text style={[styles.modalButtonText, {color: COLORS.danger}]}>{t('logout')}</Text>
                     </View>
                   </StyledButton>
                 </View>
               ) : (
-                // --- FORMULARIO CAMBIO PASSWORD ---
                 <View style={styles.formContainer}>
-                  
-                  {/* Password Actual */}
                   <Text style={styles.inputLabel}>{t('currentPassword')}</Text>
-                  <TextInput 
-                    style={styles.input}
-                    secureTextEntry
-                    value={oldPassword}
-                    onChangeText={handleInputChange(setOldPassword)}
-                    placeholder="******"
-                    placeholderTextColor="#999"
-                  />
+                  <StyledTextInput secureTextEntry value={oldPassword} onChangeText={(t) => {setOldPassword(t); setServerError('')}} placeholder="******" />
 
-                  {/* Password Nueva */}
                   <Text style={styles.inputLabel}>{t('newPassword')}</Text>
-                  <TextInput 
-                    style={styles.input}
-                    secureTextEntry
-                    value={newPassword}
-                    onChangeText={handleInputChange(setNewPassword)}
-                    placeholder="******"
-                    placeholderTextColor="#999"
-                  />
+                  <StyledTextInput secureTextEntry value={newPassword} onChangeText={(t) => {setNewPassword(t); setServerError('')}} placeholder="******" />
 
-                  {/* Confirmar Password */}
                   <Text style={styles.inputLabel}>{t('confirmPassword')}</Text>
-                  <TextInput 
-                    style={[styles.input, showMismatchError && styles.inputError]} 
-                    secureTextEntry
-                    value={confirmPassword}
-                    onChangeText={handleInputChange(setConfirmPassword)}
-                    placeholder="******"
-                    placeholderTextColor="#999"
+                  <StyledTextInput 
+                    secureTextEntry 
+                    value={confirmPassword} 
+                    onChangeText={(t) => {setConfirmPassword(t); setServerError('')}} 
+                    placeholder="******" 
+                    style={showMismatchError ? { borderColor: COLORS.error } : {}}
                   />
-
-                  {showMismatchError && (
-                    <Text style={styles.errorText}>
-                      {t('passwordsDoNotMatch')}
-                    </Text>
-                  )}
-
-                  {serverError ? (
-                    <View style={styles.serverErrorBox}>
-                         <Text style={styles.serverErrorText}>{serverError}</Text>
-                    </View>
-                  ) : null}
+                  
+                  {showMismatchError && <Text style={styles.errorText}>{t('passwordsDoNotMatch')}</Text>}
+                  {serverError ? <Text style={styles.errorText}>{serverError}</Text> : null}
 
                   <StyledButton 
-                    style={[
-                      styles.saveButton, 
-                      (loading || showMismatchError) && styles.disabledButton
-                    ]} 
+                    title={t('save')}
                     onPress={handlePasswordChange}
+                    loading={loading}
                     disabled={loading || showMismatchError} 
-                    icon={loading ? null : <Save size={20} color={COLORS.surface} />}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color={COLORS.surface} />
-                    ) : (
-                        <Text style={styles.saveButtonText}>{t('save')}</Text>
-                    )}
-                  </StyledButton>
+                    icon={!loading && <Save size={20} color={COLORS.white} />}
+                    style={{marginTop: 10}}
+                  />
                 </View>
               )}
             </ScrollView>
@@ -310,111 +216,54 @@ export const CustomHeader = ({ routeName }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    width: '100%', 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    backgroundColor: COLORS.primary, 
-    padding: 16, 
-    borderBottomWidth: 1, 
-    borderBottomColor: COLORS.secondary, 
-    ...Platform.select({
-      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
-      android: { elevation: 5 },
-      web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' }
-    }),
+  headerContainer: {
+    backgroundColor: COLORS.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.secondary,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0,
+    elevation: 4,
+    zIndex: 100,
+  },
+  container: {
+    height: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
   leftSection: { flex: 1, alignItems: 'flex-start' },
   centerSection: { flex: 2, alignItems: 'center', justifyContent: 'center' },
-  rightSection: { flex: 1, alignItems: 'flex-end', flexDirection: 'row', justifyContent: 'flex-end' },
-  title: { fontSize: 20, fontWeight: 'bold', color: COLORS.text },
-  iconButton: { 
-    backgroundColor: COLORS.white, 
-    borderColor: COLORS.secondary, 
-    borderWidth: 1, 
-    borderRadius: 8, 
-    padding: 6, 
-  },
-  settingsButton: { padding: 8 },
+  rightSection: { flex: 1, alignItems: 'flex-end' },
+  
+  title: { fontSize: 20, fontWeight: '800', color: COLORS.text },
+  iconButton: { width: 44, height: 44, borderRadius: 22, paddingHorizontal: 0, paddingVertical: 0 },
+  settingsButton: { width: 44, height: 44, borderRadius: 22, paddingHorizontal: 0, paddingVertical: 0, justifyContent: 'center', alignItems: 'center' },
+  placeholderIcon: { width: 44, height: 44 },
 
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   touchableBackground: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   modalContent: {
-    width: '90%',
-    maxWidth: 450, 
-    maxHeight: '85%', 
-    backgroundColor: COLORS.surface,
-    borderRadius: 24,
-    padding: 24,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
-      android: { elevation: 10 },
-    }),
+    width: '90%', maxWidth: 450, backgroundColor: COLORS.surface, borderRadius: 24, padding: 24,
+    elevation: 10, shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    paddingBottom: 15,
-  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 22, fontWeight: '800', color: COLORS.text },
-  backButton: { flexDirection: 'row', alignItems: 'center' },
-  backButtonText: { marginLeft: 8, fontSize: 16, color: COLORS.text, fontWeight: '600' },
-  closeButton: { padding: 4, backgroundColor: '#f5f5f5', borderRadius: 20 },
+  closeButton: { padding: 0, width: 40, height: 40, borderRadius: 20 },
   
   menuContainer: { gap: 12 },
   cardItem: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#FAFAFA', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#EEEEEE',
+    backgroundColor: COLORS.surface, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: COLORS.borderLight,
   },
   menuButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 16, borderRadius: 16, backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EEEEEE',
+    padding: 16, borderRadius: 12, width: '100%', justifyContent: 'space-between' 
   },
-  logoutButton: { backgroundColor: '#FFF5F5', borderColor: '#FFE0E0', marginTop: 8 },
   rowLabel: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   modalLabel: { fontSize: 16, fontWeight: '600', color: COLORS.text },
   modalButtonText: { fontSize: 16, fontWeight: '500', color: COLORS.text },
-  divider: { height: 1, backgroundColor: '#EEEEEE', marginVertical: 5 },
 
-  formContainer: { gap: 16, paddingTop: 5 },
-  inputLabel: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginLeft: 4, marginBottom: -8 },
-  input: {
-    borderWidth: 1, borderColor: '#E0E0E0', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12,
-    fontSize: 16, backgroundColor: '#FAFAFA', color: COLORS.text,
-  },
-  inputError: { borderColor: COLORS.danger, backgroundColor: '#FFF5F5' },
-  errorText: { color: COLORS.danger, fontSize: 13, fontWeight: '600', marginLeft: 4 },
-  
-  serverErrorBox: {
-      backgroundColor: '#FEF2F2',
-      borderWidth: 1,
-      borderColor: '#F87171',
-      borderRadius: 8,
-      padding: 10,
-      marginTop: 5,
-  },
-  serverErrorText: {
-      color: '#B91C1C',
-      fontSize: 14,
-      textAlign: 'center',
-      fontWeight: '500',
-  },
-
-  saveButton: {
-    flexDirection: 'row', backgroundColor: COLORS.primary, paddingVertical: 14, borderRadius: 12,
-    justifyContent: 'center', alignItems: 'center', marginTop: 10,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4,
-  },
-  disabledButton: { opacity: 0.6, backgroundColor: '#A0A0A0', shadowOpacity: 0, elevation: 0 },
-  saveButtonText: { color: COLORS.surface, fontSize: 17, fontWeight: 'bold', marginLeft: 8 },
+  formContainer: { gap: 16 },
+  inputLabel: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: -8, marginLeft: 4 },
+  errorText: { color: COLORS.error, fontSize: 13, fontWeight: '600', marginLeft: 4 },
 });

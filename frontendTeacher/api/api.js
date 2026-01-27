@@ -1,9 +1,11 @@
 import axios from 'axios';
 import { getLanguage } from '../context/LanguageContext';
 
+export const API_BASE_URL = 'http://localhost:8000'; 
+
 export const apiClient = axios.create({
   // baseURL: 'https://api.franjpg.com/',
-  baseURL: 'http://localhost:8000',
+  baseURL: API_BASE_URL,
   timeout: 30000,
   // baseURL: 'http://localhost:8081/',
 });

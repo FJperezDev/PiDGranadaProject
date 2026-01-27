@@ -26,8 +26,7 @@ export const GameScreen = () => {
     if (!transcript || !isFocused || questions.length === 0) return;
 
     const spoken = normalizeText(transcript);
-    console.log("Comando oído en Game:", spoken);
-
+    
     if (spoken.includes('siguiente') || spoken.includes('next') || spoken.includes('continuar')) {
         handleNext();
         setTranscript('');
@@ -127,62 +126,71 @@ export const GameScreen = () => {
 
   const question = questions[currentQ];
   const selectedCode = answers[question.id];
+  const isLastQuestion = currentQ === questions.length - 1;
 
   return (
-    <ScrollView 
-      style={styles.mainContainer}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <Text style={styles.counterText}>
-        {`${currentQ + 1} / ${questions.length}`}
-      </Text>
+    <View style={styles.mainContainer}>
+      <ScrollView 
+        style={{ flex: 1, width: '100%' }}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.counterText}>
+          {`${currentQ + 1} / ${questions.length}`}
+        </Text>
 
-      <Text style={styles.questionText}>{question.text}</Text>
+        <Text style={styles.questionText}>{question.text}</Text>
 
-      <View style={styles.optionsContainer}>
-        {question.options.map((opt, index) => {
-          const isSelected = selectedCode === opt.code;
-          return (
-            <StyledButton
-              key={`${question.id}-opt-${index}`}
-              style={[
-                styles.optionButton,
-                isSelected ? styles.optionSelected : styles.optionUnselected
-              ]}
-              textStyle={{ color: COLORS.text }} 
-              onPress={() => handleSelectAnswer(question.id, opt.code)}
-            >
-              <Text style={{ textAlign: "center", fontSize: 16 }}>
-                {opt.text}
-              </Text>
-            </StyledButton>
-          );
-        })}
-      </View>
+        <View style={styles.optionsContainer}>
+          {question.options.map((opt, index) => {
+            const isSelected = selectedCode === opt.code;
+            
+            return (
+              <StyledButton
+                key={`${question.id}-opt-${index}`}
+                onPress={() => handleSelectAnswer(question.id, opt.code)}
+                // --- CAMBIO CLAVE: Usamos variants ---
+                variant={isSelected ? "primary" : "secondary"}
+                style={[
+                    styles.optionButton,
+                    isSelected && styles.selectedBorder // Borde extra para resaltar
+                ]}
+              >
+                {/* El color del texto lo controlamos aquí para asegurar contraste */}
+                <Text style={{ 
+                    textAlign: "center", 
+                    fontSize: 16,
+                    color: isSelected ? COLORS.text : COLORS.textSecondary 
+                }}>
+                  {opt.text}
+                </Text>
+              </StyledButton>
+            );
+          })}
+        </View>
 
-      {warning ? <Text style={styles.warningText}>{warning}</Text> : null}
+        {warning ? <Text style={styles.warningText}>{warning}</Text> : null}
 
-      <View style={styles.actionsContainer}>
-        <StyledButton
-          title={t("previous")}
-          onPress={handlePrev}
-          disabled={currentQ === 0}
-          style={{ backgroundColor: COLORS.borderLight }} 
-        />
-        <StyledButton
-          title={currentQ === questions.length - 1 ? t("finishGame") : t("next")}
-          onPress={handleNext}
-          style={[
-            styles.nextButton,
-            currentQ === questions.length - 1 ? styles.finishButton : styles.nextButtonDefault
-          ]}
-          textStyle={{ 
-            color: currentQ === questions.length - 1 ? COLORS.white : COLORS.text 
-          }}
-        />
-      </View>
-    </ScrollView>
+        <View style={styles.actionsContainer}>
+          {/* Botón Anterior: Variante 'ghost' para menos peso visual */}
+          <StyledButton
+            title={t("previous")}
+            onPress={handlePrev}
+            disabled={currentQ === 0}
+            variant="ghost"
+            style={{ width: '30%' }}
+          />
+          
+          {/* Botón Siguiente/Finalizar: Variante 'primary' o 'success' */}
+          <StyledButton
+            title={isLastQuestion ? t("finishGame") : t("next")}
+            onPress={handleNext}
+            variant={isLastQuestion ? "success" : "primary"}
+            style={{ width: '40%' }}
+          />
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
@@ -191,6 +199,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: COLORS.background,
   },
   mainContainer: {
     flex: 1,
@@ -215,52 +224,41 @@ const styles = StyleSheet.create({
   },
   questionText: {
     fontSize: 22,
-    fontWeight: "500",
+    fontWeight: "700", // Negrita consistente con ExamScreen
     textAlign: "center",
-    marginVertical: 20,
+    marginVertical: 32,
     color: COLORS.text,
+    lineHeight: 30,
   },
   optionsContainer: {
     width: "100%",
+    gap: 12, // Espacio uniforme entre botones
     marginBottom: 20,
   },
   optionButton: {
     width: "100%",
-    padding: 16,
-    marginBottom: 16,
-    borderRadius: 8,
+    paddingVertical: 16, // Altura cómoda
+    // Quitamos bordes/colores manuales, lo hace StyledButton
+  },
+  selectedBorder: {
+    borderColor: COLORS.primary,
     borderWidth: 2,
-  },
-  optionSelected: {
-    backgroundColor: COLORS.primaryVeryLight,
-    borderColor: COLORS.primaryLight,
-  },
-  optionUnselected: {
-    backgroundColor: COLORS.surface,
-    borderColor: COLORS.border,
   },
   warningText: {
     color: COLORS.error,
     marginTop: 10,
     marginBottom: 10,
     fontSize: 16,
-    textAlign: 'center'
+    textAlign: 'center',
+    fontWeight: '500'
   },
   actionsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     width: "100%",
-    marginTop: 10,
-  },
-  nextButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  nextButtonDefault: {
-    backgroundColor: COLORS.primaryLight,
-  },
-  finishButton: {
-    backgroundColor: COLORS.success,
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
   },
 });

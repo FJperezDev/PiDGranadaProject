@@ -1,0 +1,116 @@
+api:
+  dashboard: true
+  insecure: true
+
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+
+entryPoints:
+  web:
+    address: ":80"
+#    reusePort: true
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+  websecure:
+    address: ":443"
+#    reusePort: true
+    http:
+      tls:
+        certresolver: cloudflarev2
+        domains:
+          - main: franjpg.com
+            sans:
+              - "*.franjpg.com"
+
+#  web-local:
+#    address: "192.168.0.5:80"
+#    reusePort: true
+#    http:
+#      redirections:
+#        entryPoint:
+#          to: websecure-local
+#          scheme: https
+#          permanent: true
+
+#  websecure-local:
+#    address: "192.168.0.5:443"
+#    reusePort: true
+#    http:
+#      tls:
+#        certresolver: letsencrypt
+#        domains:
+#          - main: local.franjpg.com
+#            sans:
+#              - "*.local.franjpg.com"
+
+serversTransport:
+  maxIdleConnsPerHost: 1
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: proxy
+#  file:
+#    directory: "/etc/traefik/config"
+
+
+log:
+  level: INFO
+#  filePath: "/var/log/traefik/traefik.log"
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  bufferingSize: 100
+  fields:
+    defaultMode: keep
+    names:
+      ClientUsername: keep
+    headers:
+      defaultMode: keep
+      names:
+        Content-Type: keep
+        X-Forwarded-For: keep
+  filters:
+    # Solo guarda logs si el código es Error (400-599) o Redirección (300-399)
+    statusCodes:
+      - "300-399"
+      - "400-599"
+#    retryAttempts: true
+#    minDuration: "10ms"
+
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: franciscojavier.1763@gmail.com
+      storage: acme.json
+      httpChallenge:
+        entryPoint: web
+  cloudflarev2:
+    acme:
+      email: franciscojavier.1763@gmail.com
+      storage: acme.json
+      keyType: EC256
+      dnsChallenge:
+        provider: cloudflare
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
+        delayBeforeCheck: 45s
+        disablePropagationCheck: true
+
+#experimental:
+#  plugins:
+#    GeoBlock:
+#      moduleName: "github.com/PascalMinder/geoblock"
+#      version: "v0.2.5"
+#    torblock:
+#      moduleName: "github.com/jpxd/torblock"
+#      version: "v0.1.1"

@@ -26,8 +26,7 @@ export const ExamRecommendationsScreen = ({ route }) => {
       if (!transcript || !isFocused) return;
   
       const spoken = normalizeText(transcript);
-      console.log("Comando oído en Recommendations:", spoken);
-  
+      
       if (
           spoken.includes('terminar') || 
           spoken.includes('finalizar') || 

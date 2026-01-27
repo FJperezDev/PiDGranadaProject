@@ -1,13 +1,14 @@
+import React from 'react';
+import { View, Text, StyleSheet, SafeAreaView, Platform, StatusBar } from 'react-native';
+import { ChevronLeft, BookMarked, LogOutIcon, Mic, MicOff } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import { COLORS } from '../constants/colors';
+import { StyledButton } from '../components/StyledButton';
 import { useLanguage } from '../context/LanguageContext';
 import { useVoiceControl } from '../context/VoiceContext';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { ChevronLeft, BookMarked, LogOutIcon, Mic, MicOff } from 'lucide-react-native';
-import { View, Text, StyleSheet } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
-import { COLORS } from '../constants/colors';
-import { StyledButton } from '../components/StyledButton';
 
-export const CustomHeader = ({routeName}) => {
+export const CustomHeader = ({ routeName }) => {
   const { t } = useLanguage();
   const navigation = useNavigation();
   const { isListening, toggleListening } = useVoiceControl();
@@ -24,123 +25,148 @@ export const CustomHeader = ({routeName}) => {
   const logout = routeName === 'Subject';
   const isHome = routeName === 'Home';
 
+  // Lógica para el icono izquierdo
+  const renderLeftIcon = () => {
+    if (hideBack && !isHome) return <View style={styles.placeholderIcon} />;
+
+    const IconComponent = isHome ? BookMarked : (logout ? LogOutIcon : ChevronLeft);
+    const onPressAction = isHome ? undefined : () => (logout ? navigation.navigate('Home') : handleGoBack());
+    
+    // Si es Home, mostramos solo el icono decorativo o acción si la hubiera
+    // Si no es Home, es un botón navegable
+    return (
+      <StyledButton
+        onPress={onPressAction}
+        variant="secondary" // Círculo blanco
+        style={styles.iconButton}
+        // Si es Home y no hace nada, desactivamos feedback visual excesivo
+        disabled={isHome} 
+      >
+        <IconComponent 
+          size={24} 
+          color={COLORS.text} 
+          style={logout ? { transform: [{ rotate: '180deg' }] } : {}}
+        />
+      </StyledButton>
+    );
+  };
+
   return (
-    <View style={styles.container}>
-      {/* Left Section */}
-      <View style={styles.leftSection}>
+    <View style={styles.headerContainer}>
+      {/* Ajuste para Status Bar en Android si es necesario, 
+          aunque SafeAreaView suele encargarse en contenedores padre */}
+      <View style={styles.container}>
         
-        {!hideBack && isHome ? (
-          <StyledButton
-            activeOpacity={0.7}
-            style={styles.iconButton}
+        {/* IZQUIERDA */}
+        <View style={styles.leftSection}>
+          {renderLeftIcon()}
+        </View>
+
+        {/* CENTRO */}
+        <View style={styles.centerSection}>
+          <Text style={styles.title} numberOfLines={1}>
+            {t('appName')}
+          </Text>
+        </View>
+
+        {/* DERECHA */}
+        <View style={styles.rightSection}>
+          {/* Botón Micrófono */}
+          <StyledButton 
+            onPress={toggleListening}
+            // Rojo si escucha, Transparente (ghost) si no
+            variant={isListening ? "danger" : "ghost"} 
+            style={[
+              styles.micButton,
+              // Si no escucha, le damos un fondo sutil semitransparente en lugar de ghost puro
+              !isListening && { backgroundColor: 'rgba(255,255,255,0.5)' } 
+            ]}
           >
-            <BookMarked size={28} color={COLORS.black} />
-          </StyledButton>
-        ): !hideBack && (
-          <StyledButton
-            onPress={() => (logout ? navigation.navigate('Home') : handleGoBack())}
-            activeOpacity={0.7}
-            style={styles.iconButton}
-          >
-            {isHome ? (
-              <BookMarked size={28} color={COLORS.black} />
-            ) : logout ? (
-              <LogOutIcon
-                size={28}
-                color={COLORS.black}
-                style={{ transform: [{ rotate: '180deg' }] }}
-              />
+            {isListening ? (
+                <Mic size={20} color={COLORS.white} />
             ) : (
-              <ChevronLeft size={28} color={COLORS.black} />
-            )
-            }
+                <MicOff size={20} color={COLORS.text} />
+            )}
           </StyledButton>
           
-        )}
-      </View>
+          <LanguageSwitcher />
+        </View>
 
-      {/* Center Section */}
-      <View style={styles.centerSection}>
-        <Text style={styles.title}>{t('appName')}</Text>
-      </View>
-
-      {/* Right Section */}
-      <View style={styles.rightSection}>
-        <StyledButton 
-          onPress={toggleListening}
-          style={[
-              styles.micButton, 
-              isListening && styles.micButtonActive
-          ]}
-        >
-          {isListening ? (
-              <Mic size={20} color="#fff" />
-          ) : (
-              <MicOff size={20} color={COLORS.text} />
-          )}
-        </StyledButton>
-        
-        <LanguageSwitcher />
       </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  headerContainer: {
+    backgroundColor: COLORS.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.secondary, // Slate-400
+    // Sombra suave para separar del contenido
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 4,
+    zIndex: 100,
+    // Padding superior para respetar el Status Bar en algunos Androids sin SafeArea
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0,
+  },
   container: {
-    width: '100%',
+    height: 64, // Altura estándar cómoda
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.primary, // tu color cyan-50
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.secondary,
-    shadowColor: COLORS.black,
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    paddingHorizontal: 16,
   },
+  
+  // Secciones Flexibles
   leftSection: {
     flex: 1,
     alignItems: 'flex-start',
   },
   centerSection: {
-    flex: 2,
+    flex: 2, // Más espacio para el título
     alignItems: 'center',
     justifyContent: 'center',
   },
   rightSection: {
-    flex: 1,
-    alignItems: 'flex-end',
+    flex: 1.5, // Un poco más de espacio a la derecha por tener 2 botones
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'flex-end',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  iconButton: {
-    backgroundColor: COLORS.white,
-    borderColor: COLORS.secondary,
-    borderWidth: 1,
-    borderRadius: 999,
-    padding: 6,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
+    gap: 8, // Espacio uniforme entre micro e idioma
   },
 
-  micButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#f1f5f9', // slate-100
-    marginLeft: 8,
+  // Elementos
+  title: {
+    fontSize: 20,
+    fontWeight: '800', // Extra bold para el nombre de la app
+    color: COLORS.text, // Slate-900 para contraste
+    letterSpacing: 0.5,
   },
-  micButtonActive: {
-    backgroundColor: '#ef4444', // red-500
-  }
+  
+  // Botones
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22, // Redondo perfecto
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderIcon: {
+    width: 44, 
+    height: 44,
+  },
+  micButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

@@ -4,6 +4,12 @@ from apps.utils.mixins import LanguageSerializerMixin
 from apps.content.domain import selectors
 
 class LongEpigraphSerializer(serializers.ModelSerializer):
+    # Forzamos que sean campos de texto y opcionales si quieres
+    description_es = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    description_en = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    name_es = serializers.CharField(required=True)
+    name_en = serializers.CharField(required=True)
+
     class Meta:
         model = Epigraph
         fields = [

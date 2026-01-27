@@ -2,7 +2,7 @@ import { useLanguage } from "../context/LanguageContext";
 import { useState, useEffect } from "react";
 import { mockApi } from "../services/api";
 import { ContentModal } from "../components/ContentModal";
-import { ConceptModal } from "../components/ConceptModal"; 
+import { ConceptModal } from "../components/ConceptModal";
 import { StyledButton } from "../components/StyledButton";
 import { View, Text, StyleSheet, ScrollView, Platform, ActivityIndicator, useWindowDimensions } from "react-native";
 import { COLORS } from "../constants/colors";
@@ -216,21 +216,32 @@ export const TopicDetailScreen = ({ route }) => {
                     {topicData.concepts && topicData.concepts.length > 0 ? (
                         topicData.concepts.map((item) => (
                         <StyledButton 
-                            style={styles.conceptCard} 
                             key={`concept-${item.id}`} 
                             onPress={() => handleConceptPress(item)}
+                            variant="secondary" // Fondo blanco con borde sutil
+                            style={styles.conceptCard} 
+                            // Eliminamos padding del StyledButton base para controlarlo nosotros
+                            // o dejamos que StyledButton lo maneje y ajustamos internamente.
+                            // En este caso, el style 'conceptCard' añade la personalización.
                         >
-                            <View style={styles.cardHeader}>
-                                <Text style={styles.itemTitle}>{item.name}</Text>
-                                {item.related_concepts && item.related_concepts.length > 0 && (
-                                    <View style={styles.badge}>
-                                        <Text style={styles.badgeText}>{item.related_concepts.length}</Text>
-                                    </View>
-                                )}
+                            <View style={styles.cardContentWrapper}>
+                                <View style={styles.cardHeader}>
+                                    <Text style={styles.itemTitle} numberOfLines={2}>
+                                        {item.name}
+                                    </Text>
+                                    
+                                    {item.related_concepts && item.related_concepts.length > 0 && (
+                                        <View style={styles.badge}>
+                                            <Ionicons name="git-network-outline" size={12} color={COLORS.primary} style={{ marginRight: 4 }} />
+                                            <Text style={styles.badgeText}>{item.related_concepts.length}</Text>
+                                        </View>
+                                    )}
+                                </View>
+                                
+                                <Text style={styles.itemSubtitle} numberOfLines={2}>
+                                    {item.description}
+                                </Text>
                             </View>
-                            <Text style={styles.itemSubtitle} numberOfLines={3}>
-                                {item.description}
-                            </Text>
                         </StyledButton>
                         ))
                     ) : (
@@ -424,36 +435,32 @@ const styles = StyleSheet.create({
   },
 
   conceptCard: {
-    backgroundColor: COLORS.surface,
-    padding: 20,
-    borderRadius: 18,
-    marginBottom: 16,
+    marginBottom: 12,
     width: '100%',
-    alignItems: 'stretch',
+    justifyContent: 'flex-start', // Alineación importante para StyledButton
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    // El borde izquierdo de acento
     borderLeftWidth: 4,
     borderLeftColor: COLORS.primary,
-    ...Platform.select({
-      ios: {
-        shadowColor: COLORS.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: { elevation: 3 },
-      web: { boxShadow: '0px 2px 8px rgba(0,0,0,0.05)' }
-    }),
+    // Aseguramos que el botón no centre el contenido horizontalmente por defecto
+    alignItems: 'stretch', 
+  },
+  cardContentWrapper: {
+    width: '100%',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start', // Alineación superior por si el título tiene 2 líneas
+    marginBottom: 6,
   },
   itemTitle: {
     fontSize: 17,
     fontWeight: "700",
     color: COLORS.text,
-    flex: 1,
+    flex: 1, // CLAVE: Esto permite que el texto se encoja si es necesario
+    marginRight: 10, // Espacio entre título y badge
   },
   itemSubtitle: {
     fontSize: 14,
@@ -461,15 +468,19 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   badge: {
-    backgroundColor: COLORS.background, 
-    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primaryVeryLight, // Fondo suave (cyan-100)
+    borderRadius: 12, // Más redondeado
     paddingHorizontal: 8,
     paddingVertical: 4,
-    marginLeft: 8,
+    flexShrink: 0, // CLAVE: Impide que el badge se aplaste
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
   },
   badgeText: {
-    color: COLORS.secondary,
-    fontSize: 11,
+    color: COLORS.primary, // Texto oscuro (cyan-700/800)
+    fontSize: 12,
     fontWeight: '800',
   },
   

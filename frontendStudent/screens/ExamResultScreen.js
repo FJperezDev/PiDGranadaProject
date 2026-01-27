@@ -1,14 +1,14 @@
-import { useEffect, useState, useRef } from "react"; // Añadido useRef
-import { View, Text, ScrollView, StyleSheet, Platform, ActivityIndicator } from "react-native"; // Añadido ActivityIndicator
+import { useEffect, useState, useRef } from "react";
+import { View, Text, ScrollView, StyleSheet, Platform, ActivityIndicator } from "react-native";
 import { useLanguage } from "../context/LanguageContext";
 import { StyledButton } from "../components/StyledButton";
 import { COLORS } from "../constants/colors"; 
 import { useIsFocused } from "@react-navigation/native";
 import { useVoiceControl } from "../context/VoiceContext";
-import { mockApi } from "../services/api"; // Importamos mockApi para traducir
+import { mockApi } from "../services/api";
 
 export const ExamResultScreen = ({ route, navigation }) => {
-  const { t, language } = useLanguage(); // Traemos 'language'
+  const { t, language } = useLanguage();
   const isFocused = useIsFocused();
   const { transcript, setTranscript } = useVoiceControl();
   
@@ -16,44 +16,40 @@ export const ExamResultScreen = ({ route, navigation }) => {
     code, 
     score, 
     total, 
-    recommendations, 
-    questions = [], // Fallback a array vacío
+    // recommendations, // No se usa en esta pantalla según tu lógica actual
+    questions = [], 
     userAnswers = {}
   } = route.params;
 
-  // Estado local para las preguntas (para poder traducirlas)
   const [examQuestions, setExamQuestions] = useState(questions);
   const [isTranslating, setIsTranslating] = useState(false);
   const isInitialMount = useRef(true);
-
-  const handleContinue = () => {
-    navigation.navigate("ExamRecommendations", {
-      code,
-      recommendations,
-      score,
-      total,
-    });
-  };
 
   const normalizeText = (text) => {
     return text ? text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : "";
   };
 
-  // --- Efecto para Control de Voz (Sin cambios) ---
+  // Función unificada para terminar la revisión
+  const handleEndRevision = () => {
+    navigation.navigate('Subject', { code: code });
+  };
+
+  // --- Voice Control ---
   useEffect(() => {
     if (!transcript || !isFocused) return;
 
     const spoken = normalizeText(transcript);
-    console.log("Comando oído en ExamResult:", spoken);
-
+    
+    // Comandos para terminar/continuar
     if (
         spoken.includes('siguiente') || 
-        spoken.includes('recomendaciones') || 
+        spoken.includes('terminar') || 
+        spoken.includes('finalizar') || 
         spoken.includes('continuar') || 
         spoken.includes('next') || 
-        spoken.includes('recommendations')
+        spoken.includes('finish')
     ) {
-        handleContinue();
+        handleEndRevision();
         setTranscript('');
         return;
     }
@@ -70,12 +66,10 @@ export const ExamResultScreen = ({ route, navigation }) => {
         return;
     }
 
-  }, [transcript, isFocused, navigation]);
+  }, [transcript, isFocused, navigation, code]);
 
-  // --- NUEVO: Efecto para Traducir Preguntas al cambiar idioma ---
+  // --- Traducción de preguntas ---
   useEffect(() => {
-    // Evitamos traducir en la primera carga si ya vienen en el idioma correcto,
-    // o puedes quitar esta guarda si prefieres forzar la traducción siempre.
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
@@ -86,11 +80,8 @@ export const ExamResultScreen = ({ route, navigation }) => {
     const translateQuestions = async () => {
       setIsTranslating(true);
       try {
-        // Mapeamos todas las preguntas actuales para pedir su traducción
         const translationPromises = examQuestions.map(q => mockApi.getQuestion(q.id));
         const translatedQuestions = await Promise.all(translationPromises);
-        
-        // Actualizamos el estado con las nuevas preguntas traducidas
         setExamQuestions(translatedQuestions);
       } catch (error) {
         console.error("Error traduciendo resultados:", error);
@@ -100,7 +91,7 @@ export const ExamResultScreen = ({ route, navigation }) => {
     };
 
     translateQuestions();
-  }, [language]); // Se ejecuta cada vez que 'language' cambia
+  }, [language]);
 
   return (
     <View style={styles.container}>
@@ -113,19 +104,15 @@ export const ExamResultScreen = ({ route, navigation }) => {
         </Text>
       </View>
 
-      {/* Si se está traduciendo, mostramos un loader, si no, la lista */}
       {isTranslating ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <Text style={{ marginTop: 10, color: COLORS.textSecondary }}>{t('loading')}</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollContainer}>
+        <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           {examQuestions.map((q, index) => {
             const userAnswerId = userAnswers[q.id];
-            
-            // Buscamos la opción seleccionada por el usuario en la pregunta (traducida o no)
-            // NOTA: Asumimos que los IDs de las respuestas NO cambian al traducir.
             const selectedOption = q.answers.find(opt => opt.id === userAnswerId);
             const isQuestionAnsweredCorrectly = selectedOption?.is_correct === true;
             
@@ -141,10 +128,15 @@ export const ExamResultScreen = ({ route, navigation }) => {
                     const isCorrectOption = opt.is_correct === true;
 
                     let optionStyle = styles.optionDefault;
-                    let textStyle = styles.optionTextDefault;
+                    // Ajuste visual para el texto según el estado
+                    let textStyle = { 
+                        fontSize: 16, 
+                        color: COLORS.text 
+                    };
 
                     if (isSelected && isCorrectOption) {
                       optionStyle = styles.optionCorrect; 
+                      textStyle.fontWeight = 'bold';
                     } else if (isSelected && !isCorrectOption) {
                       optionStyle = styles.optionWrong; 
                     } else if (!isSelected && isCorrectOption) {
@@ -177,10 +169,13 @@ export const ExamResultScreen = ({ route, navigation }) => {
 
       <View style={styles.footer}>
         <StyledButton 
-            title={t('next')} 
-            onPress={handleContinue} 
+            title={t('endRevision')} 
+            // 👇 AQUÍ ESTABA EL ERROR. Ahora usa la función arrow o la referencia.
+            onPress={handleEndRevision} 
+            variant="primary" // Usamos el sistema de diseño
+            size="large"
             style={styles.nextButton} 
-            disabled={isTranslating} // Deshabilitar si carga
+            disabled={isTranslating}
         />
       </View>
     </View>
@@ -208,21 +203,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.text,
     marginTop: 20,
-    marginBottom: 10,
+    marginBottom: 20,
   },
   scoreContainer: {
-    marginBottom: 20,
-    padding: 10,
+    marginBottom: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    elevation: 2,
+    borderRadius: 16,
+    elevation: 3,
     shadowColor: COLORS.shadow,
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   scoreText: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '800',
     color: COLORS.primary, 
   },
   scrollContainer: {
@@ -231,30 +228,31 @@ const styles = StyleSheet.create({
   },
   questionCard: {
     backgroundColor: COLORS.surface,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.05)' }
+      ? { boxShadow: '0px 2px 4px rgba(0,0,0,0.05)' }
       : { elevation: 2 }),
   },
   questionStatement: {
     fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: COLORS.textSecondary,
+    fontWeight: '700',
+    marginBottom: 16,
+    color: COLORS.text,
+    lineHeight: 26,
   },
   optionsList: {
-    marginBottom: 10,
+    marginBottom: 12,
+    gap: 10,
   },
   optionBase: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: COLORS.border, // Borde por defecto más suave
     backgroundColor: COLORS.surface,
   },
   optionDefault: {
@@ -269,39 +267,39 @@ const styles = StyleSheet.create({
     borderColor: COLORS.error, 
   },
   optionMissedCorrect: { 
-    backgroundColor: COLORS.successLight, 
+    backgroundColor: COLORS.surface, 
     borderColor: COLORS.successBorder,
     borderStyle: 'dashed', 
-  },
-  optionTextDefault: {
-    fontSize: 16,
-    color: COLORS.text,
+    borderWidth: 2,
   },
   explanationContainer: {
-    marginTop: 10,
-    padding: 12,
+    marginTop: 16,
+    padding: 16,
     backgroundColor: COLORS.warningLight, 
     borderLeftWidth: 4,
     borderLeftColor: COLORS.warning, 
-    borderRadius: 4,
+    borderRadius: 8,
   },
   explanationLabel: {
     fontWeight: 'bold',
     color: COLORS.warningText,
-    marginBottom: 4,
+    marginBottom: 6,
+    fontSize: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   explanationText: {
     fontSize: 15,
     color: COLORS.warningDark,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   footer: {
     width: '100%',
-    paddingTop: 10,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
   },
   nextButton: {
-    backgroundColor: COLORS.primary, 
-    padding: 16,
-    borderRadius: 10,
+    width: '100%', // El StyledButton con size="large" ya maneja el padding
   },
 });

@@ -1,28 +1,26 @@
-import { useLanguage } from '../context/LanguageContext';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { Languages } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
 import { StyledButton } from './StyledButton';
+import { useLanguage } from '../context/LanguageContext';
 
 export const LanguageSwitcher = () => {
   const { language, toggleLanguage } = useLanguage();
 
   const handleToggle = () => {
-    const newLang = language === 'es' ? 'en' : 'es';
-    toggleLanguage(newLang);
+    toggleLanguage(language === 'es' ? 'en' : 'es');
   };
 
   return (
     <StyledButton
       onPress={handleToggle}
+      variant="secondary"
+      size="small"
       style={styles.button}
-      variant='ghost'
     >
-      <View style={styles.iconContainer}>
-        <Languages size={18} color={COLORS.black} />
-      </View>
-
-      <View style={styles.textContainer}>
+      <View style={styles.content}>
+        <Languages size={18} color={COLORS.text} />
         <Text style={styles.text}>
           {language === 'es' ? 'ES' : 'EN'}
         </Text>
@@ -33,36 +31,17 @@ export const LanguageSwitcher = () => {
 
 const styles = StyleSheet.create({
   button: {
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  content: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.white,
-    borderColor: COLORS.secondary,
-    borderWidth: 1.5,
-    borderRadius: 8, 
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    ...Platform.select({
-      ios: { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4 },
-      android: { elevation: 5 },
-      web: { boxShadow: '0px 4px 12px rgba(0,0,0,0.15)' }
-    }),
-  },
-  iconContainer: {
-    flex: 1,
-    alignItems: 'flex-start',
-  },
-  textContainer: {
-    flex: 1,
-    alignItems: 'flex-end',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    width: '100%',
+    gap: 6,
   },
   text: {
-    color: COLORS.black,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    color: COLORS.text,
+    fontWeight: '700',
     fontSize: 14,
   },
 });

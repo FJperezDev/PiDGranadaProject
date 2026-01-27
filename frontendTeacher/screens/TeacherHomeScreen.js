@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Platform, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions, Platform, Alert, ActivityIndicator } from "react-native";
 import { AuthContext } from "../context/AuthContext";
 import { useLanguage } from '../context/LanguageContext';
 import { COLORS } from "../constants/colors";
 import { Users, FileQuestion, BookOpen, BarChart3, UserPlus, ClipboardList, UploadCloud } from "lucide-react-native";
 import * as DocumentPicker from 'expo-document-picker';
 import { importContentFromExcel } from '../api/backupRequests';
+import { StyledButton } from '../components/StyledButton';
 
 export default function UserHomeScreen({ navigation }) {
   const { isSuper, onRefresh } = useContext(AuthContext);
@@ -52,7 +53,7 @@ export default function UserHomeScreen({ navigation }) {
     { title: t('statistics'), icon: BarChart3, testID:"statisticsBtn", onPress: () => navigation.navigate("Analytics") },
     ...(isSuper
       ? [
-          { title: t('inviteTeacher'), icon: UserPlus, testID:"inviteTeacherBtn", onPress: () => navigation.navigate("InviteTeacher") },
+          { title: t('inviteTeacher'), icon: UserPlus, testID:"inviteTeacherBtn", onPress: () => navigation.navigate("InviteTeacher") }, // Corregido a ManageUsers
           { title: t('logs'), icon: ClipboardList, testID:"logsBtn", onPress: () => navigation.navigate("BackupManager") },
           { title: t('importExcel'), icon: UploadCloud, testID:"importExcelBtn", onPress: handleUploadExcel }, 
         ]
@@ -63,42 +64,42 @@ export default function UserHomeScreen({ navigation }) {
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={[styles.container, { maxWidth: width > 600 ? 800 : "100%" }]}>
-        <Text style={styles.title}>{t('panel')}</Text>
+      <View style={[styles.container, { maxWidth: width > 600 ? 900 : "100%" }]}>
+        
+        <View style={styles.header}>
+            <Text style={styles.title}>{t('panel')}</Text>
+            <Text style={styles.subtitle}>{t('teachingManagement')}</Text>
+        </View>
 
         {uploading && (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={COLORS.primary} />
-                <Text style={{marginTop: 10, color: COLORS.text}}>{t('importing')}</Text>
+                <Text style={styles.loadingText}>{t('importing')}</Text>
             </View>
         )}
 
-        <View
-          style={[
-            styles.menuGrid,
-            {
-              flexDirection: width < 600 ? "column" : "row",
-              flexWrap: width > 600 ? "wrap" : "nowrap",
-            },
-          ]}
-        >
+        <View style={styles.grid}>
           {menuItems.map((item, index) => {
             const Icon = item.icon;
+            // Calculamos el ancho restando el gap
+            const cardWidth = width > 600 ? `${(100 / numColumns) - 2}%` : "100%";
+            
             return (
-              <TouchableOpacity
-                testID={item.testID}
+              <StyledButton
                 key={index}
-                style={[
-                  styles.menuButton,
-                  { width: width > 600 ? `${100 / numColumns - 4}%` : "100%" },
-                ]}
-                activeOpacity={0.8}
+                testID={item.testID}
                 onPress={item.onPress}
                 disabled={uploading}
+                variant="secondary" // Base blanca
+                style={[styles.card, { width: cardWidth }]}
               >
-                <Icon size={40} color={COLORS.primaryDark} />
-                <Text style={styles.menuText}>{item.title}</Text>
-              </TouchableOpacity>
+                <View style={styles.cardContent}>
+                    <View style={styles.iconCircle}>
+                        <Icon size={32} color={COLORS.primary} />
+                    </View>
+                    <Text style={styles.menuText}>{item.title}</Text>
+                </View>
+              </StyledButton>
             );
           })}
         </View>
@@ -110,68 +111,81 @@ export default function UserHomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
     padding: 20,
     backgroundColor: COLORS.background,
+    alignItems: 'center'
   },
   container: {
     width: "100%",
-    alignItems: "center",
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 24,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 2px 4px rgba(0,0,0,0.1)' }
-      : {
-          shadowColor: COLORS.shadow,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 3,
-        }),
+    alignItems: "stretch",
+  },
+  header: {
+    marginBottom: 30,
+    alignItems: 'center'
   },
   title: {
-    fontSize: 26,
-    fontWeight: "bold",
+    fontSize: 32,
+    fontWeight: "800",
     color: COLORS.text,
-    marginBottom: 20,
+    marginBottom: 4,
     textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    fontWeight: '500'
   },
   loadingContainer: {
       marginBottom: 20,
-      alignItems: 'center'
+      alignItems: 'center',
+      padding: 20,
+      backgroundColor: COLORS.surface,
+      borderRadius: 12
   },
-  menuGrid: {
-    width: "100%",
-    justifyContent: "center",
-    alignItems: "center",
+  loadingText: {
+      marginTop: 10, 
+      color: COLORS.text,
+      fontWeight: '600'
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
+    justifyContent: 'center'
   },
-  menuButton: {
-    backgroundColor: COLORS.primaryLight,
+  card: {
+    height: 160,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.secondary,
-    borderRadius: 14,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    margin: 6,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.08)' }
-      : {
-          shadowColor: COLORS.shadow,
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.08,
-          shadowRadius: 3,
-          elevation: 2,
-        }),
+    borderColor: COLORS.borderLight,
+    paddingHorizontal: 0, 
+    paddingVertical: 0,
+    // Sobreescribimos sombras del StyledButton para hacerlas más suaves
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3
+  },
+  cardContent: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      height: '100%'
+  },
+  iconCircle: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: COLORS.primaryVeryLight,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16
   },
   menuText: {
-    marginTop: 12,
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
     textAlign: "center",
     color: COLORS.text,
   },

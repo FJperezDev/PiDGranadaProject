@@ -28,8 +28,7 @@ export const SubjectScreen = ({ route }) => {
     if (!transcript || !isFocused) return;
 
     const spoken = normalizeText(transcript);
-    console.log("Comando oído en SubjectScreen:", spoken);
-
+    
     // --- A. Comandos de Navegación General ---
     if (spoken.includes('volver') || spoken.includes('atras') || spoken.includes('back')) {
         if (navigation.canGoBack()) navigation.goBack();
@@ -103,7 +102,7 @@ export const SubjectScreen = ({ route }) => {
     >
       <View style={styles.topicContent}>
         <Text style={styles.topicTitle}>
-          {item.order_id + ". " + item.title}
+          {item.title}
         </Text>
         <Text style={styles.topicDescription} numberOfLines={2}>
           {item.description}

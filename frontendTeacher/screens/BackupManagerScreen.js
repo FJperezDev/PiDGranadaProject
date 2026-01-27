@@ -3,7 +3,6 @@ import {
   View, 
   Text, 
   FlatList, 
-  TouchableOpacity, 
   Alert, 
   ActivityIndicator, 
   StyleSheet, 
@@ -12,10 +11,13 @@ import {
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as SecureStore from 'expo-secure-store'; // Asegúrate de importar esto si lo usas
 import { getBackups, generateBackup, restoreBackup, deleteBackup } from '../api/backupRequests';
-import { apiClient } from "../api/api.js"
+import { apiClient, API_BASE_URL } from "../api/api.js"
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
+import { StyledButton } from '../components/StyledButton';
+import { Download, RotateCcw, Trash2, Plus, FileText, Database } from 'lucide-react-native';
 
 export default function BackupManagerScreen() {
   const [backups, setBackups] = useState([]);
@@ -65,7 +67,7 @@ export default function BackupManagerScreen() {
   };
 
   const handleDelete = (id) => {
-    const confirmMsg = t('deleteGroupConfirm'); // Reutilizamos texto o creamos específico
+    const confirmMsg = t('deleteGroupConfirm'); 
     if (Platform.OS === 'web') {
         if (confirm(confirmMsg)) {
             performDelete(id);
@@ -96,7 +98,6 @@ export default function BackupManagerScreen() {
 
   const handleRestore = (id) => {
     const msg = t('restoreConfirm');
-    
     if (Platform.OS === 'web') {
         if (confirm(msg)) {
             performRestore(id);
@@ -127,12 +128,9 @@ export default function BackupManagerScreen() {
   };
 
   const downloadFile = async (backupId, fileName) => {
-    // Ruta relativa
     const downloadPath = `/backups/${backupId}/download/`; 
 
-    // ------------------------------------------------
-    // 1. LÓGICA WEB (Se queda igual, usa apiClient)
-    // ------------------------------------------------
+    // WEB
     if (Platform.OS === 'web') {
       try {
         setProcessing(true);
@@ -153,51 +151,37 @@ export default function BackupManagerScreen() {
       return;
     }
 
-    // ------------------------------------------------
-    // 2. LÓGICA NATIVE (iOS / Android)
-    // ------------------------------------------------
+    // NATIVE
     try {
         setProcessing(true);
-        
-        // A: Definir ruta local donde se guardará temporalmente
         const fileUri = FileSystem.documentDirectory + fileName;
-
-        // B: Recuperar el Token manualmente 
-        // (Esto es CRÍTICO porque FileSystem no usa tu apiClient)
-        // Opción 1: Si usas SecureStore:
         const token = await SecureStore.getItemAsync('access_token'); 
-        // Opción 2: Si lo tienes en el contexto, úsalo directamente: auth.token
 
-        if (!token) {
-            throw new Error("No hay token de autenticación");
-        }
+        if (!token) throw new Error("No token");
 
-        // C: URL Completa necesaria
         const fullUrl = `${API_BASE_URL}${downloadPath}`;
 
-        // D: Descargar usando FileSystem con Headers manuales
         const downloadRes = await FileSystem.downloadAsync(
             fullUrl,
             fileUri,
             {
                 headers: {
-                    'Authorization': `Bearer ${token}`, // <--- LA CLAVE ESTÁ AQUÍ
+                    'Authorization': `Bearer ${token}`, 
                 }
             }
         );
 
         if (downloadRes.status !== 200) {
-            throw new Error("Error en la descarga del servidor");
+            throw new Error("Error en la descarga");
         }
 
-        // E: Compartir / Guardar archivo
         if (await Sharing.isAvailableAsync()) {
             await Sharing.shareAsync(downloadRes.uri, {
-                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // Opcional, ayuda a Android
+                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 dialogTitle: 'Guardar Backup'
             });
         } else {
-            Alert.alert(t('success'), "Archivo descargado en: " + downloadRes.uri);
+            Alert.alert(t('success'), "Archivo descargado: " + downloadRes.uri);
         }
 
     } catch (e) {
@@ -210,6 +194,12 @@ export default function BackupManagerScreen() {
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
+      <View style={styles.iconColumn}>
+        <View style={styles.fileIconBox}>
+            <FileText size={24} color={COLORS.primary} />
+        </View>
+      </View>
+
       <View style={styles.infoContainer}>
         <Text style={styles.fileName} numberOfLines={1} ellipsizeMode="middle">
             {item.file_name}
@@ -218,7 +208,7 @@ export default function BackupManagerScreen() {
         
         <View style={styles.metaRow}>
             <View style={[styles.badge, item.is_auto_generated ? styles.badgeAuto : styles.badgeManual]}>
-                <Text style={styles.badgeText}>
+                <Text style={[styles.badgeText, item.is_auto_generated ? {color: COLORS.danger} : {color: COLORS.primaryDark}]}>
                     {item.is_auto_generated ? t('auto') : t('manual')}
                 </Text>
             </View>
@@ -227,35 +217,55 @@ export default function BackupManagerScreen() {
       </View>
 
       <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => downloadFile(item.id, item.file_name)}>
-            <Text style={styles.actionIcon}>📥</Text>
-        </TouchableOpacity>
+        <StyledButton 
+            onPress={() => downloadFile(item.id, item.file_name)} 
+            variant="ghost" 
+            size="small" 
+            style={styles.actionBtn}
+        >
+            <Download size={20} color={COLORS.textSecondary} />
+        </StyledButton>
         
-        <TouchableOpacity style={[styles.actionBtn, styles.restoreBtn]} onPress={() => handleRestore(item.id)}>
-            <Text style={styles.actionIcon}>🔄</Text>
-        </TouchableOpacity>
+        <StyledButton 
+            onPress={() => handleRestore(item.id)} 
+            variant="ghost" 
+            size="small" 
+            style={[styles.actionBtn, {backgroundColor: '#FFF3E0'}]}
+        >
+            <RotateCcw size={20} color={COLORS.warning} />
+        </StyledButton>
 
-        <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDelete(item.id)}>
-            <Text style={styles.actionIcon}>🗑️</Text>
-        </TouchableOpacity>
+        <StyledButton 
+            onPress={() => handleDelete(item.id)} 
+            variant="ghost" 
+            size="small" 
+            style={[styles.actionBtn, {backgroundColor: '#FEE2E2'}]}
+        >
+            <Trash2 size={20} color={COLORS.danger} />
+        </StyledButton>
       </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>{t('backupManagement')}</Text>
-      
-      <TouchableOpacity 
-        style={[styles.mainBtn, processing && styles.disabledBtn]} 
-        onPress={handleGenerateBackup}
-        disabled={processing}
-      >
-        {processing ? <ActivityIndicator color="#fff"/> : <Text style={styles.mainBtnText}>+ {t('generateBackup')}</Text>}
-      </TouchableOpacity>
+      <View style={styles.header}>
+        <View>
+            <Text style={styles.headerTitle}>{t('backupManagement')}</Text>
+            <Text style={styles.headerSubtitle}>{t('logs')}</Text>
+        </View>
+        <StyledButton 
+            onPress={handleGenerateBackup}
+            disabled={processing}
+            loading={processing}
+            icon={<Plus size={20} color="white" />}
+            title={t('create')}
+            size="small"
+        />
+      </View>
 
       {loading && !refreshing ? (
-        <ActivityIndicator size="large" color={COLORS.primary} style={{marginTop: 20}} />
+        <ActivityIndicator size="large" color={COLORS.primary} style={{marginTop: 40}} />
       ) : (
         <FlatList
           data={backups}
@@ -264,15 +274,20 @@ export default function BackupManagerScreen() {
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>{t('noBackups')}</Text>
+            <View style={styles.emptyContainer}>
+                <Database size={48} color={COLORS.border} />
+                <Text style={styles.emptyText}>{t('noBackups')}</Text>
+            </View>
           }
         />
       )}
       
       {processing && (
         <View style={styles.overlay}>
-            <ActivityIndicator size="large" color="#fff" />
-            <Text style={{color: '#fff', marginTop: 10}}>{t('processing')}</Text>
+            <View style={styles.overlayContent}>
+                <ActivityIndicator size="large" color={COLORS.primary} />
+                <Text style={styles.processingText}>{t('processing')}</Text>
+            </View>
         </View>
       )}
     </View>
@@ -280,27 +295,75 @@ export default function BackupManagerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, paddingTop: 50, backgroundColor: COLORS.background },
-  header: { fontSize: 28, fontWeight: '800', marginBottom: 25, color: COLORS.text },
-  mainBtn: { backgroundColor: COLORS.primary, padding: 16, borderRadius: 14, alignItems: 'center', marginBottom: 20 },
-  mainBtnText: { color: COLORS.white, fontWeight: '700', fontSize: 17 },
-  disabledBtn: { opacity: 0.6 },
+  container: { flex: 1, padding: 20, backgroundColor: COLORS.background },
+  
+  header: { 
+      flexDirection: 'row', 
+      justifyContent: 'space-between', 
+      alignItems: 'center', 
+      marginBottom: 20,
+      marginTop: 10 
+  },
+  headerTitle: { fontSize: 26, fontWeight: '800', color: COLORS.text },
+  headerSubtitle: { fontSize: 14, color: COLORS.textSecondary, marginTop: 2 },
+
   list: { paddingBottom: 40 },
-  emptyText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 20 },
-  card: { backgroundColor: COLORS.surface, padding: 16, borderRadius: 16, marginBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: COLORS.shadow, shadowOpacity: 0.05, shadowRadius: 3, elevation: 2 },
+  
+  card: { 
+      backgroundColor: COLORS.surface, 
+      padding: 16, 
+      borderRadius: 16, 
+      marginBottom: 12, 
+      flexDirection: 'row', 
+      alignItems: 'center', 
+      shadowColor: COLORS.shadow, 
+      shadowOpacity: 0.05, 
+      shadowRadius: 3, 
+      elevation: 2,
+      borderWidth: 1,
+      borderColor: COLORS.borderLight
+  },
+  
+  iconColumn: { marginRight: 15 },
+  fileIconBox: {
+      width: 48, height: 48, borderRadius: 12,
+      backgroundColor: COLORS.primaryVeryLight,
+      justifyContent: 'center', alignItems: 'center'
+  },
+
   infoContainer: { flex: 1, marginRight: 10 },
-  fileName: { fontWeight: '600', fontSize: 15, color: COLORS.text, marginBottom: 4 },
+  fileName: { fontWeight: '700', fontSize: 15, color: COLORS.text, marginBottom: 4 },
   dateText: { color: COLORS.textSecondary, fontSize: 13, marginBottom: 8 },
+  
   metaRow: { flexDirection: 'row', alignItems: 'center' },
-  sizeText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '500' },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginRight: 8 },
-  badgeAuto: { backgroundColor: COLORS.dangerBg },   
-  badgeManual: { backgroundColor: COLORS.primaryLight }, 
-  badgeText: { fontSize: 10, fontWeight: '700', color: COLORS.text },
+  sizeText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '600' },
+  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 8 },
+  badgeAuto: { backgroundColor: '#FEE2E2' },   
+  badgeManual: { backgroundColor: '#E0F2FE' }, 
+  badgeText: { fontSize: 10, fontWeight: '800' },
+
   actionsContainer: { flexDirection: 'row', gap: 8 },
-  actionBtn: { backgroundColor: COLORS.background, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  restoreBtn: { backgroundColor: '#FFF3E0' }, 
-  deleteBtn: { backgroundColor: COLORS.dangerBg }, 
-  actionIcon: { fontSize: 18 },
-  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: COLORS.overlay, justifyContent: 'center', alignItems: 'center', zIndex: 999 }
+  actionBtn: { width: 36, height: 36, borderRadius: 18, padding: 0, justifyContent: 'center', alignItems: 'center' },
+
+  emptyContainer: { alignItems: 'center', marginTop: 60, opacity: 0.6 },
+  emptyText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 10, fontSize: 16, fontWeight: '500' },
+
+  overlay: { 
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
+      backgroundColor: 'rgba(0,0,0,0.4)', 
+      justifyContent: 'center', alignItems: 'center', zIndex: 999 
+  },
+  overlayContent: {
+      backgroundColor: COLORS.surface,
+      padding: 24,
+      borderRadius: 16,
+      alignItems: 'center',
+      elevation: 5
+  },
+  processingText: {
+      marginTop: 12,
+      color: COLORS.text,
+      fontWeight: '600',
+      fontSize: 16
+  }
 });

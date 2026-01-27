@@ -6,14 +6,10 @@
     "orientation": "portrait",
     "icon": "./assets/studentIcon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
@@ -22,20 +18,23 @@
       },
       "package": "com.fran1763.frontendStudent",
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "./withManifestFix.js",
-      "./withDependencyFix.js",
+      "./plugins/withAndroidQueries",  
+      "./plugins/withManifestFix",     
+      "./plugins/withDependencyFix",
       [
         "@react-native-voice/voice",
         {
-          "microphonePermission": "Permite el acceso al micrófono...",
-          "speechRecognitionPermission": "Permite el reconocimiento de voz..."
+          "microphonePermission": "Permite el acceso al micrófono para los comandos de voz.",
+          "speechRecognitionPermission": "Permite el reconocimiento de voz para interactuar con la app."
         }
       ],
       [
@@ -43,15 +42,14 @@
         {
           "android": {
             "useAndroidX": true,
-            "enableJetifier": true
+            "enableJetifier": true,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "kotlinVersion": "2.0.21"
           }
         }
       ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "6a01833f-8e6a-4c56-b268-92f9447461e9"
-      }
-    }
+    ]
   }
 }

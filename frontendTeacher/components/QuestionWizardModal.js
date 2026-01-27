@@ -1,19 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Modal, StyleSheet, ScrollView, Alert, Switch } from 'react-native';
+import { View, Text, Modal, StyleSheet, ScrollView, Alert, Switch, Platform } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { COLORS } from '../constants/colors';
 import { 
-  getTopicsBySubject, 
-  getConceptsByTopic, 
-  createQuestion, 
-  createAnswer, 
-  updateQuestion, 
-  updateAnswer,   
-  deleteAnswer    
+  getTopicsBySubject, getConceptsByTopic, createQuestion, createAnswer, updateQuestion, updateAnswer, deleteAnswer    
 } from '../api/evaluationRequests';
 import { getSubjects } from '../api/coursesRequests';
-import { Trash2, Plus, Save, ArrowRight, ArrowLeft, Check } from 'lucide-react-native';
+import { Trash2, Plus, Save, ArrowRight, ArrowLeft, Check, X } from 'lucide-react-native';
 import { StyledButton } from './StyledButton';
+import { StyledTextInput } from './StyledTextInput';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, editingQuestion }) {
@@ -21,173 +16,79 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
+  // ... (Estados de datos - Sin cambios en la lógica) ...
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
   const [concepts, setConcepts] = useState([]); 
-  
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [selectedTopicTitles, setSelectedTopicTitles] = useState([]); 
   const [selectedConceptNames, setSelectedConceptNames] = useState([]);
-  
   const [questionType, setQuestionType] = useState('multiple'); 
-
   const [statementES, setStatementES] = useState('');
   const [statementEN, setStatementEN] = useState('');
-  
   const [explanationES, setExplanationES] = useState('');
   const [explanationEN, setExplanationEN] = useState('');
-
   const [deletedAnswerIds, setDeletedAnswerIds] = useState([]);
   const [answers, setAnswers] = useState([
     { text_es: '', text_en: '', is_correct: false, tempId: 1 },
     { text_es: '', text_en: '', is_correct: false, tempId: 2 }
   ]);
 
+  // ... (useEffect y funciones de carga - Sin cambios) ...
   useEffect(() => {
-    if (visible) {
-      loadSubjects();
-      if (editingQuestion) {
-        loadEditingData();
-      } else {
-        resetForm();
-      }
-    }
+    if (visible) { loadSubjects(); if (editingQuestion) loadEditingData(); else resetForm(); }
   }, [visible, editingQuestion]);
 
-  useEffect(() => {
-    if (selectedSubject) {
-      loadTopics(selectedSubject);
-    }
-  }, [selectedSubject]);
-
-  useEffect(() => {
-    if (selectedTopicTitles.length > 0 && topics.length > 0) {
-      loadConceptsForSelectedTopics();
-    } else {
-      setConcepts([]);
-    }
+  useEffect(() => { if (selectedSubject) loadTopics(selectedSubject); }, [selectedSubject]);
+  useEffect(() => { 
+      if (selectedTopicTitles.length > 0 && topics.length > 0) loadConceptsForSelectedTopics();
+      else setConcepts([]); 
   }, [selectedTopicTitles, topics]);
 
   const resetForm = () => {
-    setStep(1);
-    setSelectedTopicTitles([]); 
-    setSelectedConceptNames([]);
-    setQuestionType('multiple');
-    setStatementES('');
-    setStatementEN('');
-    setExplanationES('');
-    setExplanationEN('');
-    setDeletedAnswerIds([]); 
-    setAnswers([
-      { text_es: '', text_en: '', is_correct: false, tempId: 1 },
-      { text_es: '', text_en: '', is_correct: false, tempId: 2 }
-    ]);
+    setStep(1); setSelectedTopicTitles([]); setSelectedConceptNames([]); setQuestionType('multiple');
+    setStatementES(''); setStatementEN(''); setExplanationES(''); setExplanationEN(''); setDeletedAnswerIds([]); 
+    setAnswers([{ text_es: '', text_en: '', is_correct: false, tempId: 1 }, { text_es: '', text_en: '', is_correct: false, tempId: 2 }]);
   };
 
-  const loadSubjects = async () => {
-    try {
-      const data = await getSubjects();
-      setSubjects(data);
-      if (data.length > 0 && !selectedSubject) setSelectedSubject(data[0].id);
-    } catch (e) { console.error(e); }
-  };
-
-  const loadTopics = async (subId) => {
-    try {
-      const data = await getTopicsBySubject(subId);
-      setTopics(data);
-    } catch (e) { console.error(e); }
-  };
-
+  const loadSubjects = async () => { /* ... */ try { const data = await getSubjects(); setSubjects(data); if (data.length > 0 && !selectedSubject) setSelectedSubject(data[0].id); } catch (e) { console.error(e); } };
+  const loadTopics = async (subId) => { /* ... */ try { const data = await getTopicsBySubject(subId); setTopics(data); } catch (e) { console.error(e); } };
   const loadConceptsForSelectedTopics = async () => {
-    const selectedTopicIds = topics
-      .filter(t => selectedTopicTitles.includes(t.title || t.name))
-      .map(t => t.id);
-
+    const selectedTopicIds = topics.filter(t => selectedTopicTitles.includes(t.title || t.name)).map(t => t.id);
     let allConcepts = [];
     try {
         const promises = selectedTopicIds.map(id => getConceptsByTopic(id));
         const results = await Promise.all(promises);
-        
-        results.forEach(list => {
-             if(Array.isArray(list)) allConcepts = [...allConcepts, ...list];
-        });
-
-        const uniqueConcepts = Array.from(new Map(allConcepts.map(c => [c.name, c])).values());
-        setConcepts(uniqueConcepts);
-    } catch (e) {
-        console.error("Error cargando conceptos", e);
-    }
+        results.forEach(list => { if(Array.isArray(list)) allConcepts = [...allConcepts, ...list]; });
+        setConcepts(Array.from(new Map(allConcepts.map(c => [c.name, c])).values()));
+    } catch (e) { console.error("Error cargando conceptos", e); }
   };
 
-  const handleSubjectChange = (val) => {
-    setSelectedSubject(val);
-    setSelectedTopicTitles([]); 
-    setSelectedConceptNames([]); 
-  };
+  const handleSubjectChange = (val) => { setSelectedSubject(val); setSelectedTopicTitles([]); setSelectedConceptNames([]); };
 
   const loadEditingData = async () => {
-    setStep(1); 
-    setDeletedAnswerIds([]); 
-    setStatementES(editingQuestion.statement_es);
-    setStatementEN(editingQuestion.statement_en || '');
-    
-    setExplanationES(editingQuestion.explanation_es || '');
-    setExplanationEN(editingQuestion.explanation_en || '');
-
+    // ... (Lógica de carga existente) ...
+    setStep(1); setDeletedAnswerIds([]); 
+    setStatementES(editingQuestion.statement_es); setStatementEN(editingQuestion.statement_en || '');
+    setExplanationES(editingQuestion.explanation_es || ''); setExplanationEN(editingQuestion.explanation_en || '');
     setQuestionType(editingQuestion.type);
-
-    if (editingQuestion.topics && Array.isArray(editingQuestion.topics)) {
-        const existingTopics = editingQuestion.topics.map(t => t.name || t.title).filter(Boolean);
-        setSelectedTopicTitles(existingTopics);
-    } else if (editingQuestion.topics_titles) {
-        setSelectedTopicTitles(editingQuestion.topics_titles);
-    }
-
-    if (editingQuestion.concepts && Array.isArray(editingQuestion.concepts)) {
-        const existingConcepts = editingQuestion.concepts.map(c => c.name || c.title).filter(Boolean);
-        setSelectedConceptNames(existingConcepts);
-    } else if (editingQuestion.concepts_names) {
-        setSelectedConceptNames(editingQuestion.concepts_names);
-    }
-
+    if (editingQuestion.topics) setSelectedTopicTitles(editingQuestion.topics.map(t => t.name || t.title).filter(Boolean));
+    else if (editingQuestion.topics_titles) setSelectedTopicTitles(editingQuestion.topics_titles);
+    if (editingQuestion.concepts) setSelectedConceptNames(editingQuestion.concepts.map(c => c.name || c.title).filter(Boolean));
+    else if (editingQuestion.concepts_names) setSelectedConceptNames(editingQuestion.concepts_names);
     try {
-      const apiAnswers = (editingQuestion.answers);
-      const formattedAnswers = apiAnswers.map(a => ({
-          ...a,
-          text_es: a.text_es || '',
-          text_en: a.text_en || '',
-          tempId: a.id,
-          id: a.id
-      }));
-      setAnswers(formattedAnswers);
-    } catch (e) {
-      console.error("Error loading answers", e);
-    }
+      setAnswers((editingQuestion.answers).map(a => ({ ...a, text_es: a.text_es || '', text_en: a.text_en || '', tempId: a.id, id: a.id })));
+    } catch (e) { console.error(e); }
   };
 
-  const toggleTopic = (title) => {
-    setSelectedTopicTitles(prev => {
-        if (prev.includes(title)) return prev.filter(t => t !== title);
-        else return [...prev, title];
-    });
-  };
-
-  const toggleConcept = (name) => {
-    setSelectedConceptNames(prev => {
-        if (prev.includes(name)) return prev.filter(c => c !== name);
-        else return [...prev, name];
-    });
-  };
+  const toggleTopic = (title) => setSelectedTopicTitles(prev => prev.includes(title) ? prev.filter(t => t !== title) : [...prev, title]);
+  const toggleConcept = (name) => setSelectedConceptNames(prev => prev.includes(name) ? prev.filter(c => c !== name) : [...prev, name]);
 
   const handleAddAnswer = () => setAnswers([...answers, { text_es: '', text_en: '', is_correct: false, tempId: Date.now() }]);
   const handleRemoveAnswer = (index) => {
       if (answers.length <= 2) return Alert.alert(t('error'), "Mínimo 2 opciones");
-      const ans = answers[index];
-      if (ans.id) setDeletedAnswerIds(prev => [...prev, ans.id]);
-      const newArr = [...answers];
-      newArr.splice(index, 1);
-      setAnswers(newArr);
+      const ans = answers[index]; if (ans.id) setDeletedAnswerIds(prev => [...prev, ans.id]);
+      const newArr = [...answers]; newArr.splice(index, 1); setAnswers(newArr);
   };
   const handleAnswerChangeES = (text, i) => { const n = [...answers]; n[i].text_es = text; setAnswers(n); };
   const handleAnswerChangeEN = (text, i) => { const n = [...answers]; n[i].text_en = text; setAnswers(n); };
@@ -199,270 +100,187 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
   };
 
   const handleNext = () => {
-      if (step === 1) {
-        if(selectedTopicTitles.length === 0) {
-            Alert.alert(t('error'), t('selectTopicError'));
-            return;
-        }
-        setStep(2);
-      } else if (step === 2) {
-        if (!statementES.trim()) return Alert.alert(t('error'), t('missingStatement'));
-        if (!answers.some(a => a.is_correct)) return Alert.alert(t('error'), t('missingCorrect'));
-        if (answers.some(a => !a.text_es.trim())) return Alert.alert(t('error'), t('fillAllFields'));
-        setStep(3);
-      } else if (step === 3) {
-        if (!statementEN.trim()) return Alert.alert(t('error'), t('missingTranslation'));
-        if (answers.some(a => !a.text_en.trim())) return Alert.alert(t('error'), t('missingTranslation'));
-        setStep(4); // Ir al nuevo paso de explicaciones
+      if (step === 1) { if(selectedTopicTitles.length === 0) return Alert.alert(t('error'), t('selectTopicError')); setStep(2); } 
+      else if (step === 2) { 
+          if (!statementES.trim()) return Alert.alert(t('error'), t('missingStatement'));
+          if (!answers.some(a => a.is_correct)) return Alert.alert(t('error'), t('missingCorrect'));
+          if (answers.some(a => !a.text_es.trim())) return Alert.alert(t('error'), t('fillAllFields'));
+          setStep(3); 
+      } 
+      else if (step === 3) { 
+          if (!statementEN.trim() || answers.some(a => !a.text_en.trim())) return Alert.alert(t('error'), t('missingTranslation'));
+          setStep(4); 
       }
   }
 
   const handleSubmit = async () => {
-
     setLoading(true);
     try {
-        const baseData = {
-            type: questionType,
-            statement_es: statementES,
-            statement_en: statementEN,
-            explanation_es: explanationES,
-            explanation_en: explanationEN,
-            topics: selectedTopicTitles,
-            concepts: selectedConceptNames
-        };
-
+        const baseData = { type: questionType, statement_es: statementES, statement_en: statementEN, explanation_es: explanationES, explanation_en: explanationEN, topics: selectedTopicTitles, concepts: selectedConceptNames };
         let questionId;
-
         if (editingQuestion) {
             questionId = editingQuestion.id;
             await updateQuestion(questionId, baseData);
-            
-            if (deletedAnswerIds.length > 0) {
-                await Promise.all(deletedAnswerIds.map(aid => deleteAnswer(questionId, aid)));
-            }
+            if (deletedAnswerIds.length > 0) await Promise.all(deletedAnswerIds.map(aid => deleteAnswer(questionId, aid)));
             await Promise.all(answers.map(ans => {
                 const ansData = { text_es: ans.text_es, text_en: ans.text_en, is_correct: ans.is_correct };
                 return ans.id ? updateAnswer(questionId, ans.id, ansData) : createAnswer(questionId, ansData);
             }));
-
         } else {
-            const createData = {
-                ...baseData,
-                topics_titles: selectedTopicTitles,
-            };
+            const createData = { ...baseData, topics_titles: selectedTopicTitles };
             const qResponse = await createQuestion(createData);
             questionId = qResponse.id;
-            
-            await Promise.all(answers.map(ans => 
-                createAnswer(questionId, { text_es: ans.text_es, text_en: ans.text_en, is_correct: ans.is_correct })
-            ));
+            await Promise.all(answers.map(ans => createAnswer(questionId, { text_es: ans.text_es, text_en: ans.text_en, is_correct: ans.is_correct })));
         }
-
-        Alert.alert(t('success'), t('saved'));
-        onSaveSuccess();
-        onClose();
-    } catch (error) {
-        console.error(error);
-        Alert.alert(t('error'), t('error'));
-    } finally {
-        setLoading(false);
-    }
+        Alert.alert(t('success'), t('saved')); onSaveSuccess(); onClose();
+    } catch (error) { console.error(error); Alert.alert(t('error'), t('error')); } finally { setLoading(false); }
   };
 
-  const renderStep1 = () => (
-    <ScrollView style={styles.stepContainer}>
-        <Text style={styles.sectionHeader}>{t('context')}</Text>
-        
-        <Text style={styles.label}>{t('subject')}</Text>
-        <View style={styles.pickerWrapper}>
-            <Picker testID="subjectsPicker" selectedValue={selectedSubject ?? ""} onValueChange={handleSubjectChange}>
-                {!selectedSubject && <Picker.Item label={t('select')} value="" enabled={false} />}
-                {subjects.map(s => <Picker.Item key={s.id} label={s.name} value={s.id} />)}
-            </Picker>
-        </View>
-
-        <Text style={styles.label}>{t('topics')}</Text>
-        <ScrollView style={styles.topicsBox} nestedScrollEnabled={true} paddingBottom={10} >
-            <View style={styles.topicsGrid}>
-                {topics.length === 0 && <Text style={{color: 'gray', padding: 5}}>{t('selectTopic')}</Text>}
-                {topics.map((t, i) => {
-                    const topicTitle = t.title || t.name; 
-                    const isSelected = selectedTopicTitles.includes(topicTitle);
-                    return (
-                        <StyledButton 
-                          testID={t.title + "Btn"}
-                          key={i} 
-                          style={[styles.topicChip, isSelected && styles.topicChipSelected]} 
-                          onPress={() => toggleTopic(topicTitle)}
-                          variant="ghost"
-                        >
-                          <Text style={[styles.topicText, isSelected && styles.topicTextSelected]}>{topicTitle}</Text>
-                          {isSelected && <Check size={16} color={COLORS.surface} style={{marginLeft: 5}}/>}
-                        </StyledButton>
-                    );
-                })}
-            </View>
-        </ScrollView>
-
-        {selectedTopicTitles.length > 0 && (
-            <>
-                <Text style={styles.label}>{t('concepts')}</Text>
-                <ScrollView style={styles.topicsBox} nestedScrollEnabled={true} paddingBottom={10} >
-                    <View style={styles.topicsGrid}>
-                        {concepts.length === 0 && <Text style={{color: 'gray', padding: 5}}>{t('loading')}</Text>}
-                        {concepts.map((c, i) => {
-                            const cName = c.name || c.title; 
-                            const isSelected = selectedConceptNames.includes(cName);
-                            return (
-                                <StyledButton 
-                                  testID={c.name + "Btn"}
-                                  key={i} 
-                                  style={[styles.conceptChip, isSelected && styles.conceptChipSelected]} 
-                                  onPress={() => toggleConcept(cName)}
-                                  variant="ghost"
-                                >
-                                  <Text style={[styles.topicText, isSelected && styles.topicTextSelected]}>{cName}</Text>
-                                  {isSelected && <Check size={14} color={COLORS.surface} style={{marginLeft: 5}}/>}
-                                </StyledButton>
-                            );
-                        })}
-                    </View>
-                </ScrollView>
-            </>
-        )}
-
-        <Text style={styles.label}>{t('questionType')}</Text>
-        <View style={styles.pickerWrapper}>
-            <Picker testID="questionTypePicker" selectedValue={questionType ?? "multiple"} onValueChange={setQuestionType}>
-                <Picker.Item label={t('multipleChoice')} value="multiple" />
-                <Picker.Item label={t('trueFalse')} value="boolean" />
-            </Picker>
-        </View>
-    </ScrollView>
+  const renderChips = (items, selectedItems, toggleFunc) => (
+    <View style={styles.chipsGrid}>
+        {items.length === 0 && <Text style={styles.helperText}>{t('selectTopic')}</Text>}
+        {items.map((item, i) => {
+            const name = item.title || item.name;
+            const isSelected = selectedItems.includes(name);
+            return (
+                <StyledButton 
+                    key={i} 
+                    onPress={() => toggleFunc(name)} 
+                    variant={isSelected ? 'primary' : 'outline'}
+                    size="small"
+                    style={{marginBottom: 6, borderColor: isSelected ? 'transparent' : COLORS.border}}
+                    textStyle={!isSelected ? {color: COLORS.textSecondary} : {}}
+                >
+                    <Text style={[styles.chipText, isSelected && {color: COLORS.white}]}>{name}</Text>
+                    {isSelected && <Check size={14} color={COLORS.white} style={{marginLeft: 5}}/>}
+                </StyledButton>
+            );
+        })}
+    </View>
   );
-
-  const renderStep2 = () => (
-    <ScrollView style={styles.stepContainer}>
-        <Text style={styles.sectionHeader}>{t('spanishVersion')}</Text>
-        <Text style={styles.label}>{t('statement')}</Text>
-        <TextInput testID="statementInput" style={[styles.input, { height: 80 }]} multiline value={statementES} onChangeText={setStatementES} placeholder="..." />
-        <Text style={styles.label}>{t('answers')}</Text>
-        {answers.map((ans, index) => (
-            <View key={ans.id || ans.tempId} style={styles.answerRow}>
-                    <Switch testID={"answerSwitch" + ans.tempId} value={ans.is_correct} onValueChange={() => handleCorrectChange(index)} trackColor={{false:"#767577", true:COLORS.success}} />
-                    <TextInput testID={"answerInput" + ans.tempId} style={styles.answerInput} placeholder={`${t('option')} ${index + 1}`} value={ans.text_es} onChangeText={(text) => handleAnswerChangeES(text, index)} />
-                    {questionType === 'multiple' && (
-                        <StyledButton 
-                          onPress={() => handleRemoveAnswer(index)}
-                          icon={<Trash2 size={20} color={COLORS.danger} />}
-                          variant="ghost"
-                        />
-                    )}
-            </View>
-        ))}
-        {questionType === 'multiple' && (
-            <StyledButton 
-              style={styles.addAnswerBtn} 
-              onPress={handleAddAnswer}
-              icon={<Plus size={20} color={COLORS.surface} />}
-              variant="secondary"
-            >  
-              <Text style={{color:COLORS.white, marginLeft:5}}>{t('addOption')}</Text>
-            </StyledButton>
-        )}
-    </ScrollView>
-  );
-
-  const renderStep3 = () => (
-      <ScrollView style={styles.stepContainer}>
-        {/* ... (Contenido Step 3 igual) ... */}
-        <Text style={styles.sectionHeader}>{t('englishVersion')}</Text>
-        <Text style={styles.label}>{t('statement')}</Text>
-        <Text style={styles.helperText}>{statementES}</Text>
-        <TextInput testID={"statementInput"} style={[styles.input, { height: 80 }]} multiline value={statementEN} onChangeText={setStatementEN} placeholder="..." />
-        <Text style={styles.label}>{t('answers')}</Text>
-        {answers.map((ans, index) => (
-            <View key={ans.id || ans.tempId} style={styles.answerRowTranslation}>
-                    <View style={styles.originalTextContainer}>
-                    <Text style={styles.originalTextLabel}>{ans.text_es}</Text>
-                    {ans.is_correct && <Text style={styles.correctBadge}>{t('correct')}</Text>}
-                    </View>
-                    <TextInput testID={"answerInput" + ans.tempId} style={styles.answerInput} placeholder={`${t('option')} ${index + 1}`} value={ans.text_en} onChangeText={(text) => handleAnswerChangeEN(text, index)} />
-            </View>
-        ))}
-    </ScrollView>
-  );
-
-  const renderStep4 = () => (
-    <ScrollView style={styles.stepContainer}>
-        <Text style={styles.sectionHeader}>{t('feedback') || 'Explicación'}</Text>
-        
-        <Text style={styles.label}>{t('explanationES') || 'Explicación (Español)'}</Text>
-        <Text style={styles.helperText}>Texto que verá el alumno al fallar/acertar</Text>
-        <TextInput 
-            testID="explanationESInput" 
-            style={[styles.input, { height: 100 }]} 
-            multiline 
-            value={explanationES} 
-            onChangeText={setExplanationES} 
-            placeholder="Escribe la explicación aquí..." 
-        />
-
-        <Text style={styles.label}>{t('explanationEN') || 'Explicación (Inglés)'}</Text>
-        <TextInput 
-            testID="explanationENInput" 
-            style={[styles.input, { height: 100 }]} 
-            multiline 
-            value={explanationEN} 
-            onChangeText={setExplanationEN} 
-            placeholder="Write the explanation here..." 
-        />
-    </ScrollView>
-  );
-  
 
   return (
-    <Modal animationType="slide" transparent={true} visible={visible} onRequestClose={onClose}>
+    <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>{editingQuestion ? t('edit') : t('new')} ({step}/4)</Text>
-          {step === 1 && renderStep1()}
-          {step === 2 && renderStep2()}
-          {step === 3 && renderStep3()}
-          {step === 4 && renderStep4()} 
           
-          <View style={styles.buttonRow}>
-            <StyledButton title={t('cancel')} variant='danger' onPress={onClose} style={{flex: 1, marginRight: 5}} />
-            <View style={{flexDirection: 'row', gap: 10, flex: 1, justifyContent: 'flex-end'}}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{editingQuestion ? t('edit') : t('newQuestion')} ({step}/4)</Text>
+            <StyledButton onPress={onClose} variant="ghost" style={{padding:4}}>
+                <X size={24} color={COLORS.textSecondary} />
+            </StyledButton>
+          </View>
+
+          {step === 1 && (
+            <ScrollView style={styles.stepContainer}>
+                <Text style={styles.sectionHeader}>{t('context')}</Text>
+                
+                <Text style={styles.label}>{t('subject')}</Text>
+                <View style={styles.pickerWrapper}>
+                    <Picker selectedValue={selectedSubject ?? ""} onValueChange={handleSubjectChange}>
+                        {!selectedSubject && <Picker.Item label={t('select')} value="" enabled={false} />}
+                        {subjects.map(s => <Picker.Item key={s.id} label={s.name} value={s.id} />)}
+                    </Picker>
+                </View>
+
+                <Text style={styles.label}>{t('topics')}</Text>
+                <View style={styles.topicsBox}>
+                    {renderChips(topics, selectedTopicTitles, toggleTopic)}
+                </View>
+
+                {selectedTopicTitles.length > 0 && (
+                    <>
+                        <Text style={styles.label}>{t('concepts')}</Text>
+                        <View style={styles.topicsBox}>
+                            {renderChips(concepts, selectedConceptNames, toggleConcept)}
+                        </View>
+                    </>
+                )}
+
+                <Text style={styles.label}>{t('questionType')}</Text>
+                <View style={styles.pickerWrapper}>
+                    <Picker selectedValue={questionType ?? "multiple"} onValueChange={setQuestionType}>
+                        <Picker.Item label={t('multipleChoice')} value="multiple" />
+                        <Picker.Item label={t('trueFalse')} value="boolean" />
+                    </Picker>
+                </View>
+            </ScrollView>
+          )}
+
+          {step === 2 && (
+            <ScrollView style={styles.stepContainer}>
+                <Text style={styles.sectionHeader}>{t('spanishVersion')}</Text>
+                <Text style={styles.label}>{t('statement')}</Text>
+                <StyledTextInput multiline numberOfLines={3} value={statementES} onChangeText={setStatementES} style={{minHeight: 80}} />
+                
+                <Text style={styles.label}>{t('answers')}</Text>
+                {answers.map((ans, index) => (
+                    <View key={ans.id || ans.tempId} style={styles.answerRow}>
+                        <Switch value={ans.is_correct} onValueChange={() => handleCorrectChange(index)} trackColor={{false:"#ccc", true:COLORS.success}} />
+                        <View style={{flex: 1, marginHorizontal: 8}}>
+                            <StyledTextInput placeholder={`${t('option')} ${index + 1}`} value={ans.text_es} onChangeText={(text) => handleAnswerChangeES(text, index)} />
+                        </View>
+                        {questionType === 'multiple' && (
+                            <StyledButton onPress={() => handleRemoveAnswer(index)} variant="ghost" style={{padding: 4}}>
+                                <Trash2 size={20} color={COLORS.danger} />
+                            </StyledButton>
+                        )}
+                    </View>
+                ))}
+                {questionType === 'multiple' && (
+                    <StyledButton onPress={handleAddAnswer} variant="secondary" icon={<Plus size={18} color={COLORS.textSecondary} />} title={t('addOption')} style={{alignSelf: 'flex-start'}} />
+                )}
+            </ScrollView>
+          )}
+
+          {step === 3 && (
+            <ScrollView style={styles.stepContainer}>
+                <Text style={styles.sectionHeader}>{t('englishVersion')}</Text>
+                <Text style={styles.label}>{t('statement')}</Text>
+                <Text style={styles.helperText}>{statementES}</Text>
+                <StyledTextInput multiline numberOfLines={3} value={statementEN} onChangeText={setStatementEN} style={{minHeight: 80}} />
+                
+                <Text style={styles.label}>{t('answers')}</Text>
+                {answers.map((ans, index) => (
+                    <View key={ans.id || ans.tempId} style={styles.translationRow}>
+                        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
+                            <Text style={styles.originalTextLabel}>{ans.text_es}</Text>
+                            {ans.is_correct && <Check size={14} color={COLORS.success} style={{marginLeft: 4}} />}
+                        </View>
+                        <StyledTextInput placeholder={`${t('option')} ${index + 1} (EN)`} value={ans.text_en} onChangeText={(text) => handleAnswerChangeEN(text, index)} />
+                    </View>
+                ))}
+            </ScrollView>
+          )}
+
+          {step === 4 && (
+            <ScrollView style={styles.stepContainer}>
+                <Text style={styles.sectionHeader}>{t('feedback') || 'Explicación'}</Text>
+                
+                <Text style={styles.label}>{t('explanationES') || 'Explicación (Español)'}</Text>
+                <StyledTextInput multiline numberOfLines={4} value={explanationES} onChangeText={setExplanationES} style={{minHeight: 100, marginBottom: 15}} />
+
+                <Text style={styles.label}>{t('explanationEN') || 'Explicación (Inglés)'}</Text>
+                <StyledTextInput multiline numberOfLines={4} value={explanationEN} onChangeText={setExplanationEN} style={{minHeight: 100}} />
+            </ScrollView>
+          )}
+          
+          <View style={styles.footerRow}>
+            <StyledButton title={t('cancel')} variant='ghost' onPress={onClose} />
+            
+            <View style={{flexDirection: 'row', gap: 10}}>
                 {step > 1 && 
-                  <StyledButton 
-                    testID="nextBtn"
-                    style={styles.backBtn} 
-                    onPress={() => setStep(step - 1)}
-                    icon={<ArrowLeft size={20} color={COLORS.surface} />}
-                  />}
-                {step < 4 ? ( // Ahora cambiamos a 4
-                    <StyledButton 
-                      testID="createBtn"
-                      style={styles.nextBtn} 
-                      onPress={handleNext}
-                      icon={<ArrowRight size={20} color={COLORS.surface} />}
-                    >
-                      <Text style={styles.nextBtnText}>{t('next')}</Text>
-                    </StyledButton>
+                  <StyledButton onPress={() => setStep(step - 1)} variant="secondary" icon={<ArrowLeft size={20} color={COLORS.textSecondary} />} />
+                }
+                
+                {step < 4 ? (
+                    <StyledButton onPress={handleNext} title={t('next')} icon={<ArrowRight size={20} color={COLORS.white} />} style={{flexDirection: 'row-reverse'}} />
                 ) : (
-                    <StyledButton 
-                      testID="saveBtn"
-                      style={styles.saveBtn} 
-                      onPress={handleSubmit} 
-                      disabled={loading}
-                      icon={<Save size={20} color="white" />}
-                    >
-                      <Text style={styles.nextBtnText}>{t('save')}</Text>
-                    </StyledButton>
+                    <StyledButton onPress={handleSubmit} title={t('save')} disabled={loading} loading={loading} icon={<Save size={20} color="white" />} />
                 )}
             </View>
           </View>
+
         </View>
       </View>
     </Modal>
@@ -470,38 +288,25 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
 }
 
 const styles = StyleSheet.create({
-  centeredView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
-  modalView: { width: '95%', height: '90%', backgroundColor: 'white', borderRadius: 10, padding: 20, elevation: 5 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', textAlign: 'center', marginBottom: 10 },
-  sectionHeader: { fontSize: 18, color: COLORS.primary, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
-  stepContainer: { flex: 1 },
-  label: { fontSize: 16, fontWeight: '600', marginTop: 15, marginBottom: 5, color: COLORS.text },
-  helperText: { fontSize: 13, color: '#666', fontStyle: 'italic', marginBottom: 5 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, fontSize: 16, textAlignVertical: 'top' },
-  pickerWrapper: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, marginBottom: 10 },
+  centeredView: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.overlay, padding: 20 },
+  modalView: { width: '100%', maxWidth: 600, height: '90%', backgroundColor: COLORS.surface, borderRadius: 24, padding: 0, elevation: 10, overflow: 'hidden' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: COLORS.borderLight, backgroundColor: COLORS.surface },
+  modalTitle: { fontSize: 20, fontWeight: '800', color: COLORS.text },
   
-  topicsBox: { maxHeight: 150, marginBottom: 10, borderWidth: 1, borderColor: '#eee', borderRadius: 5, padding: 5 },
-  topicsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 15 },
+  stepContainer: { flex: 1, padding: 20 },
+  sectionHeader: { fontSize: 18, color: COLORS.primary, fontWeight: '700', marginBottom: 15, textAlign: 'center' },
+  label: { fontSize: 14, fontWeight: '700', marginTop: 15, marginBottom: 8, color: COLORS.textSecondary, textTransform: 'uppercase' },
+  helperText: { fontSize: 14, color: COLORS.text, marginBottom: 8, fontStyle: 'italic', padding: 8, backgroundColor: COLORS.background, borderRadius: 8 },
   
-  topicChip: { backgroundColor: '#f0f0f0', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1, borderColor: '#ccc', flexDirection: 'row', alignItems: 'center' },
-  topicChipSelected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  pickerWrapper: { borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
   
-  conceptChip: { backgroundColor: '#e8f5e9', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 15, borderWidth: 1, borderColor: '#c8e6c9', flexDirection: 'row', alignItems: 'center' },
-  conceptChipSelected: { backgroundColor: COLORS.success, borderColor: COLORS.success },
+  topicsBox: { maxHeight: 200, marginBottom: 10 },
+  chipsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chipText: { fontSize: 12, fontWeight: '600' },
 
-  topicText: { color: COLORS.text, fontSize: 14 },
-  topicTextSelected: { color: 'white', fontWeight: 'bold' },
-
-  answerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 },
-  answerRowTranslation: { flexDirection: 'column', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#eee', paddingBottom: 10 },
-  originalTextContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  originalTextLabel: { fontWeight: 'bold', color: '#444', flex: 1 },
-  correctBadge: { fontSize: 10, color: 'green', fontWeight: 'bold', backgroundColor: '#e8f5e9', padding: 2, borderRadius: 4 },
-  answerInput: { flex: 1, borderWidth: 1, borderColor: '#eee', borderRadius: 5, padding: 8, backgroundColor: '#f9f9f9' },
-  addAnswerBtn: { padding: 10, borderRadius: 5, alignSelf: 'flex-start', alignItems: 'center', marginTop: 10 },
-  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 10 },
-  backBtn: { backgroundColor: COLORS.gray, padding: 10, borderRadius: 5, justifyContent: 'center' },
-  nextBtn: { flexDirection: 'row', backgroundColor: COLORS.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 5, alignItems: 'center' },
-  saveBtn: { flexDirection: 'row', backgroundColor: COLORS.success, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 5, alignItems: 'center' },
-  nextBtnText: { color: 'white', fontWeight: 'bold', marginRight: 5, marginLeft: 5 },
+  answerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  translationRow: { marginBottom: 15, paddingBottom: 15, borderBottomWidth: 1, borderBottomColor: COLORS.borderLight },
+  originalTextLabel: { fontWeight: '600', color: COLORS.text, fontSize: 14 },
+  
+  footerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderTopWidth: 1, borderTopColor: COLORS.borderLight, backgroundColor: COLORS.surface },
 });

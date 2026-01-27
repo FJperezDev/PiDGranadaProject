@@ -14,12 +14,13 @@ export const StyledTextInput = ({ style, ...props }) => {
 
 const styles = StyleSheet.create({
   input: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surface, // Fondo blanco
     width: '100%',
-    padding: 16,
-    borderRadius: 12, // Coincide con StyledButton
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12, // Coherente con los botones
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: COLORS.border, // Gris suave
     fontSize: 16,
     color: COLORS.text,
     ...Platform.select({

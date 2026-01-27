@@ -1,37 +1,22 @@
 import { apiClient } from './api';
 
-// 1. Obtener todos los usuarios (GET /users/)
+// Obtener usuarios
 export const getUsers = async () => {
-  try {
     const res = await apiClient.get('/users/');
     return res.data;
-  } catch (error) {
-    console.error('Error getting users:', error.response?.data || error);
-    throw error;
-  }
 };
 
-// 2. Crear/Invitar un usuario (POST /users/)
+// Crear/Invitar usuario
 export const createUser = async (userData) => {
-  try {
-    // userData debe contener: { username, email, password, is_super }
+    // userData: { username, email, password, is_super }
+    // IMPORTANTE: No usamos try-catch aquí. Dejamos que falle para que el componente
+    // pueda leer error.response.data y mostrar "El usuario ya existe" o "Email inválido".
     const res = await apiClient.post('/users/invite/', userData);
     return res.data;
-  } catch (error) {
-    // Captura el error para que ManageUsersScreen lo maneje
-    console.error('Error creating user:', error.response?.data || error);
-    throw error;
-  }
 };
 
-// 3. Borrar un usuario (DELETE /users/{id})
+// Borrar usuario
 export const deleteUser = async (userId) => {
-    try {
-        // DELETE espera un status 204 No Content
-        await apiClient.delete(`/users/${userId}/`);
-        return { success: true };
-    } catch (error) {
-        console.error('Error deleting user:', error.response?.data || error);
-        throw error;
-    }
+    await apiClient.delete(`/users/${userId}/`);
+    return { success: true };
 };

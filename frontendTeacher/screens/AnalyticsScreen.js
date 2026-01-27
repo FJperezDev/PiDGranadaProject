@@ -8,19 +8,20 @@ import { getSubjects } from '../api/coursesRequests';
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
 import { AuthContext } from '../context/AuthContext';
-import { StyledButton } from '../components/StyledButton';
+import { StyledButton } from '../components/StyledButton'; // Usamos el botón estandarizado
 import { Filter, ChevronDown, X, BarChart2, Target, Repeat, Layers, Trash2 } from 'lucide-react-native';
 
 const screenWidth = Dimensions.get("window").width;
 
+// Habilitar LayoutAnimation en Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
+  UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 const ProgressBar = ({ percentage }) => {
     const color = percentage < 50 ? COLORS.danger : (percentage < 80 ? COLORS.warning : COLORS.success);
     return (
-        <View style={{ height: 6, backgroundColor: COLORS.lightGray, borderRadius: 3, flex: 1, marginTop: 4 }}>
+        <View style={{ height: 6, backgroundColor: COLORS.borderLight, borderRadius: 3, flex: 1, marginTop: 4 }}>
             <View style={{ width: `${percentage}%`, backgroundColor: color, height: '100%', borderRadius: 3 }} />
         </View>
     );
@@ -37,6 +38,8 @@ export default function AnalyticsScreen({ route }) {
 
     const [groupBy, setGroupBy] = useState(initialGroupBy || 'topic'); 
     const [selectedSubject, setSelectedSubject] = useState(null); 
+    
+    // Estado correcto para colapsar filtros
     const [showFilters, setShowFilters] = useState(false);
     
     const [showFilterModal, setShowFilterModal] = useState(false);
@@ -59,7 +62,7 @@ export default function AnalyticsScreen({ route }) {
 
     const toggleFilters = () => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setShowFilters(!showFilters);
+        setShowFilters(!showFilters); // Usamos la variable correcta
     };
 
     const fetchData = async () => {
@@ -179,7 +182,7 @@ export default function AnalyticsScreen({ route }) {
         strokeWidth: 0,
         barPercentage: 0.7,
         decimalPlaces: 0,
-        labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`, 
+        labelColor: (opacity = 1) => `rgba(107, 114, 128, ${opacity})`, // COLORS.textSecondary con opacidad
         propsForLabels: { fontSize: 11, fontWeight: '600' },
         style: { borderRadius: 16 }
     };
@@ -206,7 +209,7 @@ export default function AnalyticsScreen({ route }) {
                             style={styles.globalDeleteBtn}
                             variant="danger"
                             size="small"
-                            icon={<Trash2 size={22} color={COLORS.danger} />}
+                            icon={<Trash2 size={22} color={COLORS.white} />} // Icono blanco sobre rojo
                         />
                     )}
                 </View>
@@ -230,7 +233,7 @@ export default function AnalyticsScreen({ route }) {
                             </Text>
                         </View>
                     </View>
-                    <ChevronDown size={20} color={COLORS.gray} style={{ transform: [{ rotate: showFilters ? '180deg' : '0deg' }] }} />
+                    <ChevronDown size={20} color={COLORS.textSecondary} style={{ transform: [{ rotate: showFilters ? '180deg' : '0deg' }] }} />
                 </StyledButton>
 
                 {showFilters && (
@@ -240,11 +243,13 @@ export default function AnalyticsScreen({ route }) {
                             {['topic', 'concept', 'group', 'question'].map((mode) => (
                                 <StyledButton 
                                     key={mode} 
-                                    style={[styles.chip, groupBy === mode && styles.chipActive]}
                                     onPress={() => setGroupBy(mode)}
-                                    variant="ghost"
+                                    variant={groupBy === mode ? 'primary' : 'outline'}
+                                    size="small"
+                                    style={styles.chip}
+                                    textStyle={groupBy !== mode ? {color: COLORS.textSecondary} : {}}
                                 >
-                                    <Text style={[styles.chipText, groupBy === mode && styles.chipTextActive]}>
+                                    <Text style={[styles.chipText, groupBy === mode && {color: COLORS.white}]}>
                                         {t(mode)}
                                     </Text>
                                 </StyledButton>
@@ -255,7 +260,7 @@ export default function AnalyticsScreen({ route }) {
                         <StyledButton 
                             style={styles.selectButton} 
                             onPress={handleOpenSubjectFilter}
-                            variant="ghost"
+                            variant="secondary" // Borde suave
                         >
                             <Text style={styles.selectButtonText}>
                                 {selectedSubject ? selectedSubject.name : t('allSubjects')}
@@ -268,6 +273,7 @@ export default function AnalyticsScreen({ route }) {
                                 onPress={() => setSelectedSubject(null)} 
                                 style={styles.clearFilterBtn}
                                 variant="ghost"
+                                size="small"
                             >
                                 <Text style={styles.clearFilterText}>{t('clearFilter')}</Text>
                             </StyledButton>
@@ -284,7 +290,7 @@ export default function AnalyticsScreen({ route }) {
             ) : chartData.length > 0 ? (
                 <View style={styles.card}>
                     <View style={styles.cardHeader}>
-                        <View style={[styles.iconBox, { backgroundColor: COLORS.successBg }]}>
+                        <View style={[styles.iconBox, { backgroundColor: COLORS.successLight }]}>
                             <BarChart2 size={20} color={COLORS.success} />
                         </View>
                         <Text style={styles.cardTitle}>{t('percentageCorrect')}</Text>
@@ -370,11 +376,12 @@ export default function AnalyticsScreen({ route }) {
                 </View>
             )}
 
-            {/* --- MODAL --- */}
+            {/* --- MODAL SELECCIÓN ASIGNATURA --- */}
             <Modal 
                 visible={showFilterModal} 
                 animationType="fade" 
                 transparent={true}
+                onRequestClose={() => setShowFilterModal(false)}
             >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
@@ -417,7 +424,7 @@ export default function AnalyticsScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f9fafb', padding: 16 },
+    container: { flex: 1, backgroundColor: COLORS.background, padding: 16 },
     
     // Header
     headerContainer: { marginBottom: 20 },
@@ -425,8 +432,7 @@ const styles = StyleSheet.create({
     headerSubtitle: { fontSize: 14, color: COLORS.textSecondary, marginTop: 4 },
     
     globalDeleteBtn: {
-        backgroundColor: COLORS.dangerBg,
-        borderRadius: 8,
+        // Estilo específico si se necesita, si no, variant="danger" lo maneja
     },
 
     // Cards Genéricas
@@ -449,28 +455,25 @@ const styles = StyleSheet.create({
     iconBox: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
 
     // Filtros
-    filterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surface, paddingHorizontal: 0 },
+    filterHeader: { 
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 
+        paddingHorizontal: 0, paddingVertical: 0 // Reseteo de padding del StyledButton
+    },
     filterContent: { marginTop: 16, borderTopWidth: 1, borderTopColor: COLORS.background, paddingTop: 16 },
     sectionLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
     
-    // Chips
+    // Chips (Estilos extra para StyledButton)
     chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    chip: { 
-        paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, 
-        backgroundColor: COLORS.background, borderWidth: 1, borderColor: 'transparent' 
-    },
-    chipActive: { backgroundColor: COLORS.primaryLight, borderColor: COLORS.primary },
-    chipText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
-    chipTextActive: { color: COLORS.primaryDark },
+    chip: { marginBottom: 4 }, // Solo margen, el resto lo hace StyledButton
+    chipText: { fontSize: 13, fontWeight: '600' },
 
     // Select Button
     selectButton: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        backgroundColor: '#f9fafb', borderWidth: 1, borderColor: COLORS.border,
-        padding: 12, borderRadius: 10
+        width: '100%', paddingVertical: 12
     },
     selectButtonText: { fontSize: 14, color: COLORS.text },
-    clearFilterBtn: { alignItems: 'center', marginTop: 12 },
+    clearFilterBtn: { alignSelf: 'center', marginTop: 12 },
     clearFilterText: { fontSize: 13, color: COLORS.danger, fontWeight: '600' },
 
     // Empty State
@@ -481,11 +484,11 @@ const styles = StyleSheet.create({
     sectionTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
     detailItem: {
         backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, marginBottom: 10,
-        borderWidth: 1, borderColor: COLORS.background
+        borderWidth: 1, borderColor: COLORS.borderLight
     },
     detailHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
     badge: { 
-        backgroundColor: '#eff6ff', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginRight: 10 
+        backgroundColor: COLORS.primaryVeryLight, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, marginRight: 10 
     },
     badgeText: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
     detailTitle: { fontSize: 15, fontWeight: '600', color: COLORS.text, flex: 1, marginRight: 8 },
@@ -494,7 +497,7 @@ const styles = StyleSheet.create({
     detailStatsRow: { flexDirection: 'row', justifyContent: 'space-between' },
     statGroup: { flex: 1 },
     statLabel: { fontSize: 12, color: COLORS.textSecondary },
-    statValue: { fontSize: 18, fontWeight: '800', marginRight: 10 },
+    statValue: { fontSize: 18, fontWeight: '800', marginRight: 10, color: COLORS.text },
     statValueSimple: { fontSize: 16, fontWeight: '600', color: COLORS.textSecondary },
 
     // Modal
@@ -502,7 +505,7 @@ const styles = StyleSheet.create({
     modalContent: { backgroundColor: COLORS.surface, borderRadius: 20, width: '100%', maxWidth: 400, padding: 20, elevation: 5 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     modalTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text },
-    modalItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.background, flexDirection: 'row', justifyContent: 'space-between' },
+    modalItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.background, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     modalItemSelected: { backgroundColor: COLORS.background },
     modalItemText: { fontSize: 16, color: COLORS.textSecondary },
 });

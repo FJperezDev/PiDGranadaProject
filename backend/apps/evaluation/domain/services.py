@@ -190,7 +190,7 @@ def create_exam(topics: set[Topic], num_questions: int) -> list[Question]:
         
         if deck:
             topic_decks.append(deck)
-    
+    print("Topic Decks: ", topic_decks)
     # Si no hay preguntas en ningún tema, salimos ya
     if not topic_decks:
         return []

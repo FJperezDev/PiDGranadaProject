@@ -1,12 +1,13 @@
 import React, { useState, useContext, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Alert, RefreshControl, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, RefreshControl, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { AuthContext } from '../context/AuthContext'; 
 import { getUsers, createUser, deleteUser } from '../api/inviteRequests'; 
 import InviteUserModal from '../components/InviteUserModal';
-import { UserPlus, ShieldAlert, Mail, Trash2 } from 'lucide-react-native'; 
+import { UserPlus, ShieldAlert, Mail, Trash2, Shield, User } from 'lucide-react-native'; 
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
+import { StyledButton } from '../components/StyledButton';
 
 const getUserDisplayName = (item) => item.username || item.email;
 
@@ -33,130 +34,74 @@ export default function ManageUsersScreen({ navigation }) {
         }
     };
 
-    useFocusEffect(
-        useCallback(() => {
-            fetchUsers();
-        }, [isSuper])
-    );
+    useFocusEffect(useCallback(() => { fetchUsers(); }, [isSuper]));
 
-    const handleRefresh = () => {
-        setRefreshing(true);
-        fetchUsers();
-    };
+    const handleRefresh = () => { setRefreshing(true); fetchUsers(); };
 
     const handleCreateUser = async (userData) => {
         try {
-            // 1. Llamada a la API (que ahora envía el email)
             const response = await createUser(userData);
-            
             setModalVisible(false);
-            
-            // 2. Mensaje de éxito actualizado
-            // Ya no mostramos la contraseña en pantalla, es más seguro.
             const successTitle = t('success');
             const successMsg = `${t('userCreated')} ${t('emailSentTo')} ${userData.email}`;
-
-            if (Platform.OS === 'web') {
-                window.alert(`${successTitle}: ${successMsg}`);
-            } else {
-                Alert.alert(successTitle, successMsg);
-            }
-
-            // 3. Recargar la lista
+            if (Platform.OS === 'web') window.alert(`${successTitle}: ${successMsg}`);
+            else Alert.alert(successTitle, successMsg);
             fetchUsers();
-
         } catch (error) {
             let errorMessage = t('error');
-            if (error.response && error.response.data) {
-                // ... (tu lógica existente de manejo de errores) ...
-                 const errors = error.response.data;
-                 // Si el backend devuelve un mensaje específico (ej: error SMTP), úsalo
-                 if (errors.detail) {
-                     errorMessage = errors.detail;
-                 } else {
-                    for (const key in errors) {
-                        if (Array.isArray(errors[key])) {
-                             errorMessage = `${key.toUpperCase()}: ${errors[key][0]}`;
-                             break; 
-                        }
-                    }
-                 }
-            }
+            if (error.response?.data?.detail) errorMessage = error.response.data.detail;
             Alert.alert(t('error'), errorMessage);
-            // No hacemos throw error aquí para evitar crasheos no controlados si no hay catch superior
         }
     };
 
     const handleDeleteUser = (item) => {
-      if (!item.is_super && item.id === loggedUser.id) { 
-          const msg = t('accessDenied');
-          if (Platform.OS === 'web') alert(msg);
-          else Alert.alert(t('error'), msg);
-          return;
-      }
-
+      if (!item.is_super && item.id === loggedUser.id) return Alert.alert(t('error'), t('accessDenied'));
       const executeDelete = async () => {
           try {
               setLoading(true);
               await deleteUser(item.id);
-              const successMsg = t('success');
-              if (Platform.OS === 'web') alert(successMsg);
-              else Alert.alert(t('success'), successMsg);
               setUsers(prev => prev.filter(u => u.id !== item.id));
-          } catch (error) {
-              const errorMsg = t('error');
-              if (Platform.OS === 'web') alert(errorMsg);
-              else Alert.alert(t('error'), errorMsg);
-          } finally {
-              setLoading(false);
-          }
+          } catch (error) { Alert.alert(t('error'), t('error')); } finally { setLoading(false); }
       };
-
-      const confirmMessage = `${t('deleteUserConfirm')} ${getUserDisplayName(item)}?`;
-
-      if (Platform.OS === 'web') {
-          if (window.confirm(confirmMessage)) executeDelete();
-      } else {
-          Alert.alert(
-              t('confirm'),
-              confirmMessage,
-              [
-                  { text: t('cancel'), style: 'cancel' },
-                  { text: t('delete'), style: 'destructive', onPress: executeDelete },
-              ]
-          );
-      }
+      const msg = `${t('deleteUserConfirm')} ${getUserDisplayName(item)}?`;
+      if (Platform.OS === 'web') { if (window.confirm(msg)) executeDelete(); }
+      else { Alert.alert(t('confirm'), msg, [{ text: t('cancel'), style: 'cancel' }, { text: t('delete'), style: 'destructive', onPress: executeDelete }]); }
     };
 
-    const renderUserItem = ({ item }) => (
-        <View style={styles.userCard}>
-            <View style={styles.userInfo}>
-                <Text style={styles.userName}>{getUserDisplayName(item)}</Text>
-                <View style={styles.emailRow}>
-                    <Mail size={14} color={COLORS.textSecondary} style={{ marginRight: 5 }} />
-                    <Text style={styles.userEmail}>{item.email}</Text>
+    const renderUserItem = ({ item }) => {
+        const isAdmin = item.is_super;
+        return (
+            <View style={styles.userCard}>
+                <View style={[styles.avatar, isAdmin ? {backgroundColor: COLORS.dangerBg} : {backgroundColor: COLORS.successBg}]}>
+                    {isAdmin ? <Shield size={24} color={COLORS.danger} /> : <User size={24} color={COLORS.success} />}
+                </View>
+                
+                <View style={styles.userInfo}>
+                    <Text style={styles.userName}>{getUserDisplayName(item)}</Text>
+                    <View style={styles.emailRow}>
+                        <Mail size={14} color={COLORS.textSecondary} style={{ marginRight: 6 }} />
+                        <Text style={styles.userEmail}>{item.email}</Text>
+                    </View>
+                </View>
+                
+                <View style={{alignItems: 'flex-end'}}>
+                    <View style={[styles.badge, { backgroundColor: isAdmin ? COLORS.danger : COLORS.success }]}>
+                        <Text style={styles.badgeText}>{isAdmin ? t('admin') : t('teacher')}</Text>
+                    </View>
+                    {!isAdmin && (
+                        <StyledButton 
+                            onPress={() => handleDeleteUser(item)} 
+                            variant="ghost" 
+                            size="small"
+                            style={styles.deleteButton}
+                        >
+                            {/* AUMENTADO: Icono más grande (22) */}
+                            <Trash2 size={22} color={COLORS.danger} />
+                        </StyledButton>
+                    )}
                 </View>
             </View>
-            
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={[styles.badge, { backgroundColor: getRoleColor(item.is_super) }]}>
-                    <Text style={styles.badgeText}>{item.is_super ? t('admin') : t('teacher')}</Text>
-                </View>
-
-                {!item.is_super && (
-                    <TouchableOpacity 
-                        onPress={() => handleDeleteUser(item)} 
-                        style={styles.deleteButton}
-                    >
-                        <Trash2 size={20} color={COLORS.danger} />
-                    </TouchableOpacity>
-                )}
-            </View>
-        </View>
-    );
-
-    const getRoleColor = (isSuperUser) => {
-        return isSuperUser ? COLORS.danger : COLORS.success;
+        );
     };
 
     if (!isSuper) {
@@ -165,18 +110,9 @@ export default function ManageUsersScreen({ navigation }) {
                 <ShieldAlert size={64} color={COLORS.danger} />
                 <Text style={styles.accessDeniedTitle}>{t('accessDenied')}</Text>
                 <Text style={styles.accessDeniedText}>{t('noPerms')}</Text>
-                <TouchableOpacity 
-                    style={styles.goBackButton} 
-                    onPress={() => navigation.goBack()}
-                >
-                    <Text style={styles.goBackButtonText}>{t('back')}</Text>
-                </TouchableOpacity>
+                <StyledButton title={t('back')} onPress={() => navigation.goBack()} />
             </View>
         );
-    }
-
-    if (loading && !refreshing) {
-        return <ActivityIndicator style={styles.loader} size="large" color={COLORS.primary} />;
     }
 
     return (
@@ -186,27 +122,26 @@ export default function ManageUsersScreen({ navigation }) {
                     <Text style={styles.title}>{t('users')}</Text>
                     <Text style={styles.subtitle}>{t('manageInvite')}</Text>
                 </View>
-                <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.addButton}>
-                    <UserPlus size={24} color="white" />
-                    <Text style={styles.addButtonText}>{t('invite')}</Text>
-                </TouchableOpacity>
+                <StyledButton 
+                    onPress={() => setModalVisible(true)} 
+                    icon={<UserPlus size={20} color="white" />}
+                    title={t('invite')}
+                    size="small"
+                />
             </View>
 
-            <FlatList
-                data={users}
-                renderItem={renderUserItem}
-                keyExtractor={(item) => item.id.toString()}
-                style={styles.list}
-                contentContainerStyle={{ paddingBottom: 80 }}
-                ListEmptyComponent={<Text style={styles.emptyText}>{t('noResults')}</Text>}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-            />
+            {loading && !refreshing ? <ActivityIndicator size="large" color={COLORS.primary} /> : (
+                <FlatList
+                    data={users}
+                    renderItem={renderUserItem}
+                    keyExtractor={(item) => item.id.toString()}
+                    contentContainerStyle={{ paddingBottom: 80, gap: 12 }}
+                    ListEmptyComponent={<Text style={styles.emptyText}>{t('noResults')}</Text>}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+                />
+            )}
 
-            <InviteUserModal
-                visible={modalVisible}
-                onClose={() => setModalVisible(false)}
-                onSubmit={handleCreateUser}
-            />
+            <InviteUserModal visible={modalVisible} onClose={() => setModalVisible(false)} onSubmit={handleCreateUser} />
         </View>
     );
 }
@@ -214,44 +149,42 @@ export default function ManageUsersScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20, backgroundColor: COLORS.background },
     centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-    loader: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     title: { fontSize: 28, fontWeight: 'bold', color: COLORS.text },
     subtitle: { fontSize: 14, color: COLORS.textSecondary, marginTop: 2 },
-    addButton: {
-        backgroundColor: COLORS.secondary,
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: 25,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        ...(Platform.OS === 'web' ? { boxShadow: '0 2px 5px rgba(0,0,0,0.2)' } : { elevation: 4 }),
-    },
-    addButtonText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
-    list: { width: '100%' },
+    
     userCard: {
         backgroundColor: COLORS.surface,
-        padding: 15,
-        borderRadius: 12,
-        marginBottom: 12,
+        padding: 16,
+        borderRadius: 16,
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-         ...(Platform.OS === 'web'
-            ? { boxShadow: '0px 1px 3px rgba(0,0,0,0.05)' }
-            : { shadowColor: COLORS.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 }),
+        borderWidth: 1,
+        borderColor: COLORS.borderLight,
+        elevation: 2,
+        shadowColor: COLORS.shadow, shadowOffset: {width:0, height:2}, shadowOpacity:0.05, shadowRadius:3
+    },
+    avatar: {
+        width: 48, height: 48, borderRadius: 24,
+        justifyContent: 'center', alignItems: 'center',
+        marginRight: 16
     },
     userInfo: { flex: 1 },
     userName: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 4 },
     emailRow: { flexDirection: 'row', alignItems: 'center' },
     userEmail: { fontSize: 14, color: COLORS.textSecondary },
-    badge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, marginLeft: 10 },
+    
+    badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginBottom: 4 },
     badgeText: { color: 'white', fontSize: 10, fontWeight: 'bold' },
+    
+    // Ajustado para icono más grande
+    deleteButton: { 
+        paddingHorizontal: 8, 
+        paddingVertical: 8,
+        marginTop: 4 
+    },
+    
     emptyText: { textAlign: 'center', marginTop: 50, fontSize: 16, color: COLORS.textSecondary },
-    deleteButton: { marginLeft: 15, padding: 5 },
     accessDeniedTitle: { fontSize: 22, fontWeight: 'bold', marginTop: 20, color: COLORS.text },
     accessDeniedText: { textAlign: 'center', marginTop: 10, marginBottom: 30, color: COLORS.textSecondary, fontSize: 16 },
-    goBackButton: { paddingHorizontal: 30, paddingVertical: 12, backgroundColor: COLORS.primary, borderRadius: 8 },
-    goBackButtonText: { color: 'white', fontWeight: 'bold' },
 });
