@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getLanguage } from '../context/LanguageContext';
 
-export const API_BASE_URL = 'https://api.franjpg.com'; 
+export const API_BASE_URL = 'https://api.franjpg.com';
 
 export const apiClient = axios.create({
   // baseURL: 'https://api.franjpg.com/',
