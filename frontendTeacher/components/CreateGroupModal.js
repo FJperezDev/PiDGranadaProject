@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, StyleSheet, Alert, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, Modal, StyleSheet, Platform, KeyboardAvoidingView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { COLORS } from '../constants/colors'; 
 import { StyledButton } from './StyledButton';
@@ -10,36 +10,40 @@ export default function CreateGroupModal({ visible, subjects, onClose, onSubmit 
   const { t } = useLanguage();
   const [nameEs, setNameEs] = useState('');
   const [nameEn, setNameEn] = useState('');
-  
-  // Estado inicial seguro
   const [selectedSubject, setSelectedSubject] = useState(null);
-  
-  // EFECTO MÁGICO: Cuando se abre el modal, si no hay selección, selecciona el primero
+  const [warning, setWarning] = useState("");
+
   useEffect(() => {
     if (visible && subjects.length > 0) {
-        // Solo forzamos si no hay uno ya seleccionado o si el seleccionado no existe
         if (!selectedSubject || !subjects.find(s => s.id === selectedSubject)) {
             setSelectedSubject(subjects[0].id);
         }
     }
+    // Limpiar warning al abrir
+    if (visible) setWarning("");
   }, [visible, subjects]);
+
+  const showWarning = (msg) => {
+      setWarning(msg);
+      setTimeout(() => setWarning(""), 3000);
+  };
 
   const handleSubmit = () => {
     // 1. Validación de campos de texto
-    if (!nameEs.trim() || !nameEn.trim()) {
-      Alert.alert(t('error'), t('fillAllFields'));
+    if (!nameEs.trim()) {
+      showWarning(t('fillAllFields') || 'El nombre (ES) es obligatorio');
       return;
     }
+    // Opcional: Validar inglés
+    // if (!nameEn.trim()) { showWarning('Name (EN) is mandatory'); return; }
     
     // 2. Validación crítica de asignatura
     if (!selectedSubject) {
-      Alert.alert(t('error'), t('noSubjects') || "Selecciona una asignatura válida");
+      showWarning(t('noSubjects') || "Selecciona una asignatura válida");
       return;
     }
 
     onSubmit(selectedSubject, nameEs, nameEn);
-    
-    // Limpiamos nombres pero MANTENEMOS la asignatura seleccionada por comodidad
     setNameEs('');
     setNameEn('');
   };
@@ -56,7 +60,6 @@ export default function CreateGroupModal({ visible, subjects, onClose, onSubmit 
               selectedValue={selectedSubject}
               onValueChange={(itemValue) => setSelectedSubject(itemValue)}
               style={styles.picker}
-              // Deshabilitamos si no hay asignaturas
               enabled={subjects.length > 0}
             >
               {subjects.length === 0 ? (
@@ -76,7 +79,7 @@ export default function CreateGroupModal({ visible, subjects, onClose, onSubmit 
 
           <Text style={styles.label}>{t('name')} (Español)</Text>
           <StyledTextInput 
-            placeholder="Ej: Grupo A - Mañana" 
+            placeholder="Ej: Grupo A - Mañana *" 
             value={nameEs} 
             onChangeText={setNameEs} 
             style={{marginBottom: 16}} 
@@ -84,11 +87,14 @@ export default function CreateGroupModal({ visible, subjects, onClose, onSubmit 
 
           <Text style={styles.label}>{t('name')} (English)</Text>
           <StyledTextInput 
-            placeholder="Ex: Group A - Morning" 
+            placeholder="Ex: Group A - Morning *" 
             value={nameEn} 
             onChangeText={setNameEn} 
             style={{marginBottom: 24}} 
           />
+
+          {/* WARNING TEXT */}
+          {warning ? <Text style={styles.warningText}>{warning}</Text> : null}
 
           <View style={styles.buttonRow}>
             <StyledButton 
@@ -101,7 +107,6 @@ export default function CreateGroupModal({ visible, subjects, onClose, onSubmit 
                 title={t('create')} 
                 onPress={handleSubmit} 
                 style={{flex: 1, marginLeft: 10}}
-                // Deshabilitamos visualmente si no hay subject
                 disabled={!selectedSubject}
             />
           </View>
@@ -118,5 +123,14 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, fontWeight: '600', marginBottom: 6, color: COLORS.textSecondary, marginLeft: 4 },
   pickerContainer: { borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 12, marginBottom: 16, backgroundColor: COLORS.surface, overflow: 'hidden' },
   picker: { width: '100%', height: 50 },
-  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
+  
+  warningText: {
+    color: COLORS.error,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+
+  buttonRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
 });

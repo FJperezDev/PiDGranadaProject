@@ -167,6 +167,7 @@ export const STRINGS = {
     epigraphs: 'Epigraphs',
     noEpigraphs: 'No epigraphs defined.',
     deleteEpigraphConfirm: 'Are you sure you want to delete this epigraph?',
+    sameOrderEpigraph: 'Exists already another epigraph in this order'
   },
   es: {
     // --- General Actions & UI ---
@@ -336,5 +337,6 @@ export const STRINGS = {
     epigraphs: 'Epígrafes',
     noEpigraphs: 'No hay epígrafes definidos.',
     deleteEpigraphConfirm: '¿Seguro que quieres eliminar este epígrafe?',
+    sameOrderEpigraph: 'Ya existe otro epígrafe en esa posición'
   },
 };

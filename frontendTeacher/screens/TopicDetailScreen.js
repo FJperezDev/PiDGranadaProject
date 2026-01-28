@@ -44,8 +44,8 @@ export default function TopicDetailScreen({ route, navigation }) {
       setEditingEpigraph(null); 
       fetchEpigraphs();
     } catch (e) { 
-      Alert.alert(t('error'), t('error')); 
-      console.error(e);
+      const msg = e.response?.data?.detail || e.response?.data?.non_field_errors?.[0] || e.message || t('error');
+      throw new Error(msg);
     }
   };
 

@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getSubjects, createSubject, createGroup, deleteSubject, getSubjectGroups } from '../api/coursesRequests';
 import CreateGroupModal from '../components/CreateGroupModal';
 import CreateSubjectModal from '../components/CreateSubjectModal';
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal'; // <--- IMPORTANTE
 import { Plus, Users, Book, Trash2, ChevronRight } from 'lucide-react-native';
 import { COLORS } from '../constants/colors';
 import { useLanguage } from '../context/LanguageContext';
@@ -16,8 +17,13 @@ export default function ManageGroupsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('groups');
 
+  // Modales de creación
   const [groupModalVisible, setGroupModalVisible] = useState(false);
   const [subjectModalVisible, setSubjectModalVisible] = useState(false);
+
+  // Estados para el Modal de Borrado
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [subjectToDelete, setSubjectToDelete] = useState(null);
 
   const fetchData = async () => {
     try {
@@ -25,12 +31,11 @@ export default function ManageGroupsScreen({ navigation }) {
       const subData = await getSubjects();
       setSubjects(subData);
       
-      const allGroupsMap = new Map(); // Usamos un Mapa para evitar duplicados por ID
+      const allGroupsMap = new Map();
 
       await Promise.all(subData.map(async (sub) => {
           try {
               const gData = await getSubjectGroups(sub.id);
-              // Si el backend devuelve grupos repetidos, el Mapa solo guardará la última versión (son idénticos)
               gData.forEach(g => {
                   allGroupsMap.set(g.id, { 
                       ...g, 
@@ -43,7 +48,6 @@ export default function ManageGroupsScreen({ navigation }) {
           }
       }));
       
-      // Convertimos el mapa a array
       setGroups(Array.from(allGroupsMap.values()));
 
     } catch (error) {
@@ -57,19 +61,18 @@ export default function ManageGroupsScreen({ navigation }) {
   useEffect(() => { fetchData(); }, [language]);
   useFocusEffect(useCallback(() => { fetchData(); }, []));
 
+  // --- CREACIÓN ---
+
   const handleCreateGroup = async (subjectId, nameEs, nameEn) => {
     try {
-      // 1. Cerramos modal inmediatamente para evitar doble tap visual
       setGroupModalVisible(false);
-      setLoading(true); // Ponemos loading general
-      
+      setLoading(true);
       await createGroup(subjectId, { name_es: nameEs, name_en: nameEn });
-      
       Alert.alert(t('success'), t('success'));
-      fetchData(); // Recargamos datos
+      fetchData();
     } catch (error) { 
-        Alert.alert(t('error'), t('error')); 
-        setLoading(false); // Quitamos loading si falla
+        Alert.alert(t('error'), error.response?.data?.detail || t('error')); 
+        setLoading(false);
     }
   };
 
@@ -77,30 +80,45 @@ export default function ManageGroupsScreen({ navigation }) {
     try {
       setSubjectModalVisible(false);
       setLoading(true);
-      
       await createSubject({ name_es: nameEs, name_en: nameEn, description_es: descEs, description_en: descEn });
-      
       Alert.alert(t('success'), t('success'));
       fetchData();
     } catch (error) { 
-        Alert.alert(t('error'), t('error'));
+        Alert.alert(t('error'), error.response?.data?.detail || t('error'));
         setLoading(false);
     }
   };
 
-  const handleDeleteSubject = (id) => {
-      const doDelete = async () => { 
-          try { 
-              setLoading(true);
-              await deleteSubject(id); 
-              fetchData(); 
-          } catch(e){ 
-              Alert.alert(t('error'), t('error')); 
-              setLoading(false);
-          } 
-      };
-      Alert.alert(t('delete'), t('deleteGroupConfirm'), [{text: t('cancel')}, {text: t('delete'), style: 'destructive', onPress: doDelete}]);
+  // --- BORRADO (LÓGICA NUEVA) ---
+
+  // 1. Abrir modal y guardar qué vamos a borrar
+  const openDeleteModal = (subject) => {
+      setSubjectToDelete(subject);
+      setDeleteModalVisible(true);
   };
+
+  // 2. Ejecutar borrado al confirmar
+  const handleConfirmDelete = async () => {
+      if (!subjectToDelete) return;
+
+      try {
+          setDeleteModalVisible(false); // Cerramos modal visualmente
+          setLoading(true); // Ponemos spinner global
+          
+          await deleteSubject(subjectToDelete.id);
+          
+          // No mostramos alert de éxito para agilizar, o puedes ponerlo:
+          // Alert.alert(t('success'), t('success'));
+          fetchData(); 
+      } catch(e) { 
+          Alert.alert(t('error'), t('error')); 
+          setLoading(false);
+      } finally {
+          setSubjectToDelete(null);
+      }
+  };
+
+  // --- RENDER ---
 
   const renderGroupItem = ({ item }) => (
     <StyledButton 
@@ -114,7 +132,6 @@ export default function ManageGroupsScreen({ navigation }) {
             </View>
             <View style={styles.textContainer}>
                 <Text style={styles.cardTitle}>{item.name}</Text>
-                {/* Mostramos a qué asignatura pertenece realmente */}
                 <Text style={styles.cardSub}>{item.subjectName || "Sin Asignatura"}</Text>
             </View>
             <ChevronRight size={20} color={COLORS.border} />
@@ -136,7 +153,14 @@ export default function ManageGroupsScreen({ navigation }) {
                 <Text style={styles.cardTitle}>{item.name}</Text>
                 <Text style={styles.cardSub} numberOfLines={1}>{item.description}</Text>
             </View>
-            <StyledButton onPress={() => handleDeleteSubject(item.id)} variant="ghost" size="small" style={{padding: 8}}>
+            
+            {/* Botón de borrar llama a openDeleteModal */}
+            <StyledButton 
+                onPress={() => openDeleteModal(item)} 
+                variant="ghost" 
+                size="small" 
+                style={{padding: 8}}
+            >
                 <Trash2 size={20} color={COLORS.danger} />
             </StyledButton>
         </View>
@@ -181,7 +205,7 @@ export default function ManageGroupsScreen({ navigation }) {
         />
       )}
 
-      {/* Importante: Pasar subjects al modal para que el Picker funcione */}
+      {/* Modales de Creación */}
       <CreateGroupModal 
         visible={groupModalVisible} 
         subjects={subjects} 
@@ -193,6 +217,15 @@ export default function ManageGroupsScreen({ navigation }) {
         visible={subjectModalVisible} 
         onClose={() => setSubjectModalVisible(false)} 
         onSubmit={handleCreateSubject} 
+      />
+
+      {/* Modal de Borrado */}
+      <ConfirmDeleteModal
+        visible={deleteModalVisible}
+        onClose={() => setDeleteModalVisible(false)}
+        onConfirm={handleConfirmDelete}
+        title={`${t('delete')} ${t('subject')}`} // "Borrar Asignatura"
+        message={`${t('deleteGroupConfirm')} "${subjectToDelete?.name}"?`} // "¿Seguro que...? 'Matemáticas'?"
       />
     </View>
   );

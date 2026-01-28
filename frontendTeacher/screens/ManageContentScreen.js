@@ -39,7 +39,7 @@ export default function ManageContentScreen({ navigation }) {
       setConcepts(cData);
       setAllSubjects(sData);
     } catch (error) {
-      Alert.alert(t('error'), t('error'));
+      Alert.alert(t('error'), t('error') + ": No se pudieron cargar los datos.");
       console.error(error);
     } finally {
       setLoading(false);
@@ -49,44 +49,187 @@ export default function ManageContentScreen({ navigation }) {
   useEffect(() => { fetchData(); }, [language]);
   useFocusEffect(useCallback(() => { fetchData(); }, []));
 
-  // --- HANDLERS (Iguales que antes, simplificados para brevedad visual) ---
+  // --- HANDLERS TEMAS (TOPICS) ---
   const handleSaveTopic = async (data, originalSubjectIds = [], originalConceptIds = []) => {
     setLoading(true);
     try {
-      // ... (Lógica de guardado idéntica a tu código original) ...
-      // Para ahorrar espacio aquí, asumo que mantienes la lógica de linking/unlinking
-      // Si la necesitas completa, dime y la pego de nuevo.
-      // (Básicamente es create/update topic + subjectIsAboutTopic + topicIsAboutConcept)
+      // 1. Separar datos del formulario
+      const currentSubjectIds = data.subject_ids || [];
+      const currentConceptIds = data.concept_ids || [];
+
+      // 2. Preparar payload limpio (solo campos del modelo Topic)
+      const dataToSave = {
+          title_es: data.title_es,
+          title_en: data.title_en,
+          description_es: data.description_es,
+          description_en: data.description_en,
+          // No enviamos subject_ids ni concept_ids aquí, eso va por endpoints separados
+      };
+
+      let topicId;
+      let savedTopicTitle; // Importante: Usaremos el título real devuelto por el servidor
+
+      // 3. Crear o Actualizar el Topic
+      if (editingItem) {
+        const updated = await updateTopic(editingItem.id, dataToSave);
+        topicId = editingItem.id;
+        savedTopicTitle = updated.title_es || updated.title;
+      } else {
+        const newTopic = await createTopic(dataToSave);
+        topicId = newTopic.id;
+        savedTopicTitle = newTopic.title_es || newTopic.title;
+      }
+
+      // 4. Gestionar ASIGNATURAS (Subjects)
+      // Calculamos diferencias
+      const subjectsToUnlink = originalSubjectIds.filter(id => !currentSubjectIds.includes(id));
+      const subjectsToLink = currentSubjectIds.filter(id => !originalSubjectIds.includes(id));
+
+      const subjectPromises = [
+          ...subjectsToUnlink.map(subId => subjectIsNotAboutTopic(subId, savedTopicTitle)),
+          ...subjectsToLink.map(subId => subjectIsAboutTopic(subId, savedTopicTitle))
+      ];
+
+      // 5. Gestionar CONCEPTOS (Concepts)
+      const conceptsToUnlink = originalConceptIds.filter(id => !currentConceptIds.includes(id));
+      const conceptsToLink = currentConceptIds.filter(id => !originalConceptIds.includes(id));
+
+      // Helper para buscar el nombre del concepto (necesario para el backend actual de Topic)
+      const getConceptNameById = (id) => {
+        const found = concepts.find(c => c.id === id);
+        return found ? (found.name_es || found.name) : null;
+      };
+
+      const conceptPromises = [
+          ...conceptsToUnlink.map(cId => {
+              const name = getConceptNameById(cId);
+              return name ? topicIsNotAboutConcept(topicId, name, cId) : Promise.resolve();
+          }),
+          ...conceptsToLink.map(cId => {
+              const name = getConceptNameById(cId);
+              return name ? topicIsAboutConcept(topicId, name) : Promise.resolve();
+          })
+      ];
       
-      // ... Simulando el final del proceso:
+      // Ejecutar todas las vinculaciones en paralelo
+      await Promise.all([...subjectPromises, ...conceptPromises]);
+
       setTopicModalVisible(false);
       setEditingItem(null);
-      fetchData();
       Alert.alert(t('success'), t('success'));
-    } catch (e) { console.error(e); Alert.alert(t('error'), t('error')); } finally { setLoading(false); }
+      fetchData(); // Recargar lista completa
+
+    } catch (e) {
+      console.error("Error saving topic:", e);
+      const msg = e.response?.data?.detail || e.message || t('error');
+      Alert.alert(t('error'), msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteTopic = (orderId) => {
-      const deleteAction = async () => { try { await deleteTopic(orderId); fetchData(); } catch(e){console.error(e)} };
-      if (Platform.OS === 'web') { if (window.confirm(t('deleteGroupConfirm'))) deleteAction(); }
-      else { Alert.alert(t('delete'), t('deleteGroupConfirm'), [{ text: t('cancel'), style: 'cancel' }, { text: t('delete'), style: 'destructive', onPress: deleteAction }]); }
+      const performDelete = async () => {
+        try {
+          setLoading(true);
+          await deleteTopic(orderId);
+          fetchData();
+        } catch (error) {
+          console.error("Error al eliminar", error);
+          Alert.alert(t('error'), "No se pudo eliminar el tema.");
+          setLoading(false);
+        }
+      };
+  
+      if (Platform.OS === 'web') {
+        if (window.confirm(t('deleteGroupConfirm'))) performDelete();
+      } else {
+        Alert.alert(t('delete'), t('deleteGroupConfirm'), [
+          { text: t('cancel'), style: 'cancel' },
+          { text: t('delete'), style: 'destructive', onPress: performDelete }
+        ]);
+      }
   };
 
+  // --- HANDLERS CONCEPTOS (CONCEPTS) ---
   const handleSaveConcept = async (data, originalIdsFromModal = []) => {
     setLoading(true);
     try {
-      // ... (Lógica de guardado de conceptos idéntica) ...
+      const incomingRelations = data.related_concepts || [];
+      const incomingIds = incomingRelations.map(r => r.id);
+  
+      const dataToSave = {
+          name_es: data.name_es,
+          name_en: data.name_en,
+          description_es: data.description_es,
+          description_en: data.description_en,
+          // No enviamos related_concepts aquí
+      };
+  
+      let parentConceptId;
+  
+      if (editingItem) {
+        await updateConcept(editingItem.id, dataToSave);
+        parentConceptId = editingItem.id;
+      } else {
+        const newConcept = await createConcept(dataToSave);
+        parentConceptId = newConcept.id;
+      }
+
+      // 1. Desvincular eliminados
+      const idsToUnlink = originalIdsFromModal.filter(id => !incomingIds.includes(id));
+      const unlinkPromises = idsToUnlink.map(childId => unlinkConceptFromConcept(parentConceptId, childId));
+  
+      // 2. Vincular nuevos o actualizar descripciones
+      // Nota: Si ya existía pero cambió la descripción, el backend debería manejarlo (upsert) o podríamos desvincular y revincular.
+      // Asumiremos que linkConceptToConcept actualiza si ya existe.
+      
+      const linkPromises = incomingRelations.map(relation => {
+        return linkConceptToConcept(
+            parentConceptId, 
+            relation.id, 
+            relation.description_es || '',
+            relation.description_en || '',
+        );
+      });
+  
+      await Promise.all([...unlinkPromises, ...linkPromises]);
+  
       setConceptModalVisible(false);
       setEditingItem(null);
-      fetchData(); 
       Alert.alert(t('success'), t('success'));
-    } catch (e) { console.error(e); Alert.alert(t('error'), t('error')); } finally { setLoading(false); }
+      fetchData(); 
+  
+    } catch (e) { 
+      console.error(e);
+      const msg = e.response?.data?.detail || e.message || t('error');
+      Alert.alert(t('error'), msg); 
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDeleteConcept = (id) => {
-      const deleteAction = async () => { try { await deleteConcept(id); fetchData(); } catch(e){console.error(e)} };
-      if (Platform.OS === 'web') { if (window.confirm(t('deleteGroupConfirm'))) deleteAction(); }
-      else { Alert.alert(t('delete'), t('deleteGroupConfirm'), [{ text: t('cancel'), style: 'cancel' }, { text: t('delete'), style: 'destructive', onPress: deleteAction }]); }
+  const handleDeleteConcept = (conceptId) => {
+      const performDelete = async () => {
+        try {
+          setLoading(true);
+          await deleteConcept(conceptId);
+          fetchData();
+        } catch (error) {
+          console.error("Error al eliminar", error);
+          Alert.alert(t('error'), "No se pudo eliminar el concepto.");
+          setLoading(false);
+        }
+      };
+  
+      if (Platform.OS === 'web') {
+        if (window.confirm(t('deleteGroupConfirm'))) performDelete();
+      } else {
+        Alert.alert(t('delete'), t('deleteGroupConfirm'), [
+          { text: t('cancel'), style: 'cancel' },
+          { text: t('delete'), style: 'destructive', onPress: performDelete }
+        ]);
+      }
   };
 
   const openCreateModal = () => {
@@ -99,7 +242,7 @@ export default function ManageContentScreen({ navigation }) {
     activeTab === 'topics' ? setTopicModalVisible(true) : setConceptModalVisible(true);
   };
 
-  // --- RENDER ITEMS (Estilizados) ---
+  // --- RENDER ITEMS ---
   const renderTopicItem = ({ item }) => (
     <StyledButton 
       variant="secondary"
@@ -117,10 +260,10 @@ export default function ManageContentScreen({ navigation }) {
         
         <View style={styles.actions}>
             <StyledButton onPress={() => openEditModal(item)} variant="ghost" size="small" style={styles.iconBtn}>
-                <Edit size={18} color={COLORS.textSecondary} />
+                <Edit size={20} color={COLORS.textSecondary} />
             </StyledButton>
             <StyledButton onPress={() => handleDeleteTopic(item.id)} variant="ghost" size="small" style={styles.iconBtn}>
-                <Trash2 size={18} color={COLORS.danger} />
+                <Trash2 size={20} color={COLORS.danger} />
             </StyledButton>
             <ChevronRight size={20} color={COLORS.border} />
         </View>
@@ -142,10 +285,10 @@ export default function ManageContentScreen({ navigation }) {
         
         <View style={styles.actions}>
             <StyledButton onPress={() => openEditModal(item)} variant="ghost" size="small" style={styles.iconBtn}>
-                <Edit size={18} color={COLORS.textSecondary} />
+                <Edit size={20} color={COLORS.textSecondary} />
             </StyledButton>
             <StyledButton onPress={() => handleDeleteConcept(item.id)} variant="ghost" size="small" style={styles.iconBtn}>
-                <Trash2 size={18} color={COLORS.danger} />
+                <Trash2 size={20} color={COLORS.danger} />
             </StyledButton>
         </View>
     </View>
@@ -193,9 +336,22 @@ export default function ManageContentScreen({ navigation }) {
         />
       )}
 
-      {/* Modales (se mantienen igual que los pasaste antes, ya están refactorizados) */}
-      <TopicModal visible={topicModalVisible} onClose={() => setTopicModalVisible(false)} onSubmit={handleSaveTopic} editingTopic={editingItem} allSubjects={allSubjects} allConcepts={concepts} />
-      <ConceptModal visible={conceptModalVisible} onClose={() => setConceptModalVisible(false)} onSubmit={handleSaveConcept} editingConcept={editingItem} allConcepts={concepts} />
+      {/* MODALES */}
+      <TopicModal 
+        visible={topicModalVisible} 
+        onClose={() => setTopicModalVisible(false)} 
+        onSubmit={handleSaveTopic} 
+        editingTopic={editingItem} 
+        allSubjects={allSubjects} 
+        allConcepts={concepts} 
+      />
+      <ConceptModal 
+        visible={conceptModalVisible} 
+        onClose={() => setConceptModalVisible(false)} 
+        onSubmit={handleSaveConcept} 
+        editingConcept={editingItem} 
+        allConcepts={concepts} 
+      />
     </View>
   );
 }
@@ -211,12 +367,12 @@ const styles = StyleSheet.create({
 
   // Estilo para el StyledButton (Touchable)
   card: { 
-      marginBottom: 0, // Controlado por gap del FlatList
-      paddingHorizontal: 0, paddingVertical: 0, // Quitamos padding del botón base
+      marginBottom: 0, 
+      paddingHorizontal: 0, paddingVertical: 0, 
       justifyContent: 'center',
       alignItems: 'stretch'
   },
-  // Estilo para el View estático
+  // Estilo para el View estático (Conceptos)
   cardStatic: {
       backgroundColor: COLORS.surface,
       borderRadius: 12,
@@ -245,6 +401,6 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 2 },
   cardSub: { fontSize: 13, color: COLORS.textSecondary },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  iconBtn: { paddingHorizontal: 8, paddingVertical: 8, width: 36, height: 36 },
+  iconBtn: { paddingHorizontal: 8, paddingVertical: 8, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' },
   empty: { textAlign: 'center', marginTop: 40, color: COLORS.textSecondary, fontSize: 16 }
 });
