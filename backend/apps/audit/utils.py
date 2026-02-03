@@ -2,9 +2,10 @@ import pandas as pd
 from io import BytesIO
 import traceback
 from django.core.files import File
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import Q
 from .models import BackupFile
+
 
 # --- IMPORTA TUS MODELOS ---
 from apps.content.api.models import (
@@ -114,6 +115,23 @@ def generate_excel_backup(is_auto=False):
                 df_sub_top.to_excel(writer, sheet_name='subject_topics', index=False)
             else:
                 pd.DataFrame(columns=['subject_code', 'topic_code', 'order_id']).to_excel(writer, sheet_name='subject_topics', index=False)
+            
+            # 5.B. RELACIÓN TOPIC-CONCEPT
+            print("   - Exportando Topic-Concepts (Vínculos)...")
+            qs_top_con = TopicIsAboutConcept.objects.all().values(
+                'topic__id', 
+                'concept__id', 
+                'order_id'
+            )
+            df_top_con = pd.DataFrame(list(qs_top_con))
+            if not df_top_con.empty:
+                df_top_con.rename(columns={
+                    'topic__id': 'topic_code', 
+                    'concept__id': 'concept_code'
+                }, inplace=True)
+                df_top_con.to_excel(writer, sheet_name='topic_concepts', index=False)
+            else:
+                pd.DataFrame(columns=['topic_code', 'concept_code', 'order_id']).to_excel(writer, sheet_name='topic_concepts', index=False)
 
             # 6. EPIGRAPHS
             print("   - Exportando Epígrafes...")
@@ -241,13 +259,12 @@ def restore_excel_backup(backup_id):
     except Exception as e:
         raise Exception(f"Error leyendo archivo Excel: {str(e)}")
 
+    # BLOQUE ATÓMICO PRINCIPAL (Todo o nada, salvo excepciones controladas)
     with transaction.atomic():
         print("⚠️ Iniciando restauración. Borrando datos actuales...")
         
-        # 1. FLUSH DE DATOS (IMPORTANTE: Borrar intermedias primero)
-        # Borramos las evaluaciones primero porque dependen de StudentGroup y Question
+        # 1. FLUSH DE DATOS
         QuestionEvaluationGroup.objects.all().delete()
-        
         SubjectIsAboutTopic.objects.all().delete()
         TopicIsAboutConcept.objects.all().delete()
         ConceptIsRelatedToConcept.objects.all().delete()
@@ -256,239 +273,260 @@ def restore_excel_backup(backup_id):
             QuestionRelatedToConcept.objects.all().delete() 
         except:
             pass
-
         Answer.objects.all().delete()
         Question.objects.all().delete()
         Epigraph.objects.all().delete()
         StudentGroup.objects.all().delete()
+        Topic.objects.all().delete() 
         Concept.objects.all().delete()
-        Topic.objects.all().delete()
         Subject.objects.all().delete()
         
         print("✅ Datos borrados. Iniciando importación...")
 
-        subjects_map = {} 
-        topics_map = {} 
-        concepts_map = {} 
-        concepts_name_map = {} 
-        questions_map = {}
-        groups_map = {} # NUEVO: Mapa para guardar grupos por su ID antiguo
-        teachers_cache = {} # Cache para teachers
-
         # --- 2. SUBJECTS ---
         if "subjects" in xls:
             for _, row in xls["subjects"].iterrows():
-                payload = row.to_dict()
-                s_code = clean_str(payload.pop("subject_code", None))
-                if 'title_es' in payload: payload['name_es'] = payload.pop('title_es')
-                if 'title_en' in payload: payload['name_en'] = payload.pop('title_en')
+                try:
+                    # Usamos atomic anidado para que si falla una fila, no aborte todo
+                    with transaction.atomic():
+                        payload = row.to_dict()
+                        original_id = payload.pop("subject_code", None)
+                        if 'title_es' in payload: payload['name_es'] = payload.pop('title_es')
+                        if 'title_en' in payload: payload['name_en'] = payload.pop('title_en')
 
-                valid_fields = {f.name for f in Subject._meta.get_fields()}
-                clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
-                obj = Subject.objects.create(**clean_payload)
-                subjects_map[s_code] = obj 
+                        valid_fields = {f.name for f in Subject._meta.get_fields()}
+                        clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
+                        
+                        if original_id: clean_payload['id'] = original_id
+                        Subject.objects.create(**clean_payload)
+                except Exception as e:
+                    print(f"Skipping Subject Error: {e}")
 
         # --- 3. TOPICS ---
         if "topics" in xls:
             for _, row in xls["topics"].iterrows():
-                payload = row.to_dict()
-                t_code = clean_str(payload.pop("topic_code", None))
+                try:
+                    with transaction.atomic():
+                        payload = row.to_dict()
+                        original_id = payload.pop("topic_code", None)
+                        if 'name_es' in payload: payload['title_es'] = payload.pop('name_es')
+                        if 'name_en' in payload: payload['title_en'] = payload.pop('name_en')
+                        
+                        valid_fields = {f.name for f in Topic._meta.get_fields()}
+                        clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
 
-                if 'name_es' in payload: payload['title_es'] = payload.pop('name_es')
-                if 'name_en' in payload: payload['title_en'] = payload.pop('name_en')
-                
-                valid_fields = {f.name for f in Topic._meta.get_fields()}
-                clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
-
-                obj = Topic.objects.create(**clean_payload)
-                topics_map[t_code] = obj
+                        if original_id: clean_payload['id'] = original_id
+                        Topic.objects.create(**clean_payload)
+                except Exception as e:
+                    print(f"Skipping Topic Error: {e}")
                 
         # --- 4. SUBJECT_TOPICS ---
         if "subject_topics" in xls:
-            print("   > Procesando vínculos Subject-Topics...")
             for _, row in xls["subject_topics"].iterrows():
-                s_code = clean_str(row.get("subject_code"))
-                t_code = clean_str(row.get("topic_code"))
-                order_id = int(clean_str(row.get('order_id')) or 1)
-                
-                subject_obj = subjects_map.get(s_code)
-                topic_obj = topics_map.get(t_code)
-
-                if subject_obj and topic_obj:
-                    SubjectIsAboutTopic.objects.create(
-                        subject=subject_obj, 
-                        topic=topic_obj, 
-                        order_id=order_id
-                    )
+                try:
+                    with transaction.atomic():
+                        s_id = row.get("subject_code")
+                        t_id = row.get("topic_code")
+                        order_id = int(clean_str(row.get('order_id')) or 1)
+                        
+                        subject_obj = Subject.objects.get(id=s_id)
+                        topic_obj = Topic.objects.get(id=t_id)
+                        SubjectIsAboutTopic.objects.create(
+                            subject=subject_obj, topic=topic_obj, order_id=order_id
+                        )
+                except Exception:
+                    # Ignoramos silenciosamente si falta el padre
+                    pass
 
         # --- 5. CONCEPTS ---
         if "concepts" in xls:
             for _, row in xls["concepts"].iterrows():
-                payload = row.to_dict()
-                c_code = clean_str(payload.pop("concept_code", None))
-                t_code = clean_str(payload.pop("related_topic_code", None))
-                topic_obj = topics_map.get(t_code)
-                valid_fields = {f.name for f in Concept._meta.get_fields()}
-                clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
+                try:
+                    # ESTE ES EL PUNTO CRÍTICO DONDE OCURRÍA EL ERROR
+                    with transaction.atomic():
+                        payload = row.to_dict()
+                        original_id = payload.pop("concept_code", None)
+                        related_topic_id = payload.pop("related_topic_code", None)
+                        
+                        valid_fields = {f.name for f in Concept._meta.get_fields()}
+                        clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
 
-                obj = Concept.objects.create(**clean_payload)
-                concepts_map[c_code] = obj
-                if 'name_es' in clean_payload:
-                    concepts_name_map[clean_payload['name_es']] = obj
+                        if original_id: clean_payload['id'] = original_id
 
-                if topic_obj:
-                    TopicIsAboutConcept.objects.create(topic=topic_obj, concept=obj, order_id=1)
+                        Concept.objects.create(**clean_payload)
+                       
+                except IntegrityError as e:
+                    print(f"❌ Error creando concepto {original_id}: {e}")
+                    # Al salir del bloque atomic(), la transacción principal sigue viva
+                    continue 
+                except Exception as e:
+                    print(f"❌ Error genérico concepto: {e}")
+                    continue
+
+        # --- 5.B. TOPIC_CONCEPTS ---
+        if "topic_concepts" in xls:
+            for _, row in xls["topic_concepts"].iterrows():
+                try:
+                    with transaction.atomic():
+                        t_id = row.get("topic_code")
+                        c_id = row.get("concept_code")
+                        order_id = int(clean_str(row.get('order_id')) or 1)
+                        
+                        # Búsqueda directa por ID (ya que los preservamos)
+                        topic_obj = Topic.objects.get(id=t_id)
+                        concept_obj = Concept.objects.get(id=c_id)
+                        
+                        TopicIsAboutConcept.objects.create(
+                            topic=topic_obj, concept=concept_obj, order_id=order_id
+                        )
+                except (Topic.DoesNotExist, Concept.DoesNotExist):
+                    pass # Si falta alguno, saltamos
+                except IntegrityError:
+                    pass # Si ya existe, saltamos
 
         # --- 6. RELATIONS ---
         if "relations" in xls:
             for _, row in xls["relations"].iterrows():
-                code_from = clean_str(row.get("variable1"))
-                code_to = clean_str(row.get("variable2"))
-                source_obj = concepts_map.get(code_from)
-                target_obj = concepts_map.get(code_to) 
-                if not target_obj: target_obj = concepts_name_map.get(code_to)
+                try:
+                    with transaction.atomic():
+                        id_from = row.get("variable1")
+                        id_to = row.get("variable2")
+                        
+                        if not id_from or not id_to: continue
 
-                if source_obj and target_obj:
-                    ConceptIsRelatedToConcept.objects.create(
-                        concept_from=source_obj, concept_to=target_obj,
-                        description_es=row.get('description_es', ''),
-                        description_en=row.get('description_en', '')
-                    )
+                        source_obj = Concept.objects.get(id=id_from)
+                        target_obj = Concept.objects.get(id=id_to)
+
+                        ConceptIsRelatedToConcept.objects.create(
+                            concept_from=source_obj, 
+                            concept_to=target_obj,
+                            description_es=row.get('description_es', ''),
+                            description_en=row.get('description_en', '')
+                        )
+                except (Concept.DoesNotExist, IntegrityError):
+                    # Si falla una relación, no rompemos el resto
+                    pass
 
         # --- 7. EPIGRAPHS ---
         if "epigraphs" in xls:
             for _, row in xls["epigraphs"].iterrows():
-                payload = row.to_dict()
-                payload.pop("epigraph_code", None)
-                t_code = clean_str(payload.pop("topic_code", None))
-                topic_obj = topics_map.get(t_code)
-                if 'content_es' in payload: payload['description_es'] = payload.pop('content_es')
-                if 'content_en' in payload: payload['description_en'] = payload.pop('content_en')
+                try:
+                    with transaction.atomic():
+                        payload = row.to_dict()
+                        original_id = payload.pop("epigraph_code", None)
+                        t_id = payload.pop("topic_code", None)
+                        
+                        if 'content_es' in payload: payload['description_es'] = payload.pop('content_es')
+                        if 'content_en' in payload: payload['description_en'] = payload.pop('content_en')
 
-                valid_fields = {f.name for f in Epigraph._meta.get_fields()}
-                clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
-                
-                if topic_obj:
-                    Epigraph.objects.create(topic=topic_obj, **clean_payload)
+                        valid_fields = {f.name for f in Epigraph._meta.get_fields()}
+                        clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
+                        
+                        if original_id: clean_payload['id'] = original_id
+                        
+                        topic_obj = Topic.objects.get(id=t_id)
+                        Epigraph.objects.create(topic=topic_obj, **clean_payload)
+                except Exception:
+                    pass
 
         # --- 8. QUESTIONS ---
         if "questions" in xls:
             for _, row in xls["questions"].iterrows():
-                payload = row.to_dict()
-                q_code = clean_str(payload.pop("question_code", None))
+                try:
+                    with transaction.atomic():
+                        payload = row.to_dict()
+                        original_id = payload.pop("question_code", None)
+                        
+                        valid_fields = {f.name for f in Question._meta.get_fields()}
+                        clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
+                        
+                        if original_id: clean_payload['id'] = original_id
+                        
+                        Question.objects.create(**clean_payload)
+                except Exception:
+                    pass
                 
-                valid_fields = {f.name for f in Question._meta.get_fields()}
-                clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
-                
-                q_obj = Question.objects.create(**clean_payload)
-                questions_map[q_code] = q_obj
-                
-        # --- 9. QUESTION VINCULOS (TOPIC) ---
+        # --- 9 & 10. QUESTION LINKS ---
         if "question_topics" in xls:
-            print("   > Procesando vínculos Question-Topic...")
             for _, row in xls["question_topics"].iterrows():
-                q_code = clean_str(row.get("question_code"))
-                t_code = clean_str(row.get("topic_code"))
+                try:
+                    with transaction.atomic():
+                        q = Question.objects.get(id=row.get("question_code"))
+                        t = Topic.objects.get(id=row.get("topic_code"))
+                        QuestionBelongsToTopic.objects.create(question=q, topic=t)
+                except: pass
                 
-                question_obj = questions_map.get(q_code)
-                topic_obj = topics_map.get(t_code)
-
-                if question_obj and topic_obj:
-                    QuestionBelongsToTopic.objects.create(question=question_obj, topic=topic_obj)
-        
-        # --- 10. QUESTION VINCULOS (CONCEPT) ---
         if "question_concepts" in xls:
-            print("   > Procesando vínculos Question-Concept...")
             for _, row in xls["question_concepts"].iterrows():
-                q_code = clean_str(row.get("question_code"))
-                c_code = clean_str(row.get("concept_code"))
-                
-                question_obj = questions_map.get(q_code)
-                concept_obj = concepts_map.get(c_code)
-
-                if question_obj and concept_obj:
-                    QuestionRelatedToConcept.objects.create(question=question_obj, concept=concept_obj)
-
+                try:
+                    with transaction.atomic():
+                        q = Question.objects.get(id=row.get("question_code"))
+                        c = Concept.objects.get(id=row.get("concept_code"))
+                        QuestionRelatedToConcept.objects.create(question=q, concept=c)
+                except: pass
 
         # --- 11. ANSWERS ---
         if "answers" in xls:
             for _, row in xls["answers"].iterrows():
-                payload = row.to_dict()
-                q_code = clean_str(payload.pop("question_code", None))
-                is_correct = str(payload.get("is_correct")).lower() in ['true', '1', 'yes']
-                payload['is_correct'] = is_correct
-                q_obj = questions_map.get(q_code)
-                if q_obj:
-                    Answer.objects.create(question=q_obj, **payload)
+                try:
+                    with transaction.atomic():
+                        payload = row.to_dict()
+                        q_id = payload.pop("question_code", None)
+                        is_correct = str(payload.get("is_correct")).lower() in ['true', '1', 'yes']
+                        payload['is_correct'] = is_correct
+                        
+                        q_obj = Question.objects.get(id=q_id)
+                        Answer.objects.create(question=q_obj, **payload)
+                except: pass
 
-        # --- 12. STUDENT GROUPS (ASIGNACIÓN DE TEACHER) ---
+        # --- 12. STUDENT GROUPS ---
         if "student_groups" in xls:
-            print("   > Procesando Student Groups y asignando Teachers...")
             for _, row in xls["student_groups"].iterrows():
-                payload = row.to_dict()
-                
-                # IMPORTANTE: Capturamos el ID antiguo para mapearlo luego en analytics
-                g_old_code = clean_str(payload.pop("group_code", None))
-                
-                s_code = clean_str(payload.pop("subject_code", None))
-                teacher_email = clean_str(row.get("teacher_email")) 
-                
-                subject_obj = subjects_map.get(s_code)
-                teacher_obj = None
+                try:
+                    with transaction.atomic():
+                        payload = row.to_dict()
+                        original_id = payload.pop("group_code", None)
+                        s_id = payload.pop("subject_code", None)
+                        teacher_email = clean_str(row.get("teacher_email")) 
+                        
+                        teacher_obj = None
+                        if teacher_email:
+                            try:
+                                teacher_obj = Teacher.objects.get(email=teacher_email)
+                            except Teacher.DoesNotExist:
+                                pass 
 
-                # 1. Buscar Teacher en cache o DB
-                if teacher_email:
-                    if teacher_email in teachers_cache:
-                        teacher_obj = teachers_cache[teacher_email]
-                    else:
-                        try:
-                            teacher_obj = Teacher.objects.get(email=teacher_email)
-                            teachers_cache[teacher_email] = teacher_obj
-                        except Teacher.DoesNotExist:
-                            print(f"⚠️ Profesor con email '{teacher_email}' no encontrado. Grupo sin asignar.")
-                            teacher_obj = None 
+                        valid_fields = {f.name for f in StudentGroup._meta.get_fields()}
+                        clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
+                        
+                        if original_id: clean_payload['id'] = original_id
+                        if teacher_obj: clean_payload['teacher'] = teacher_obj
+                        
+                        subject_obj = Subject.objects.get(id=s_id)
+                        clean_payload['subject'] = subject_obj
+                        StudentGroup.objects.create(**clean_payload)
+                except: pass
 
-                valid_fields = {f.name for f in StudentGroup._meta.get_fields()}
-                clean_payload = {k: v for k, v in payload.items() if k in valid_fields}
-                
-                # 2. Asignar Foreign Keys
-                if subject_obj: clean_payload['subject'] = subject_obj
-                if teacher_obj: clean_payload['teacher'] = teacher_obj 
-                
-                if 'groupCode' in payload:
-                    clean_payload['groupCode'] = clean_str(payload['groupCode'])
-
-                # Crear el grupo
-                obj = StudentGroup.objects.create(**clean_payload)
-                
-                # Guardamos en mapa: ID Antiguo -> Objeto Nuevo
-                if g_old_code:
-                    groups_map[g_old_code] = obj
-
-        # --- 13. QUESTION EVALUATION GROUPS (ANALYTICS) ---
+        # --- 13. ANALYTICS ---
         if "analytics" in xls:
-            print("   > Procesando Analytics (QuestionEvaluationGroup)...")
-            count_evals = 0
             for _, row in xls["analytics"].iterrows():
-                # Recuperamos los códigos antiguos
-                g_code = clean_str(row.get("group_code"))
-                q_code = clean_str(row.get("question_code"))
-                
-                # Buscamos los objetos nuevos usando los mapas
-                group_obj = groups_map.get(g_code)
-                question_obj = questions_map.get(q_code)
-                
-                if group_obj and question_obj:
-                    QuestionEvaluationGroup.objects.create(
-                        group=group_obj,
-                        question=question_obj,
-                        ev_count=int(row.get('ev_count', 0)),
-                        correct_count=int(row.get('correct_count', 0))
-                    )
-                    count_evals += 1
-            print(f"     -> {count_evals} registros de analítica restaurados.")
+                try:
+                    with transaction.atomic():
+                        g_id = row.get("group_code")
+                        q_id = row.get("question_code")
+                        
+                        group_obj = StudentGroup.objects.get(id=g_id)
+                        question_obj = Question.objects.get(id=q_id)
+                        
+                        QuestionEvaluationGroup.objects.create(
+                            group=group_obj,
+                            question=question_obj,
+                            ev_count=int(row.get('ev_count', 0)),
+                            correct_count=int(row.get('correct_count', 0))
+                        )
+                except: pass
 
-        print("🏁 Restauración completada exitosamente.")
+        print("🏁 Restauración completada.")
 
 # ==========================================
 #   IMPORTACIÓN MASIVA (CORREGIDA RELACIONES)

@@ -43,7 +43,6 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'insecure-default-key')
 
 ALLOWED_HOSTS = ['localhost', 'api.franjpg.com']
-ALLOWED_HOSTS = ['*']
 
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True

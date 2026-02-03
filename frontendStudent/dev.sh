@@ -49,6 +49,8 @@ EOF
 echo "☕ Compilando APK Debug..."
 cd android
 ./gradlew clean
+./gradlew assembleDebug
 ./gradlew assembleRelease
 
 echo "✅ APK FINAL LISTO: android/app/build/outputs/apk/debug/app-debug.apk"
+echo "✅ APK FINAL LISTO: android/app/build/outputs/apk/debug/app-release.apk"
