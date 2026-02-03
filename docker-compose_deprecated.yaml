@@ -8,36 +8,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
-    networks:
-      - internal_net
-    # OPTIMIZACIÓN RASPBERRY PI 5 (8GB RAM)
-    # Le damos memoria para que vuele y no toque disco
-    command: >
-      postgres 
-      -c shared_buffers=2GB 
-      -c effective_cache_size=4GB 
-      -c work_mem=16MB 
-      -c maintenance_work_mem=128MB 
-      -c max_connections=200
-
-  # NUEVO SERVICIO: EL "POOL" DE CONEXIONES
-  pgbouncer:
-    image: edoburu/pgbouncer:latest
-    container_name: pgbouncer
-    restart: unless-stopped
-    depends_on:
-      - db
-    environment:
-      - DB_USER=django
-      - DB_PASSWORD=django123
-      - DB_HOST=db
-      - DB_NAME=django_db
-      - POOL_MODE=transaction  # El mejor modo para Django
-      - MAX_CLIENT_CONN=1000   # Django puede abrir hasta 1000 conexiones ligeras
-      - DEFAULT_POOL_SIZE=20   # Pero solo usamos 20 reales contra Postgres
-    ports:
-      - "6432:5432" # Escucha en el 6432
+      - "5432:5432" # Opcional: solo si necesitas acceder a la DB desde tu PC
     networks:
       - internal_net
 
@@ -48,18 +19,16 @@ services:
     env_file:
       - .env
     depends_on:
-      - pgbouncer # Ahora dependemos del pool, no de la db directa
+      - db
     volumes:
       - django_media:/app/media
     environment:
-      # CAMBIO CRÍTICO: Apuntamos al puerto 5432 de PGBOUNCER (que internamente es el 6432 mapeado o directo por red interna)
-      # Nota: En red interna de docker, pgbouncer escucha en su puerto interno 5432 según la imagen edoburu
-      - DATABASE_URL=postgresql://django:django123@pgbouncer:5432/django_db
+      - DATABASE_URL=postgresql://django:django123@db:5432/django_db
     ports:
-      - "8000:8000"
+      - "8000:8000" # Django suele correr en el 8000
     networks:
       - internal_net
-      
+
   frontend_student:
     build: ./frontendStudent
     container_name: frontend_student

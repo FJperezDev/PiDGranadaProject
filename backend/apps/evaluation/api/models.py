@@ -1,14 +1,8 @@
 from django.db import models
-
-# Create your models here.
-from django.db import models
 from django.utils import timezone
-
-# Importar desde otras apps
 from apps.customauth.models import CustomTeacher as Teacher
 from apps.content.api.models import Topic, Concept 
 from apps.courses.api.models import StudentGroup
-from apps.utils.choices import ACTION_CHOICES
 
 class Question(models.Model):
     QUESTION_TYPES = [
@@ -24,6 +18,14 @@ class Question(models.Model):
     approved = models.BooleanField(default=False)
     generated = models.BooleanField(default=False)
     old = models.BooleanField(default=False)
+
+    class Meta:
+        # AÑADIDO: Índices para acelerar la generación de exámenes
+        indexes = [
+            models.Index(fields=['type']),
+            models.Index(fields=['approved']),
+            models.Index(fields=['generated']),
+        ]
 
     def __str__(self):
       return self.statement_es or f"Question #{self.pk}"
@@ -46,10 +48,13 @@ class Answer(models.Model):
 
     class Meta:
         unique_together = ('id', 'question')
+        # AÑADIDO: Índice para recuperar respuestas de una pregunta instantáneamente
+        indexes = [
+            models.Index(fields=['question']),
+        ]
 
     def __str__(self):
         return f"{self.text_es or self.text_en} (Q{self.question.id})"
-
 
 class TeacherMakeChangeAnswer(models.Model):
     old_object = models.ForeignKey(Answer, on_delete=models.CASCADE, related_name='old_changes', null=True, blank=True)

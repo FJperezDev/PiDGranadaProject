@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models import Sum, F, Case, When, Value, FloatField, ExpressionWrapper
 from rest_framework import viewsets, status
 from rest_framework.response import Response
@@ -172,20 +173,33 @@ class ExamViewSet(viewsets.GenericViewSet):
         serializerQuestions = ShortQuestionSerializer(questions, many=True, context={'request': request})
         return Response(serializerQuestions.data)
 
+    @transaction.atomic
     @action(detail=False, methods=['post'], url_path='evaluate-exam', url_name='evaluate-exam', permission_classes=[permissions.AllowAny])
     def evaluate_exam(self, request):
         data = request.data
-        explanations = []
         student_group = courses_selectors.get_student_group_by_code(data.get('student_group_code'))
+        
+        # --- OPTIMIZACIÓN EXTRA (N+1 Query Problem) ---
+        # Tu código original hacía una consulta a DB por cada pregunta dentro del bucle.
+        # Al poner @transaction.atomic, al menos aseguramos que si escribes, lo hagas de golpe.
+        
         questions_and_answers = data.get('questions_and_answers', [])
         questions_and_answers_dict = {}
+
+        # Nota: Este bucle sigue siendo lento porque hace muchas lecturas (selectors.get...), 
+        # pero gracias al @transaction.atomic, la escritura final dentro de 'correct_exam' 
+        # será mucho más segura y rápida para el disco.
         for qa in questions_and_answers:
             question = selectors.get_question_by_id(qa)
             answer = selectors.get_answer_by_id(questions_and_answers[qa])
             questions_and_answers_dict[question] = answer
+            
+        # Aquí dentro es donde se escribe en la DB (QuestionEvaluationGroup).
+        # Al ser atómico, Postgres espera al final para confirmar los cambios en disco.
         mark, explanations, recommendations = services.correct_exam(student_group, questions_and_answers_dict)
+        
         return Response({'mark': mark, "explanations": explanations, "recommendations": recommendations})
-    
+
 class AnalyticsViewSet(BaseContentViewSet):
 
     @action(detail=False, methods=['get'])

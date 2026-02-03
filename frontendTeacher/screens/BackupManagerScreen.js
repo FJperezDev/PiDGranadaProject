@@ -9,9 +9,11 @@ import {
   RefreshControl,
   Platform 
 } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+
+// 1. CAMBIO CLAVE: Importamos desde 'legacy' para evitar warnings y recuperar funcionalidades en SDK 54+
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-// 1. IMPORTANTE: Importamos la utilidad de memoria, NO SecureStore
+
 import { getAccessToken } from '../utils/memory'; 
 import { getBackups, generateBackup, restoreBackup, deleteBackup } from '../api/backupRequests';
 import { apiClient, API_BASE_URL } from "../api/api.js"
@@ -70,9 +72,7 @@ export default function BackupManagerScreen() {
   const handleDelete = (id) => {
     const confirmMsg = t('deleteGroupConfirm'); 
     if (Platform.OS === 'web') {
-        if (confirm(confirmMsg)) {
-            performDelete(id);
-        }
+        if (confirm(confirmMsg)) performDelete(id);
     } else {
         Alert.alert(
             t('delete'),
@@ -100,9 +100,7 @@ export default function BackupManagerScreen() {
   const handleRestore = (id) => {
     const msg = t('restoreConfirm');
     if (Platform.OS === 'web') {
-        if (confirm(msg)) {
-            performRestore(id);
-        }
+        if (confirm(msg)) performRestore(id);
     } else {
         Alert.alert(
             t('restore'),
@@ -129,13 +127,12 @@ export default function BackupManagerScreen() {
   };
 
   const downloadFile = async (backupId, fileName) => {
-    // 2. CORRECCIÓN: Fallback para el nombre del archivo si viene nulo
     const finalFileName = fileName || `backup_${backupId}.xlsx`;
     const downloadPath = `/backups/${backupId}/download/`; 
     const fullUrl = `${API_BASE_URL}${downloadPath}`;
     const mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-    // WEB
+    // 1. WEB
     if (Platform.OS === 'web') {
       try {
         setProcessing(true);
@@ -156,58 +153,36 @@ export default function BackupManagerScreen() {
       return;
     }
 
-    // NATIVE (Android / iOS)
+    // 2. NATIVE (Android & iOS unificados)
     try {
         setProcessing(true);
-        
-        // 3. CORRECCIÓN PRINCIPAL: Obtener token de memoria, no de SecureStore
         const token = getAccessToken(); 
+        if (!token) throw new Error("No token available");
 
-        if (!token) throw new Error("No token available (Session expired?)");
+        // Usamos cacheDirectory: No requiere permisos especiales y es seguro
+        const fileUri = FileSystem.cacheDirectory + finalFileName;
 
-        // A. SOLUCIÓN ANDROID (Storage Access Framework)
-        if (Platform.OS === 'android') {
-            const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-            
-            if (permissions.granted) {
-                // Descargar a caché temporalmente
-                const tempUri = FileSystem.cacheDirectory + finalFileName;
-                
-                const downloadRes = await FileSystem.downloadAsync(fullUrl, tempUri, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (downloadRes.status !== 200) throw new Error("Error server status: " + downloadRes.status);
-
-                // Leer y guardar en destino final
-                const base64 = await FileSystem.readAsStringAsync(tempUri, { encoding: FileSystem.EncodingType.Base64 });
-                const createdUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, finalFileName, mimeType);
-                await FileSystem.writeAsStringAsync(createdUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-
-                Alert.alert(t('success'), "Backup guardado correctamente.");
-            } else {
-                // Usuario canceló la selección de carpeta
-                setProcessing(false); 
-                return; 
-            }
-        } 
-        
-        // B. SOLUCIÓN IOS
-        else {
-            const fileUri = FileSystem.documentDirectory + finalFileName;
-            const downloadRes = await FileSystem.downloadAsync(fullUrl, fileUri, {
+        const downloadRes = await FileSystem.downloadAsync(
+            fullUrl,
+            fileUri,
+            {
                 headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (downloadRes.status !== 200) throw new Error("Error status: " + downloadRes.status);
-
-            if (await Sharing.isAvailableAsync()) {
-                await Sharing.shareAsync(downloadRes.uri, {
-                    mimeType: mimeType,
-                    UTI: 'com.microsoft.excel.xls', 
-                    dialogTitle: 'Guardar Backup'
-                });
             }
+        );
+
+        if (downloadRes.status !== 200) {
+            throw new Error(`Server returned ${downloadRes.status}`);
+        }
+
+        // Comprobamos si podemos compartir
+        if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(downloadRes.uri, {
+                mimeType: mimeType,
+                dialogTitle: 'Guardar Backup',
+                UTI: 'com.microsoft.excel.xls' // Ayuda en iOS
+            });
+        } else {
+            Alert.alert(t('error'), "No se puede compartir el archivo en este dispositivo.");
         }
 
     } catch (e) {
