@@ -1,43 +1,4 @@
 services:
-  # --- TRAEFIK (Reverse Proxy & SSL) ---
-  traefik:
-    image: traefik:v3
-    container_name: traefik
-    restart: unless-stopped
-    security_opt:
-      - no-new-privileges:true
-    networks:
-      - proxy
-    ports:
-      - "80:80"
-      - "443:443"
-    environment:
-      - TZ=Europe/Madrid
-      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
-      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN}
-      - CREDENCIALES_DASHBOARD=${CREDENCIALES_DASHBOARD}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik.yml:/traefik.yml:ro
-      - ./acme.json:/acme.json
-      - ./logs:/var/log/traefik
-    labels:
-      - "traefik.enable=true"
-      # Router HTTP (Redirección global suele ir en traefik.yml, pero esto expone el dashboard)
-      - "traefik.http.routers.traefik.entrypoints=web"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.franjpg.com`)"
-      - "traefik.http.routers.traefik.middlewares=traefik-basic-auth"
-      
-      # Router HTTPS (Dashboard Seguro)
-      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
-      - "traefik.http.routers.traefik-secure.rule=Host(`traefik.franjpg.com`)"
-      - "traefik.http.routers.traefik-secure.tls=true"
-      - "traefik.http.routers.traefik-secure.tls.certresolver=cloudflarev2"
-      - "traefik.http.routers.traefik-secure.service=api@internal"
-      - "traefik.http.routers.traefik-secure.middlewares=traefik-secure-basic-auth"
-      
-      # Middleware Auth
-      - "traefik.http.middlewares.traefik-secure-basic-auth.basicauth.users=${CREDENCIALES_DASHBOARD}"
 
   # --- APLICACIÓN ---
   db:
