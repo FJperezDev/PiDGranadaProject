@@ -1,22 +1,77 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, StyleSheet, ScrollView, Alert, Switch, Platform } from 'react-native';
+import { View, Text, Modal, StyleSheet, ScrollView, Alert, Switch, Platform, TouchableOpacity, LayoutAnimation } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { COLORS } from '../constants/colors';
 import { 
   getTopicsBySubject, getConceptsByTopic, createQuestion, createAnswer, updateQuestion, updateAnswer, deleteAnswer    
 } from '../api/evaluationRequests';
 import { getSubjects } from '../api/coursesRequests';
-import { Trash2, Plus, Save, ArrowRight, ArrowLeft, Check, X } from 'lucide-react-native';
+import { Trash2, Plus, Save, ArrowRight, ArrowLeft, Check, X, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { StyledButton } from './StyledButton';
 import { StyledTextInput } from './StyledTextInput';
 import { useLanguage } from '../context/LanguageContext';
+
+const CollapsibleSelector = ({ title, items, selectedItems, onToggle, emptyText }) => {
+    const [expanded, setExpanded] = useState(false);
+    
+    const selectedCount = selectedItems.length;
+    const summary = selectedCount > 0 
+        ? `${selectedCount} seleccionados` 
+        : "Ninguno";
+
+    return (
+        <View style={styles.collapsibleContainer}>
+            <TouchableOpacity 
+                style={styles.collapsibleHeader} 
+                onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setExpanded(!expanded);
+                }}
+                activeOpacity={0.7}
+            >
+                <View>
+                    <Text style={styles.collapsibleTitle}>{title}</Text>
+                    {!expanded && <Text style={styles.collapsibleSummary}>{summary}</Text>}
+                </View>
+                {expanded ? <ChevronUp size={20} color={COLORS.textSecondary}/> : <ChevronDown size={20} color={COLORS.textSecondary}/>}
+            </TouchableOpacity>
+
+            {expanded && (
+                <View style={styles.collapsibleContent}>
+                    {items.length === 0 && <Text style={styles.helperText}>{emptyText}</Text>}
+                    <ScrollView nestedScrollEnabled={true} style={{ maxHeight: 200 }}>
+                        <View style={styles.chipsGrid}>
+                            {items.map((item, i) => {
+                                const name = item.title || item.name;
+                                const isSelected = selectedItems.includes(name);
+                                return (
+                                    <StyledButton 
+                                        key={i} 
+                                        onPress={() => onToggle(name)} 
+                                        variant={isSelected ? 'primary' : 'outline'}
+                                        size="small"
+                                        style={{marginBottom: 6, borderColor: isSelected ? 'transparent' : COLORS.border}}
+                                        textStyle={!isSelected ? {color: COLORS.textSecondary} : {}}
+                                    >
+                                        <Text style={[styles.chipText, isSelected && {color: COLORS.white}]}>{name}</Text>
+                                        {isSelected && <Check size={14} color={COLORS.white} style={{marginLeft: 5}}/>}
+                                    </StyledButton>
+                                );
+                            })}
+                        </View>
+                    </ScrollView>
+                </View>
+            )}
+        </View>
+    );
+};
 
 export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, editingQuestion }) {
   const { t } = useLanguage();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // ... (Estados de datos - Sin cambios en la lógica) ...
+  // Datos
   const [subjects, setSubjects] = useState([]);
   const [topics, setTopics] = useState([]);
   const [concepts, setConcepts] = useState([]); 
@@ -34,7 +89,6 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
     { text_es: '', text_en: '', is_correct: false, tempId: 2 }
   ]);
 
-  // ... (useEffect y funciones de carga - Sin cambios) ...
   useEffect(() => {
     if (visible) { loadSubjects(); if (editingQuestion) loadEditingData(); else resetForm(); }
   }, [visible, editingQuestion]);
@@ -51,8 +105,8 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
     setAnswers([{ text_es: '', text_en: '', is_correct: false, tempId: 1 }, { text_es: '', text_en: '', is_correct: false, tempId: 2 }]);
   };
 
-  const loadSubjects = async () => { /* ... */ try { const data = await getSubjects(); setSubjects(data); if (data.length > 0 && !selectedSubject) setSelectedSubject(data[0].id); } catch (e) { console.error(e); } };
-  const loadTopics = async (subId) => { /* ... */ try { const data = await getTopicsBySubject(subId); setTopics(data); } catch (e) { console.error(e); } };
+  const loadSubjects = async () => { try { const data = await getSubjects(); setSubjects(data); if (data.length > 0 && !selectedSubject) setSelectedSubject(data[0].id); } catch (e) { console.error(e); } };
+  const loadTopics = async (subId) => { try { const data = await getTopicsBySubject(subId); setTopics(data); } catch (e) { console.error(e); } };
   const loadConceptsForSelectedTopics = async () => {
     const selectedTopicIds = topics.filter(t => selectedTopicTitles.includes(t.title || t.name)).map(t => t.id);
     let allConcepts = [];
@@ -67,7 +121,6 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
   const handleSubjectChange = (val) => { setSelectedSubject(val); setSelectedTopicTitles([]); setSelectedConceptNames([]); };
 
   const loadEditingData = async () => {
-    // ... (Lógica de carga existente) ...
     setStep(1); setDeletedAnswerIds([]); 
     setStatementES(editingQuestion.statement_es); setStatementEN(editingQuestion.statement_en || '');
     setExplanationES(editingQuestion.explanation_es || ''); setExplanationEN(editingQuestion.explanation_en || '');
@@ -136,29 +189,6 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
     } catch (error) { console.error(error); Alert.alert(t('error'), t('error')); } finally { setLoading(false); }
   };
 
-  const renderChips = (items, selectedItems, toggleFunc) => (
-    <View style={styles.chipsGrid}>
-        {items.length === 0 && <Text style={styles.helperText}>{t('selectTopic')}</Text>}
-        {items.map((item, i) => {
-            const name = item.title || item.name;
-            const isSelected = selectedItems.includes(name);
-            return (
-                <StyledButton 
-                    key={i} 
-                    onPress={() => toggleFunc(name)} 
-                    variant={isSelected ? 'primary' : 'outline'}
-                    size="small"
-                    style={{marginBottom: 6, borderColor: isSelected ? 'transparent' : COLORS.border}}
-                    textStyle={!isSelected ? {color: COLORS.textSecondary} : {}}
-                >
-                    <Text style={[styles.chipText, isSelected && {color: COLORS.white}]}>{name}</Text>
-                    {isSelected && <Check size={14} color={COLORS.white} style={{marginLeft: 5}}/>}
-                </StyledButton>
-            );
-        })}
-    </View>
-  );
-
   return (
     <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles.centeredView}>
@@ -177,31 +207,54 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                 
                 <Text style={styles.label}>{t('subject')}</Text>
                 <View style={styles.pickerWrapper}>
-                    <Picker selectedValue={selectedSubject ?? ""} onValueChange={handleSubjectChange}>
-                        {!selectedSubject && <Picker.Item label={t('select')} value="" enabled={false} />}
-                        {subjects.map(s => <Picker.Item key={s.id} label={s.name} value={s.id} />)}
+                    <Picker 
+                        selectedValue={selectedSubject ?? ""} 
+                        onValueChange={handleSubjectChange}
+                        dropdownIconColor={COLORS.text} // Android
+                        style={{ color: COLORS.text }} // Android Texto
+                        itemStyle={{ color: COLORS.text }} // iOS
+                    >
+                        {!selectedSubject && <Picker.Item label={t('select')} value="" enabled={false} color={COLORS.textSecondary} />}
+                        {subjects.map(s => (
+                            <Picker.Item key={s.id} label={s.name} value={s.id} color={COLORS.text} />
+                        ))}
                     </Picker>
                 </View>
 
+                {/* SELECTOR COLAPSABLE PARA TEMAS */}
                 <Text style={styles.label}>{t('topics')}</Text>
-                <View style={styles.topicsBox}>
-                    {renderChips(topics, selectedTopicTitles, toggleTopic)}
-                </View>
+                <CollapsibleSelector 
+                    title={t('selectTopics')} 
+                    items={topics} 
+                    selectedItems={selectedTopicTitles} 
+                    onToggle={toggleTopic}
+                    emptyText={t('selectTopic')}
+                />
 
                 {selectedTopicTitles.length > 0 && (
                     <>
                         <Text style={styles.label}>{t('concepts')}</Text>
-                        <View style={styles.topicsBox}>
-                            {renderChips(concepts, selectedConceptNames, toggleConcept)}
-                        </View>
+                        <CollapsibleSelector 
+                            title={t('selectConcepts')}
+                            items={concepts} 
+                            selectedItems={selectedConceptNames} 
+                            onToggle={toggleConcept}
+                            emptyText="No hay conceptos disponibles"
+                        />
                     </>
                 )}
 
                 <Text style={styles.label}>{t('questionType')}</Text>
                 <View style={styles.pickerWrapper}>
-                    <Picker selectedValue={questionType ?? "multiple"} onValueChange={setQuestionType}>
-                        <Picker.Item label={t('multipleChoice')} value="multiple" />
-                        <Picker.Item label={t('trueFalse')} value="boolean" />
+                    <Picker 
+                        selectedValue={questionType ?? "multiple"} 
+                        onValueChange={setQuestionType}
+                        dropdownIconColor={COLORS.text}
+                        style={{ color: COLORS.text }}
+                        itemStyle={{ color: COLORS.text }}
+                    >
+                        <Picker.Item label={t('multipleChoice')} value="multiple" color={COLORS.text} />
+                        <Picker.Item label={t('trueFalse')} value="boolean" color={COLORS.text} />
                     </Picker>
                 </View>
             </ScrollView>
@@ -300,7 +353,37 @@ const styles = StyleSheet.create({
   
   pickerWrapper: { borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
   
-  topicsBox: { maxHeight: 200, marginBottom: 10 },
+  // Estilos Collapsible
+  collapsibleContainer: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    marginBottom: 15,
+    overflow: 'hidden',
+    backgroundColor: COLORS.surface,
+  },
+  collapsibleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: COLORS.background, // Un poco más oscuro que surface
+  },
+  collapsibleTitle: {
+    fontWeight: '700',
+    color: COLORS.text,
+    fontSize: 14,
+  },
+  collapsibleSummary: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  collapsibleContent: {
+    padding: 10,
+    backgroundColor: COLORS.surface,
+  },
+
   chipsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chipText: { fontSize: 12, fontWeight: '600' },
 

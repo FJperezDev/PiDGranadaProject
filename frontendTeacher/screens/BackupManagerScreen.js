@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
-import * as SecureStore from 'expo-secure-store'; // Asegúrate de importar esto si lo usas
+// 1. IMPORTANTE: Importamos la utilidad de memoria, NO SecureStore
+import { getAccessToken } from '../utils/memory'; 
 import { getBackups, generateBackup, restoreBackup, deleteBackup } from '../api/backupRequests';
 import { apiClient, API_BASE_URL } from "../api/api.js"
 import { COLORS } from '../constants/colors';
@@ -128,7 +129,11 @@ export default function BackupManagerScreen() {
   };
 
   const downloadFile = async (backupId, fileName) => {
+    // 2. CORRECCIÓN: Fallback para el nombre del archivo si viene nulo
+    const finalFileName = fileName || `backup_${backupId}.xlsx`;
     const downloadPath = `/backups/${backupId}/download/`; 
+    const fullUrl = `${API_BASE_URL}${downloadPath}`;
+    const mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
     // WEB
     if (Platform.OS === 'web') {
@@ -138,7 +143,7 @@ export default function BackupManagerScreen() {
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', fileName || 'backup.xlsx');
+        link.setAttribute('download', finalFileName);
         document.body.appendChild(link);
         link.click();
         link.parentNode.removeChild(link);
@@ -151,42 +156,63 @@ export default function BackupManagerScreen() {
       return;
     }
 
-    // NATIVE
+    // NATIVE (Android / iOS)
     try {
         setProcessing(true);
-        const fileUri = FileSystem.documentDirectory + fileName;
-        const token = await SecureStore.getItemAsync('access_token'); 
+        
+        // 3. CORRECCIÓN PRINCIPAL: Obtener token de memoria, no de SecureStore
+        const token = getAccessToken(); 
 
-        if (!token) throw new Error("No token");
+        if (!token) throw new Error("No token available (Session expired?)");
 
-        const fullUrl = `${API_BASE_URL}${downloadPath}`;
+        // A. SOLUCIÓN ANDROID (Storage Access Framework)
+        if (Platform.OS === 'android') {
+            const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+            
+            if (permissions.granted) {
+                // Descargar a caché temporalmente
+                const tempUri = FileSystem.cacheDirectory + finalFileName;
+                
+                const downloadRes = await FileSystem.downloadAsync(fullUrl, tempUri, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
 
-        const downloadRes = await FileSystem.downloadAsync(
-            fullUrl,
-            fileUri,
-            {
-                headers: {
-                    'Authorization': `Bearer ${token}`, 
-                }
+                if (downloadRes.status !== 200) throw new Error("Error server status: " + downloadRes.status);
+
+                // Leer y guardar en destino final
+                const base64 = await FileSystem.readAsStringAsync(tempUri, { encoding: FileSystem.EncodingType.Base64 });
+                const createdUri = await FileSystem.StorageAccessFramework.createFileAsync(permissions.directoryUri, finalFileName, mimeType);
+                await FileSystem.writeAsStringAsync(createdUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+
+                Alert.alert(t('success'), "Backup guardado correctamente.");
+            } else {
+                // Usuario canceló la selección de carpeta
+                setProcessing(false); 
+                return; 
             }
-        );
-
-        if (downloadRes.status !== 200) {
-            throw new Error("Error en la descarga");
-        }
-
-        if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(downloadRes.uri, {
-                mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                dialogTitle: 'Guardar Backup'
+        } 
+        
+        // B. SOLUCIÓN IOS
+        else {
+            const fileUri = FileSystem.documentDirectory + finalFileName;
+            const downloadRes = await FileSystem.downloadAsync(fullUrl, fileUri, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
-        } else {
-            Alert.alert(t('success'), "Archivo descargado: " + downloadRes.uri);
+
+            if (downloadRes.status !== 200) throw new Error("Error status: " + downloadRes.status);
+
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(downloadRes.uri, {
+                    mimeType: mimeType,
+                    UTI: 'com.microsoft.excel.xls', 
+                    dialogTitle: 'Guardar Backup'
+                });
+            }
         }
 
     } catch (e) {
       console.error("Error download native:", e);
-      Alert.alert(t('error'), t('downloadError'));
+      Alert.alert(t('error'), `${t('downloadError')}: ${e.message}`);
     } finally {
         setProcessing(false);
     }
@@ -296,7 +322,6 @@ export default function BackupManagerScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: COLORS.background },
-  
   header: { 
       flexDirection: 'row', 
       justifyContent: 'space-between', 
@@ -306,9 +331,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 26, fontWeight: '800', color: COLORS.text },
   headerSubtitle: { fontSize: 14, color: COLORS.textSecondary, marginTop: 2 },
-
   list: { paddingBottom: 40 },
-  
   card: { 
       backgroundColor: COLORS.surface, 
       padding: 16, 
@@ -323,31 +346,25 @@ const styles = StyleSheet.create({
       borderWidth: 1,
       borderColor: COLORS.borderLight
   },
-  
   iconColumn: { marginRight: 15 },
   fileIconBox: {
       width: 48, height: 48, borderRadius: 12,
       backgroundColor: COLORS.primaryVeryLight,
       justifyContent: 'center', alignItems: 'center'
   },
-
   infoContainer: { flex: 1, marginRight: 10 },
   fileName: { fontWeight: '700', fontSize: 15, color: COLORS.text, marginBottom: 4 },
   dateText: { color: COLORS.textSecondary, fontSize: 13, marginBottom: 8 },
-  
   metaRow: { flexDirection: 'row', alignItems: 'center' },
   sizeText: { color: COLORS.textSecondary, fontSize: 12, fontWeight: '600' },
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginRight: 8 },
   badgeAuto: { backgroundColor: '#FEE2E2' },   
   badgeManual: { backgroundColor: '#E0F2FE' }, 
   badgeText: { fontSize: 10, fontWeight: '800' },
-
   actionsContainer: { flexDirection: 'row', gap: 8 },
   actionBtn: { width: 36, height: 36, borderRadius: 18, padding: 0, justifyContent: 'center', alignItems: 'center' },
-
   emptyContainer: { alignItems: 'center', marginTop: 60, opacity: 0.6 },
   emptyText: { textAlign: 'center', color: COLORS.textSecondary, marginTop: 10, fontSize: 16, fontWeight: '500' },
-
   overlay: { 
       position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
       backgroundColor: 'rgba(0,0,0,0.4)', 

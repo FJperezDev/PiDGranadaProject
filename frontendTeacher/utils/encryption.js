@@ -22,7 +22,6 @@ export const encryptPassword = (password) => {
   
   if (!PUBLIC_KEY_PEM) {
     console.error("Encryption failed: No Public Key available.");
-    return password;
     throw new Error("Security configuration error: Missing Encryption Key");
   }
 
