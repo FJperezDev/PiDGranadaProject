@@ -101,26 +101,7 @@ services:
     networks:
       - proxy
 
-  postgres-exporter:
-    image: prometheuscommunity/postgres-exporter
-    container_name: postgres_exporterPiD
-    restart: unless-stopped
-    environment:
-      - DATA_SOURCE_NAME=postgresql://django:django123@db:5432/django_db?sslmode=disable
-    networks:
-      - proxy
-    depends_on:
-      - db
-
-  smartctl-exporter:
-    build: https://github.com/prometheus-community/smartctl_exporter.git#master    container_name: smartctl_exporterPiD
-    restart: unless-stopped
-    privileged: true
-    user: root
-    devices:
-      - /dev/nvme0n1:/dev/nvme0n1
-    networks:
-      - proxy
+  pos
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.0
