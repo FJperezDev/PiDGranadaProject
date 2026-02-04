@@ -113,7 +113,8 @@ services:
       - db
 
   smartctl-exporter:
-    build: https://github.com/prometheus-community/smartctl_exporter.git#master    container_name: smartctl_exporterPiD
+    build: https://github.com/prometheus-community/smartctl_exporter.git#master    
+    container_name: smartctl_exporterPiD
     restart: unless-stopped
     privileged: true
     user: root
