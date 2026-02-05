@@ -150,7 +150,7 @@ services:
 
   # SMARTCTL EXPORTER: Usamos la carpeta local que arreglamos antes
   smartctl-exporter:
-    build: ./smartctl-exporter-build    
+    build: ./smartctl-exporter-build
     container_name: smartctl_exporterPiD
     restart: unless-stopped
     privileged: true
