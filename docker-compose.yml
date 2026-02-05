@@ -1,6 +1,8 @@
 services:
 
   # --- APLICACIÓN ---
+  
+  # 1. BASE DE DATOS 
   db:
     image: postgres:16
     container_name: django_db
@@ -11,7 +13,39 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - proxy
+    # TUNING DE RENDIMIENTO (RAM 8GB):
+    # shared_buffers: Memoria para tablas (25% RAM)
+    # effective_cache_size: Estimación para el planificador (50% RAM)
+    # work_mem: Memoria para sorts complejos por operación
+    # max_connections: Bajamos a 200 porque PgBouncer gestionará los miles de usuarios
+    command: >
+      postgres 
+      -c shared_buffers=2GB 
+      -c effective_cache_size=4GB 
+      -c work_mem=16MB 
+      -c maintenance_work_mem=128MB 
+      -c max_connections=200
 
+  # 2. PGBOUNCER
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: pgbouncer
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      - DB_USER=django
+      - DB_PASSWORD=django123
+      - DB_HOST=db
+      - DB_NAME=django_db
+      - POOL_MODE=transaction  # El modo mágico que reduce el overhead
+      - MAX_CLIENT_CONN=1000   # Aceptamos 1000 conexiones de Gunicorn
+      - DEFAULT_POOL_SIZE=20   # Pero solo mantenemos 20 abiertas reales contra Postgres
+      - AUTH_TYPE=plain        # Simple para red interna
+    networks:
+      - proxy
+
+  # 3. BACKEND (Conectado al Pool)
   backend:
     build: ./backend
     container_name: django_backend
@@ -19,11 +53,11 @@ services:
     env_file:
       - .env
     depends_on:
-      - db
+      - pgbouncer # Esperamos al pool, no a la db directa
     volumes:
       - django_media:/app/media
     environment:
-      - DATABASE_URL=postgresql://django:django123@db:5432/django_db
+      - DATABASE_URL=postgresql://django:django123@pgbouncer:5432/django_db
     networks:
       - proxy
     labels:
@@ -101,6 +135,8 @@ services:
     networks:
       - proxy
 
+  # POSTGRES EXPORTER: Sigue apuntando a la DB REAL (db:5432)
+  # Queremos monitorizar la salud del motor, no del bouncer.
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter
     container_name: postgres_exporterPiD
@@ -112,8 +148,9 @@ services:
     depends_on:
       - db
 
+  # SMARTCTL EXPORTER: Usamos la carpeta local que arreglamos antes
   smartctl-exporter:
-    build: https://github.com/prometheus-community/smartctl_exporter.git#master    
+    build: ./smartctl-exporter-build    
     container_name: smartctl_exporterPiD
     restart: unless-stopped
     privileged: true
@@ -124,7 +161,7 @@ services:
       - proxy
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
     container_name: cadvisorPiD
     restart: unless-stopped
     privileged: true 

@@ -20,11 +20,9 @@ class Question(models.Model):
     old = models.BooleanField(default=False)
 
     class Meta:
-        # AÑADIDO: Índices para acelerar la generación de exámenes
         indexes = [
             models.Index(fields=['type']),
             models.Index(fields=['approved']),
-            models.Index(fields=['generated']),
         ]
 
     def __str__(self):
@@ -72,6 +70,10 @@ class QuestionBelongsToTopic(models.Model):
 
     class Meta:
         unique_together = ('topic', 'question')
+        indexes = [
+            models.Index(fields=['topic']),
+            models.Index(fields=['question']),
+        ]
 
     def __str__(self):
         return f"Q{self.question.id} -> Topic {self.topic.id}"
