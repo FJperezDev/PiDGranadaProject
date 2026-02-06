@@ -2,7 +2,7 @@
 set -e
 
 echo "Esperando a que la base de datos esté lista..."
-until nc -z db 5432; do
+until nc -z pgbouncer 5432; do
   echo "Base de datos no disponible — esperando..."
   sleep 2
 done
@@ -39,7 +39,9 @@ echo "Arrancando servidor Gunicorn (Modo Turbo para Pi 5)..."
 exec gosu django gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 5 \
-    --worker-class gevent \
-    --worker-connections 1000 \
+    --threads 12 \
+    --worker-class gthread \
     --timeout 120 \
     --keep-alive 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 50

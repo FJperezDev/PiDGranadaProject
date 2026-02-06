@@ -38,4 +38,3 @@ tzdata==2025.2
 urllib3==2.5.0
 uvicorn==0.35.0
 whitenoise==6.9.0
-gevent==23.9.1
