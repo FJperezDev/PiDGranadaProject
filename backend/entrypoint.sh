@@ -7,7 +7,7 @@ until nc -z pgbouncer 5432; do
   sleep 2
 done
 
-echo "Base de datos disponible ✅"
+echo "Base de datos disponible a través de PgBouncer✅"
 
 # 1. Iniciamos CRON (Ahora como root, usando el binario directamente y en background)
 echo "Iniciando servicio cron..."
@@ -28,18 +28,18 @@ echo "Ejecutando tareas de mantenimiento (cron_jobs.sh)..."
 # Ejecutamos el script como django
 gosu django /cron_jobs.sh
 
-echo "Arrancando servidor Gunicorn (Modo Turbo para Pi 5)..."
-# 4. Finalmente, arrancamos Gunicorn optimizado
-# --workers 5:  (2 x Num_Cores) + 1. La Pi tiene 4 cores, ponemos 5 para dejar CPU a Postgres.
-# --threads 4:  Cada worker maneja 4 hilos. Ayuda mucho cuando se espera a la DB (I/O bound).
-# --worker-class gthread: Necesario para usar hilos.
-# --timeout 60: Damos 60s antes de matar un proceso (por si la Pi se satura momentáneamente).
-# --keep-alive 5: Cierra conexiones inactivas rápido para liberar hueco a los 300 alumnos.
+echo "Arrancando servidor Gunicorn modo gevent..."
+# --- EXPLICACIÓN DE LA CONFIGURACIÓN ---
+# --workers 5: (Num_Cores + 1). La Pi tiene 4 cores. 5 workers mantienen la CPU ocupada.
+# --worker-class gevent: CAMBIO CLAVE. Usa corrutinas ligeras en lugar de hilos pesados.
+# --worker-connections 1000: Cada worker puede manejar 1000 alumnos "esperando" a la vez.
+# --timeout 120: Si PgBouncer tiene cola, esperamos pacientemente 2 minutos sin fallar.
+# --keep-alive 5: Cerramos conexiones HTTP inactivas rápido para liberar recursos.
 
 exec gosu django gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
-    --workers 4 \
-    --threads 8 \
-    --worker-class gthread \
+    --workers 5 \
+    --worker-class gevent \
+    --worker-connections 1000 \
     --timeout 120 \
-    --keep-alive 5 \
+    --keep-alive 5
