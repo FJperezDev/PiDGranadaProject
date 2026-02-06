@@ -39,7 +39,7 @@ echo "Arrancando servidor Gunicorn modo gevent..."
 exec gosu django gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 4 \
-    --threads 4 \
+    --threads 6 \
     --worker-class gthread \
     --timeout 120 \
     --keep-alive 5
