@@ -85,10 +85,11 @@ class QuestionSerializer(LanguageSerializerMixin, serializers.ModelSerializer):
 
     # 2. Implementamos el método para filtrar las respuestas
     def get_answers(self, obj):
-        # Accedemos al related_name 'answers' definido en tu modelo Answer
-        # y aplicamos el filtro old=False
+
+        if hasattr(obj, 'active_answers'):
+            return AnswerSerializer(obj.active_answers, many=True, context=self.context).data
+        # Fallback
         queryset = obj.answers.filter(old=False)
-        # Serializamos el resultado filtrado
         return AnswerSerializer(queryset, many=True, context=self.context).data
 
     def get_topics(self, obj):

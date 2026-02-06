@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Sum, F, Case, When, Value, FloatField, ExpressionWrapper
+from django.db.models import Sum, F, Case, When, Value, FloatField, ExpressionWrapper, Prefetch
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -79,15 +79,29 @@ class QuestionViewSet(BaseContentViewSet):
 
     @action(detail=False, methods=['get'], url_path='long-questions', url_name='long-questions')
     def long_questions(self, request):
-        # Usamos self.get_queryset() para aprovechar el prefetch definido arriba
         queryset = self.filter_queryset(self.get_queryset())
         
-        page = self.paginate_queryset(queryset) # 2. OPTIMIZACIÓN: Paginación manual en acciones custom
+        queryset_optimized = queryset.prefetch_related(
+            # A. Traemos respuestas activas y las guardamos en 'active_answers' (para el serializer)
+            Prefetch(
+                'answers',
+                queryset=Answer.objects.filter(old=False),
+                to_attr='active_answers'
+            ),
+            # B. Traemos la relación intermedia de topics y el topic real
+            'topics__topic', 
+            # C. CRÍTICO: Traemos los subjects anidados dentro de los topics (Deep Prefetch)
+            'topics__topic__subjects__subject',
+            # D. Traemos los conceptos
+            'concepts__concept'
+        )
+
+        page = self.paginate_queryset(queryset_optimized) 
         if page is not None:
             serializer = QuestionSerializer(page, many=True, context={'request': request})
             return self.get_paginated_response(serializer.data)
 
-        serializer = QuestionSerializer(queryset, many=True, context={'request': request})
+        serializer = QuestionSerializer(queryset_optimized, many=True, context={'request': request})
         return Response(serializer.data)
 
 
@@ -180,13 +194,36 @@ class ExamViewSet(viewsets.GenericViewSet):
         student_group = courses_selectors.get_student_group_by_code(data.get('student_group_code'))
      
         questions_and_answers = data.get('questions_and_answers', [])
+
+        # --- OPTIMIZACIÓN DE BÚSQUEDA MASIVA ---
+        
+        # 1. Extraemos todos los IDs de golpe
+        # questions_and_answers es un dict { "question_id": "answer_id" } ? 
+        # Asumo que las claves son IDs de pregunta y valores IDs de respuesta.
+        
+        q_ids = list(questions_and_answers.keys())
+        a_ids = list(questions_and_answers.values())
+
+        # 2. Hacemos 2 Queries para traer todos los objetos a memoria
+        # Usamos in_bulk para obtener un diccionario {id: objeto} instantáneo
+        questions_map = Question.objects.in_bulk(q_ids)
+        answers_map = Answer.objects.in_bulk(a_ids)
+
         questions_and_answers_dict = {}
 
-        for qa in questions_and_answers:
-            question = selectors.get_question_by_id(qa)
-            answer = selectors.get_answer_by_id(questions_and_answers[qa])
-            questions_and_answers_dict[question] = answer
+        # 3. Reconstruimos el diccionario en memoria (CPU Python, muy rápido)
+        for q_id_str, a_id_str in questions_and_answers.items():
+            # Convertimos a int si vienen como string
+            q_id = int(q_id_str)
+            a_id = int(a_id_str)
             
+            question_obj = questions_map.get(q_id)
+            answer_obj = answers_map.get(a_id)
+
+            if question_obj and answer_obj:
+                questions_and_answers_dict[question_obj] = answer_obj
+            
+        # Llamamos al servicio con los objetos ya cargados
         mark, explanations, recommendations = services.correct_exam(student_group, questions_and_answers_dict)
         
         return Response({'mark': mark, "explanations": explanations, "recommendations": recommendations})
