@@ -39,7 +39,7 @@ echo "Arrancando servidor Gunicorn (Modo Turbo para Pi 5)..."
 exec gosu django gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
     --workers 5 \
-    --threads 4 \
+    --threads 10 \
     --worker-class gthread \
     --timeout 60 \
     --keep-alive 5
