@@ -40,9 +40,9 @@ services:
       - DB_NAME=django_db
       - POOL_MODE=transaction  # El modo mágico que reduce el overhead
       - MAX_CLIENT_CONN=2000   # Aceptamos 2000 conexiones de Gunicorn
-      - DEFAULT_POOL_SIZE=15   # CRÍTICO: Pasamos de 20 a 80 conexiones reales
+      - DEFAULT_POOL_SIZE=12   # CRÍTICO: Pasamos de 20 a 80 conexiones reales
       - MIN_POOL_SIZE=5       # Mantenemos 10 siempre calientes
-      - RESERVE_POOL_SIZE=5   # 10 extra para emergencias
+      - RESERVE_POOL_SIZE=3   # 10 extra para emergencias
       - AUTH_TYPE=plain        # Simple para red interna
     networks:
       - proxy
