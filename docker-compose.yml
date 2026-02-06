@@ -26,6 +26,9 @@ services:
       -c maintenance_work_mem=256MB 
       -c max_connections=100
 
+    logging:
+      driver: "none"
+
   # 2. PGBOUNCER
   pgbouncer:
     image: edoburu/pgbouncer:latest
@@ -39,13 +42,15 @@ services:
       - DB_HOST=db
       - DB_NAME=django_db
       - POOL_MODE=transaction  # El modo mágico que reduce el overhead
-      - MAX_CLIENT_CONN=2000   # Aceptamos 2000 conexiones de Gunicorn
-      - DEFAULT_POOL_SIZE=12   # CRÍTICO: Pasamos de 20 a 80 conexiones reales
+      - MAX_CLIENT_CONN=5000   # Aceptamos 2000 conexiones de Gunicorn
+      - DEFAULT_POOL_SIZE=10   # CRÍTICO: Pasamos de 20 a 80 conexiones reales
       - MIN_POOL_SIZE=5       # Mantenemos 10 siempre calientes
-      - RESERVE_POOL_SIZE=3   # 10 extra para emergencias
+      - RESERVE_POOL_SIZE=5   # 10 extra para emergencias
       - AUTH_TYPE=plain        # Simple para red interna
     networks:
       - proxy
+    logging:
+      driver: "none"
 
   # 3. BACKEND (Conectado al Pool)
   backend:
@@ -60,6 +65,7 @@ services:
       - django_media:/app/media
     environment:
       - DATABASE_URL=postgresql://django:django123@pgbouncer:5432/django_db
+      - DEBUG=False
     networks:
       - proxy
     labels:
@@ -75,6 +81,10 @@ services:
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowheaders=Authorization,Content-Type"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowcredentials=true"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
 
   frontend_student:
     build: ./frontendStudent
@@ -89,6 +99,10 @@ services:
       - "traefik.http.routers.frontendStudent.entrypoints=websecure"
       - "traefik.http.routers.frontendStudent.tls=true"
       - "traefik.http.routers.frontendStudent.tls.certresolver=cloudflarev2"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
 
   frontend_teacher:
     build:
@@ -106,6 +120,10 @@ services:
       - "traefik.http.routers.frontendTeacher.entrypoints=websecure"
       - "traefik.http.routers.frontendTeacher.tls=true"
       - "traefik.http.routers.frontendTeacher.tls.certresolver=cloudflarev2"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
 
   # --- MONITORIZACIÓN ---
   prometheus:
@@ -120,6 +138,8 @@ services:
       - '--storage.tsdb.retention.time=15d' 
     networks:
       - proxy
+    logging:
+      driver: "none"
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -136,6 +156,8 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
       - proxy
+    logging:
+      driver: "none"
 
   # POSTGRES EXPORTER: Sigue apuntando a la DB REAL (db:5432)
   # Queremos monitorizar la salud del motor, no del bouncer.
@@ -149,6 +171,8 @@ services:
       - proxy
     depends_on:
       - db
+    logging:
+      driver: "none"
 
   # SMARTCTL EXPORTER: Usamos la carpeta local que arreglamos antes
   smartctl-exporter:
@@ -161,6 +185,8 @@ services:
       - /dev/nvme0n1:/dev/nvme0n1
     networks:
       - proxy
+    logging:
+      driver: "none"
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.2
@@ -177,7 +203,9 @@ services:
       - /dev/disk/:/dev/disk:ro
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     networks:
-      - proxy  
+      - proxy 
+    logging:
+      driver: "none" 
       
   grafana:
     image: grafana/grafana:latest
@@ -194,6 +222,8 @@ services:
       - "traefik.http.routers.grafana.tls=true"
       - "traefik.http.routers.grafana.tls.certresolver=cloudflarev2"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    logging:
+      driver: "none"
 
 networks:
   proxy:
