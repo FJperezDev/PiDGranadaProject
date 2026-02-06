@@ -8,3 +8,4 @@ db.sqlite3
 backup*
 init_users.py
 android
+init-keys.sh
