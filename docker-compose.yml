@@ -20,10 +20,10 @@ services:
     # max_connections: Bajamos a 200 porque PgBouncer gestionará los miles de usuarios
     command: >
       postgres 
-      -c shared_buffers=2GB 
-      -c effective_cache_size=4GB 
-      -c work_mem=32MB 
-      -c maintenance_work_mem=256MB 
+      -c shared_buffers=1536MB
+      -c effective_cache_size=3GB 
+      -c work_mem=16MB 
+      -c maintenance_work_mem=128MB 
       -c max_connections=100
 
     logging:
@@ -42,10 +42,10 @@ services:
       - DB_HOST=db
       - DB_NAME=django_db
       - POOL_MODE=transaction  # El modo mágico que reduce el overhead
-      - MAX_CLIENT_CONN=5000   # Aceptamos 2000 conexiones de Gunicorn
-      - DEFAULT_POOL_SIZE=10   # CRÍTICO: Pasamos de 20 a 80 conexiones reales
-      - MIN_POOL_SIZE=5       # Mantenemos 10 siempre calientes
-      - RESERVE_POOL_SIZE=5   # 10 extra para emergencias
+      - MAX_CLIENT_CONN=500   # Aceptamos 500 conexiones de Gunicorn
+      - DEFAULT_POOL_SIZE=15   # 15 conexiones by default
+      - MIN_POOL_SIZE=5       # Mantenemos 5 siempre calientes
+      - RESERVE_POOL_SIZE=3   # 3 extra para emergencias
       - AUTH_TYPE=plain        # Simple para red interna
     networks:
       - proxy
@@ -75,8 +75,13 @@ services:
       - "traefik.http.routers.django.tls=true"
       - "traefik.http.routers.django.tls.certresolver=cloudflarev2"
       
+      # Middleware to prevent attacks
+      - "traefik.http.middlewares.rate-limit-api.ratelimit.average=100"
+      - "traefik.http.middlewares.rate-limit-api.ratelimit.burst=150"
+
+
       # CORS Middleware
-      - "traefik.http.routers.django.middlewares=cors-header@docker" 
+      - "traefik.http.routers.django.middlewares=cors-header@docker,rate-limit-api@docker" 
       - "traefik.http.middlewares.cors-header.headers.accesscontrolalloworiginlist=https://teacher.franjpg.com,https://student.franjpg.com"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowheaders=Authorization,Content-Type"
@@ -206,6 +211,10 @@ services:
       - proxy 
     logging:
       driver: "none" 
+    command:
+      - '-housekeeping_interval=15s'     # Por defecto es mucho más rápido
+      - '-docker_only=true'              # No monitorizar procesos fuera de docker
+      - '-disable_metrics=disk,tcp,udp,percpu,sched,process' # Desactivar métricas que no uses
       
   grafana:
     image: grafana/grafana:latest
