@@ -74,14 +74,9 @@ services:
       - "traefik.http.routers.django.entrypoints=websecure"
       - "traefik.http.routers.django.tls=true"
       - "traefik.http.routers.django.tls.certresolver=cloudflarev2"
-      
-      # Middleware to prevent attacks
-      - "traefik.http.middlewares.rate-limit-api.ratelimit.average=100"
-      - "traefik.http.middlewares.rate-limit-api.ratelimit.burst=150"
-
 
       # CORS Middleware
-      - "traefik.http.routers.django.middlewares=cors-header@docker,rate-limit-api@docker" 
+      - "traefik.http.routers.django.middlewares=cors-header@docker" 
       - "traefik.http.middlewares.cors-header.headers.accesscontrolalloworiginlist=https://teacher.franjpg.com,https://student.franjpg.com"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowheaders=Authorization,Content-Type"
