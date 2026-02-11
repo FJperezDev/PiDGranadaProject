@@ -34,7 +34,7 @@ echo "Arrancando servidor Gunicorn modo gevent..."
 # --worker-class gevent: CAMBIO CLAVE. Usa corrutinas ligeras en lugar de hilos pesados.
 # --worker-connections 1000: Cada worker puede manejar 1000 alumnos "esperando" a la vez.
 # --timeout 120: Si PgBouncer tiene cola, esperamos pacientemente 2 minutos sin fallar.
-# --keep-alive 5: Cerramos conexiones HTTP inactivas rápido para liberar recursos.
+# --keep-alive 60: Cerramos conexiones HTTP inactivas lento (consume más recursos en la pi pero reutiliza para el router).
 
 exec gosu django gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
@@ -42,4 +42,4 @@ exec gosu django gunicorn config.wsgi:application \
     --threads 4 \
     --worker-class gthread \
     --timeout 120 \
-    --keep-alive 5
+    --keep-alive 60
