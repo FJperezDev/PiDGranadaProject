@@ -8,7 +8,7 @@ scrape_configs:
 
   - job_name: 'node-exporterPiD' # RPI
     static_configs:
-      - targets: ['node_exporterPiD:9100']
+      - targets: ['host.docker.internal:9100']
 
   - job_name: 'cadvisorPiD' # Docker containers
     static_configs:
@@ -16,12 +16,12 @@ scrape_configs:
 
   - job_name: 'traefik' # Web traefik
     static_configs:
-      - targets: ['traefik:8080']
+      - targets: ['traefik:8082']
 
   - job_name: 'postgres-exporter'
     static_configs:
-      - targets: ['postgres-exporter:9187']
+      - targets: ['postgres_exporter:9187']
 
   - job_name: 'smartctl-exporter'
     static_configs:
-      - targets: ['smartctl-exporter:9633']
+      - targets: ['smartctl_exporter:9633']

@@ -141,7 +141,7 @@ services:
     logging:
       driver: "none"
 
-  node-exporter:
+  node_exporter:
     image: prom/node-exporter:latest
     container_name: node_exporterPiD
     restart: unless-stopped
@@ -154,14 +154,16 @@ services:
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    networks:
-      - proxy
+      - '--collector.tcpstat'
+    network_mode: host
+    pid: host
+
     logging:
       driver: "none"
 
   # POSTGRES EXPORTER: Sigue apuntando a la DB REAL (db:5432)
   # Queremos monitorizar la salud del motor, no del bouncer.
-  postgres-exporter:
+  postgres_exporter:
     image: prometheuscommunity/postgres-exporter
     container_name: postgres_exporterPiD
     restart: unless-stopped
@@ -175,7 +177,7 @@ services:
       driver: "none"
 
   # SMARTCTL EXPORTER: Usamos la carpeta local que arreglamos antes
-  smartctl-exporter:
+  smartctl_exporter:
     build: ./smartctl-exporter-build
     container_name: smartctl_exporterPiD
     restart: unless-stopped
