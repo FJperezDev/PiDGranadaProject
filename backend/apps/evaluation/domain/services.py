@@ -50,9 +50,9 @@ def create_question(teacher: Teacher, type: str, statement_es: str = None, state
             QuestionRelatedToConcept.objects.create(question=question, concept=concept)
             try:
                 relationship = QuestionRelatedToConcept.objects.get(question=question, concept=concept)
-                print("La relación QuestionRelatedToConcept se ha creado correctamente.")
+                # print("La relación QuestionRelatedToConcept se ha creado correctamente.")
                 # Puedes acceder a los atributos de la relación si es necesario
-                print(f"Question ID: {relationship.question.id}, Concept ID: {relationship.concept.id}")
+                # print(f"Question ID: {relationship.question.id}, Concept ID: {relationship.concept.id}")
             except QuestionRelatedToConcept.DoesNotExist:
                 print("La relación QuestionRelatedToConcept no se encontró.")
     
@@ -190,7 +190,7 @@ def create_exam(topics: set[Topic], num_questions: int) -> list[Question]:
         
         if deck:
             topic_decks.append(deck)
-    print("Topic Decks: ", topic_decks)
+    # print("Topic Decks: ", topic_decks)
     # Si no hay preguntas en ningún tema, salimos ya
     if not topic_decks:
         return []

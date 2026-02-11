@@ -15,7 +15,8 @@ class BackupFile(models.Model):
             try:
                 os.remove(self.file.path)
             except Exception as e:
-                print(f"Error borrando archivo físico: {e}")
+                return
+                # print(f"Error borrando archivo físico: {e}")
         super().delete(*args, **kwargs)
 
     class Meta:

@@ -31,7 +31,7 @@ def authenticate(session):
         if r.status_code == 200:
             token = r.json().get("access")
             session.headers.update({"Authorization": f"Bearer {token}"})
-            print("✅ Autenticado correctamente. Iniciando carga masiva...")
+            # print("✅ Autenticado correctamente. Iniciando carga masiva...")
             return True
         else:
             log_error("Login", r.status_code, r.text)
@@ -162,7 +162,7 @@ def main():
 
         # --- RELATIONS (Hoja separada) ---
         if "relations" in xls:
-            print("⏳ Procesando Relaciones...")
+            # print("⏳ Procesando Relaciones...")
             rel_futures = []
             for idx, row in xls["relations"].iterrows():
                 code_from = clean_str(row["variable1"])
@@ -209,7 +209,7 @@ def main():
         # --- QUESTIONS ---
         q_futures = []
         if "questions" in xls:
-            print("⏳ Procesando Preguntas...")
+            # print("⏳ Procesando Preguntas...")
             for _, row in xls["questions"].iterrows():
                 t_code = clean_str(row.get("topic_code"))
                 c_code = clean_str(row.get("concept_code"))
@@ -244,7 +244,7 @@ def main():
 
         # --- ANSWERS ---
         if "answers" in xls:
-            print("⏳ Procesando Respuestas...")
+            # print("⏳ Procesando Respuestas...")
             for _, row in xls["answers"].iterrows():
                 q_code = clean_str(row.get("question_code"))
                 
@@ -275,7 +275,7 @@ def main():
                     payload.pop("subject_code", None)
                     executor.submit(post_task, session, f"{BASE_URL}/subjects/{s_id}/groups/", payload, f"Grupo {row['name_es']}", None)
 
-    print("\n🏁 Proceso finalizado.")
+    # print("\n🏁 Proceso finalizado.")
 
 if __name__ == "__main__":
     main()

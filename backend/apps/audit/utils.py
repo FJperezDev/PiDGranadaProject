@@ -36,13 +36,13 @@ def clean_str(val):
 #   GENERACIÓN (EXPORTAR BD -> EXCEL)
 # ==========================================
 def generate_excel_backup(is_auto=False):
-    print("🔄 Iniciando generación de backup COMPLETO (+Analytics)...")
+    # print("🔄 Iniciando generación de backup COMPLETO (+Analytics)...")
     try:
         output = BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             
             # 1. SUBJECTS
-            print("   - Exportando Subjects...")
+            # print("   - Exportando Subjects...")
             qs_sub = Subject.objects.all().values(
                 'id', 'name_es', 'name_en', 'description_es', 'description_en'
             )
@@ -54,7 +54,7 @@ def generate_excel_backup(is_auto=False):
                 pd.DataFrame(columns=['subject_code', 'name_es', 'name_en', 'description_es', 'description_en']).to_excel(writer, sheet_name='subjects', index=False)
 
             # 2. TOPICS
-            print("   - Exportando Topics...")
+            # print("   - Exportando Topics...")
             qs_top = Topic.objects.all().values(
                 'id', 'title_es', 'title_en', 'description_es', 'description_en'
             )
@@ -66,7 +66,7 @@ def generate_excel_backup(is_auto=False):
                 pd.DataFrame(columns=['topic_code', 'title_es', 'title_en', 'description_es', 'description_en']).to_excel(writer, sheet_name='topics', index=False)
 
             # 3. CONCEPTS
-            print("   - Exportando Concepts...")
+            # print("   - Exportando Concepts...")
             qs_con = Concept.objects.all().values(
                 'id', 'name_es', 'name_en', 
                 'description_es', 'description_en',
@@ -81,7 +81,7 @@ def generate_excel_backup(is_auto=False):
                 pd.DataFrame(columns=['concept_code', 'name_es', 'name_en', 'description_es', 'description_en', 'examples_es', 'examples_en', 'related_topic_code']).to_excel(writer, sheet_name='concepts', index=False)
 
             # 4. RELATIONS (Conceptos Relacionados)
-            print("   - Exportando Relaciones Concepto-Concepto...")
+            # print("   - Exportando Relaciones Concepto-Concepto...")
             try:
                 relations = []
                 for rel in ConceptIsRelatedToConcept.objects.all():
@@ -100,7 +100,7 @@ def generate_excel_backup(is_auto=False):
                 pd.DataFrame(columns=['variable1', 'variable2', 'description_es', 'description_en']).to_excel(writer, sheet_name='relations', index=False)
                 
             # 5. RELACIÓN SUBJECT-TOPIC
-            print("   - Exportando Subject-Topics (Vínculos)...")
+            # print("   - Exportando Subject-Topics (Vínculos)...")
             qs_sub_top = SubjectIsAboutTopic.objects.all().values(
                 'subject__id', 
                 'topic__id', 
@@ -117,7 +117,7 @@ def generate_excel_backup(is_auto=False):
                 pd.DataFrame(columns=['subject_code', 'topic_code', 'order_id']).to_excel(writer, sheet_name='subject_topics', index=False)
             
             # 5.B. RELACIÓN TOPIC-CONCEPT
-            print("   - Exportando Topic-Concepts (Vínculos)...")
+            # print("   - Exportando Topic-Concepts (Vínculos)...")
             qs_top_con = TopicIsAboutConcept.objects.all().values(
                 'topic__id', 
                 'concept__id', 
@@ -134,7 +134,7 @@ def generate_excel_backup(is_auto=False):
                 pd.DataFrame(columns=['topic_code', 'concept_code', 'order_id']).to_excel(writer, sheet_name='topic_concepts', index=False)
 
             # 6. EPIGRAPHS
-            print("   - Exportando Epígrafes...")
+            # print("   - Exportando Epígrafes...")
             qs_epi = Epigraph.objects.all().values(
                 'id', 'topic__id', 'name_es', 'name_en', 
                 'description_es', 'description_en', 'order_id'
@@ -147,7 +147,7 @@ def generate_excel_backup(is_auto=False):
                 pd.DataFrame(columns=['epigraph_code', 'topic_code', 'name_es', 'name_en', 'description_es', 'description_en', 'order_id']).to_excel(writer, sheet_name='epigraphs', index=False)
 
             # 7. QUESTIONS
-            print("   - Exportando Questions...")
+            # print("   - Exportando Questions...")
             qs_quest = Question.objects.all().values('id', 'statement_es', 'statement_en', 'explanation_es', 'explanation_en') 
             df_quest = pd.DataFrame(list(qs_quest))
             if not df_quest.empty:
@@ -157,7 +157,7 @@ def generate_excel_backup(is_auto=False):
                 pd.DataFrame(columns=['question_code', 'statement_es', 'statement_en', 'explanation_es', 'explanation_en']).to_excel(writer, sheet_name='questions', index=False)
 
             # 8. RELACIONES QUESTION-TOPIC y QUESTION-CONCEPT
-            print("   - Exportando Vínculos Question-Topic/Concept...")
+            # print("   - Exportando Vínculos Question-Topic/Concept...")
             
             # Question-Topic
             qs_q_top = QuestionBelongsToTopic.objects.all().values(
@@ -182,7 +182,7 @@ def generate_excel_backup(is_auto=False):
                 pd.DataFrame(columns=['question_code', 'concept_code']).to_excel(writer, sheet_name='question_concepts', index=False)
 
             # 9. ANSWERS
-            print("   - Exportando Answers...")
+            # print("   - Exportando Answers...")
             qs_ans = Answer.objects.all().values('text_es', 'text_en', 'is_correct', 'question__id')
             df_ans = pd.DataFrame(list(qs_ans))
             if not df_ans.empty:
@@ -192,7 +192,7 @@ def generate_excel_backup(is_auto=False):
                 pd.DataFrame(columns=['question_code', 'text_es', 'is_correct']).to_excel(writer, sheet_name='answers', index=False)
 
             # 10. STUDENT GROUPS
-            print("   - Exportando Student Groups...")
+            # print("   - Exportando Student Groups...")
             qs_grp = StudentGroup.objects.all().values(
                 'id', 'name_es', 'name_en', 'groupCode',
                 'subject__id', 
@@ -211,7 +211,7 @@ def generate_excel_backup(is_auto=False):
                 pd.DataFrame(columns=['group_code', 'name_es', 'name_en', 'groupCode', 'subject_code', 'teacher_email']).to_excel(writer, sheet_name='student_groups', index=False)
 
             # 11. QUESTION EVALUATION GROUPS (ANALYTICS) - NUEVO
-            print("   - Exportando Analytics (QuestionEvaluationGroup)...")
+            # print("   - Exportando Analytics (QuestionEvaluationGroup)...")
             qs_eval = QuestionEvaluationGroup.objects.all().values(
                 'group__id',
                 'question__id',
@@ -230,13 +230,13 @@ def generate_excel_backup(is_auto=False):
 
 
         output.seek(0)
-        print("💾 Guardando archivo...")
+        # print("💾 Guardando archivo...")
         filename = f"backup_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         backup_obj = BackupFile(is_auto_generated=is_auto)
         backup_obj.file.save(filename, File(output))
         backup_obj.save()
         
-        print(f"✅ Backup creado: {filename}")
+        # print(f"✅ Backup creado: {filename}")
         return backup_obj
 
     except Exception as e:
@@ -261,7 +261,7 @@ def restore_excel_backup(backup_id):
 
     # BLOQUE ATÓMICO PRINCIPAL (Todo o nada, salvo excepciones controladas)
     with transaction.atomic():
-        print("⚠️ Iniciando restauración. Borrando datos actuales...")
+        # print("⚠️ Iniciando restauración. Borrando datos actuales...")
         
         # 1. FLUSH DE DATOS
         QuestionEvaluationGroup.objects.all().delete()
@@ -281,7 +281,7 @@ def restore_excel_backup(backup_id):
         Concept.objects.all().delete()
         Subject.objects.all().delete()
         
-        print("✅ Datos borrados. Iniciando importación...")
+        # print("✅ Datos borrados. Iniciando importación...")
 
         # --- 2. SUBJECTS ---
         if "subjects" in xls:
@@ -300,7 +300,8 @@ def restore_excel_backup(backup_id):
                         if original_id: clean_payload['id'] = original_id
                         Subject.objects.create(**clean_payload)
                 except Exception as e:
-                    print(f"Skipping Subject Error: {e}")
+                    continue
+                    # print(f"Skipping Subject Error: {e}")
 
         # --- 3. TOPICS ---
         if "topics" in xls:
@@ -318,7 +319,8 @@ def restore_excel_backup(backup_id):
                         if original_id: clean_payload['id'] = original_id
                         Topic.objects.create(**clean_payload)
                 except Exception as e:
-                    print(f"Skipping Topic Error: {e}")
+                    continue
+                    # print(f"Skipping Topic Error: {e}")
                 
         # --- 4. SUBJECT_TOPICS ---
         if "subject_topics" in xls:
@@ -361,7 +363,6 @@ def restore_excel_backup(backup_id):
                     continue 
                 except Exception as e:
                     print(f"❌ Error genérico concepto: {e}")
-                    continue
 
         # --- 5.B. TOPIC_CONCEPTS ---
         if "topic_concepts" in xls:
@@ -526,7 +527,7 @@ def restore_excel_backup(backup_id):
                         )
                 except: pass
 
-        print("🏁 Restauración completada.")
+        # print("🏁 Restauración completada.")
 
 # ==========================================
 #   IMPORTACIÓN MASIVA (CORREGIDA RELACIONES)
@@ -542,7 +543,7 @@ def import_content_from_excel(file_obj, teacher):
         raise Exception(f"Error leyendo archivo Excel: {str(e)}")
 
     with transaction.atomic():
-        print("⚠️ INICIANDO LIMPIEZA TOTAL DE DATOS DE LA ASIGNATURA...")
+        # print("⚠️ INICIANDO LIMPIEZA TOTAL DE DATOS DE LA ASIGNATURA...")
         
         # --- 0. FLUSH (BORRADO PREVIO) ---
         SubjectIsAboutTopic.objects.all().delete()
@@ -562,7 +563,7 @@ def import_content_from_excel(file_obj, teacher):
         Topic.objects.all().delete()
         Subject.objects.all().delete()
         
-        print("✅ Base de datos limpia. Iniciando carga masiva...")
+        # print("✅ Base de datos limpia. Iniciando carga masiva...")
 
         # Mapas
         subjects_map = {}
@@ -573,7 +574,7 @@ def import_content_from_excel(file_obj, teacher):
 
         # --- 1. SUBJECTS ---
         if "subjects" in xls:
-            print("📘 Procesando Subjects...")
+            # print("📘 Procesando Subjects...")
             for index, row in xls["subjects"].iterrows():
                 try:
                     s_code = clean_str(row.get("subject_code"))
@@ -594,7 +595,7 @@ def import_content_from_excel(file_obj, teacher):
 
         # --- 2. TOPICS ---
         if "topics" in xls:
-            print("📙 Procesando Topics...")
+            # print("📙 Procesando Topics...")
             for index, row in xls["topics"].iterrows():
                 try:
                     t_code = clean_str(row.get("topic_code"))
@@ -617,7 +618,7 @@ def import_content_from_excel(file_obj, teacher):
 
         # --- SUBJECT_ABOUT_TOPICS (VINCULACIÓN) ---
         if "subject_topics" in xls:
-            print("🔗 Vinculando Subjects con Topics...")
+            # print("🔗 Vinculando Subjects con Topics...")
             for index, row in xls["subject_topics"].iterrows():
                 excel_row = index + 2
                 try:
@@ -638,14 +639,14 @@ def import_content_from_excel(file_obj, teacher):
                         missing = []
                         if not subject_obj: missing.append(f"Subject '{s_code}'")
                         if not topic_obj: missing.append(f"Topic '{t_code}'")
-                        print(f"⚠️ [Subject-Topic] Fila {excel_row}: No vinculada. Faltan: {', '.join(missing)}")
+                        # print(f"⚠️ [Subject-Topic] Fila {excel_row}: No vinculada. Faltan: {', '.join(missing)}")
 
                 except Exception as e:
                     print(f"❌ [Subject-Topic] Fila {excel_row}: {e}")
 
         # --- 3. CONCEPTS ---
         if "concepts" in xls:
-            print("📗 Procesando Concepts...")
+            # print("📗 Procesando Concepts...")
             for index, row in xls["concepts"].iterrows():
                 try:
                     c_code = clean_str(row.get("concept_code"))
@@ -678,7 +679,7 @@ def import_content_from_excel(file_obj, teacher):
 
         # --- 4. RELATIONS (CORREGIDO) ---
         if "relations" in xls:
-            print("🔗 Procesando Relaciones...")
+            # print("🔗 Procesando Relaciones...")
             for index, row in xls["relations"].iterrows():
                 excel_row = index + 2
                 try:
@@ -714,14 +715,14 @@ def import_content_from_excel(file_obj, teacher):
                         missing = []
                         if not source_obj: missing.append(f"Origen '{val_1}' no encontrado")
                         if not target_obj: missing.append(f"Destino '{val_2}' no encontrado")
-                        print(f"⚠️ [Relations] Fila {excel_row}: No se creó. {', '.join(missing)}.")
+                        # print(f"⚠️ [Relations] Fila {excel_row}: No se creó. {', '.join(missing)}.")
 
                 except Exception as e:
                     print(f"❌ [Relations] Error crítico en fila {excel_row}: {e}")
 
         # --- 5. EPIGRAPHS ---
         if "epigraphs" in xls:
-            print("📑 Procesando Epigraphs...")
+            # print("📑 Procesando Epigraphs...")
             for index, row in xls["epigraphs"].iterrows():
                 try:
                     t_code = clean_str(row.get("topic_code"))
@@ -742,7 +743,7 @@ def import_content_from_excel(file_obj, teacher):
 
         # --- 6. QUESTIONS ---
         if "questions" in xls:
-            print("❓ Procesando Questions...")
+            # print("❓ Procesando Questions...")
             for index, row in xls["questions"].iterrows():
                 try:
                     q_code = clean_str(row.get("question_code"))
@@ -751,7 +752,6 @@ def import_content_from_excel(file_obj, teacher):
                     
                     if not q_code: 
                         print(f"❌ [Questions] Fila {index+2}: Código de pregunta vacío.")
-                        continue
 
                     payload = {
                         'statement_es': clean_str(row.get('statement_es')),
@@ -775,7 +775,7 @@ def import_content_from_excel(file_obj, teacher):
 
         # --- 7. ANSWERS ---
         if "answers" in xls:
-            print("✏️ Procesando Answers...")
+            # print("✏️ Procesando Answers...")
             for index, row in xls["answers"].iterrows():
                 excel_row = index + 2
                 try:
@@ -799,7 +799,7 @@ def import_content_from_excel(file_obj, teacher):
 
         # --- 8. STUDENT GROUPS ---
         if "student_groups" in xls:
-            print("👥 Procesando Student Groups...")
+            # print("👥 Procesando Student Groups...")
             for index, row in xls["student_groups"].iterrows():
                 try:
                     s_code = clean_str(row.get("subject_code"))
