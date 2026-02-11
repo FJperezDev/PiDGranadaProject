@@ -44,7 +44,7 @@ export default function ManageGroupsScreen({ navigation }) {
                   });
               });
           } catch(e) {
-              console.log("Error cargando grupos de asignatura " + sub.id);
+              console.error("Error cargando grupos de asignatura " + sub.id);
           }
       }));
       

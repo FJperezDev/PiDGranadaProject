@@ -17,14 +17,14 @@ module.exports = function withVoiceNative(config) {
         throw new Error("❌ FATAL: No encuentro MainApplication.kt en " + appPath);
       }
 
-      console.log("\n🔍 ANALIZANDO ARCHIVO: " + mainAppFile);
+      // console.log("\n🔍 ANALIZANDO ARCHIVO: " + mainAppFile);
       let contents = fs.readFileSync(mainAppFile, 'utf-8');
 
       // 2. Inyección del IMPORT
       if (contents.includes('import com.wenkesj.voice.VoicePackage')) {
-        console.log("✅ Import ya existe.");
+        // console.log("✅ Import ya existe.");
       } else {
-        console.log("✏️ Inyectando Import...");
+        // console.log("✏️ Inyectando Import...");
         contents = contents.replace(
           /package (.*)/,
           `package $1\n\nimport com.wenkesj.voice.VoicePackage`
@@ -36,9 +36,9 @@ module.exports = function withVoiceNative(config) {
       const regex = /PackageList\s*\(\s*this\s*\)\s*\.\s*packages/g;
 
       if (contents.includes('VoicePackage()')) {
-        console.log("✅ VoicePackage ya está registrado.");
+        // console.log("✅ VoicePackage ya está registrado.");
       } else if (regex.test(contents)) {
-        console.log("✏️ Inyectando VoicePackage en la lista...");
+        // console.log("✏️ Inyectando VoicePackage en la lista...");
         // Reemplazamos encontrando el patrón exacto
         contents = contents.replace(
           regex,
@@ -49,13 +49,13 @@ module.exports = function withVoiceNative(config) {
         console.error("\n⚠️⚠️⚠️ ALERTA ROJA ⚠️⚠️⚠️");
         console.error("No encuentro dónde meter 'VoicePackage'.");
         console.error("El contenido del archivo es este:\n");
-        console.log(contents); // IMPRIME EL ARCHIVO PARA QUE LO VEAMOS
+        // console.log(contents); // IMPRIME EL ARCHIVO PARA QUE LO VEAMOS
         console.error("\n----------------------------------\n");
         throw new Error("No se pudo inyectar el código nativo automáticamente.");
       }
 
       fs.writeFileSync(mainAppFile, contents);
-      console.log("✅ MainApplication.kt guardado con éxito.\n");
+      // console.log("✅ MainApplication.kt guardado con éxito.\n");
       return config;
     },
   ]);

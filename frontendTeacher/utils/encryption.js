@@ -14,7 +14,7 @@ if (RAW_KEY) {
     console.error("Error decoding public key from Base64:", error);
   }
 } else {
-  console.log("Public key not found in environment variables. Debug Mode");
+  console.warn("Public key not found in environment variables. Debug Mode");
 }
 
 export const encryptPassword = (password) => {

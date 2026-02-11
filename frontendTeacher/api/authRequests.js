@@ -20,8 +20,6 @@ export const changePassword = async (oldPassword, newPassword) => {
         return { success: true, data: res.data };
         
     } catch (err) {
-        console.log("Error original:", err); // Solo para ti en consola
-
         // CASO 1: El servidor respondió (ej: 400 Bad Request - Contraseña común)
         if (err.response && err.response.data) {
             return { success: false, error: err.response.data };

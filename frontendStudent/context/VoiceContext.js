@@ -3,8 +3,8 @@ import { Platform } from 'react-native';
 import Voice from '@react-native-voice/voice';
 import { useLanguage } from './LanguageContext';
 
-console.log("¿Módulo Voice cargado?:", !!Voice);
-console.log("¿Métodos disponibles?:", Object.keys(Voice || {}));
+// console.log("¿Módulo Voice cargado?:", !!Voice);
+// console.log("¿Métodos disponibles?:", Object.keys(Voice || {}));
 
 const VoiceContext = createContext();
 
