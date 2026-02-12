@@ -1,13 +1,34 @@
 #!/bin/sh
 set -e
 
-echo "Esperando a que la base de datos esté lista..."
-until nc -z pgbouncer 5432; do
-  echo "Base de datos no disponible — esperando..."
-  sleep 2
-done
+echo "Esperando a que la base de datos esté lista (comprobación real)..."
 
-echo "Base de datos disponible a través de PgBouncer✅"
+python << END
+import sys
+import time
+import psycopg2
+import os
+
+# Loop infinito hasta que Postgres responda a través de PgBouncer
+while True:
+    try:
+        conn = psycopg2.connect(
+            dbname="${DB_NAME:-django_db}",
+            user="${DB_USER:-django}",
+            password="${DB_PASSWORD:-django123}",
+            host="pgbouncer",
+            port=5432,
+            connect_timeout=3
+        )
+        conn.close()
+        print("✅ ¡Conexión exitosa a Postgres a través de PgBouncer!")
+        break
+    except psycopg2.OperationalError as e:
+        print(f"⏳ PgBouncer responde, pero Postgres aún no está listo... ({e})")
+        time.sleep(3)
+END
+
+echo "Base de datos disponible. Iniciando..."
 
 # 1. Iniciamos CRON (Ahora como root, usando el binario directamente y en background)
 echo "Iniciando servicio cron..."
@@ -38,11 +59,11 @@ echo "Arrancando servidor Gunicorn modo gevent..."
 
 exec gosu django gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
-    --workers 4 \
-    --threads 25 \
+    --workers 5 \
+    --threads 12 \
     --worker-class gthread \
     --worker-tmp-dir /dev/shm \
-    --backlog 2048 \
-    --timeout 300 \
+    --backlog 4096 \
+    --timeout 15 \
     --keep-alive 5 \
     --log-level error

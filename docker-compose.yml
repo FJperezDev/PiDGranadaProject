@@ -13,18 +13,17 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - proxy
-    # TUNING DE RENDIMIENTO (RAM 8GB):
-    # shared_buffers: Memoria para tablas (25% RAM)
-    # effective_cache_size: Estimación para el planificador (50% RAM)
-    # work_mem: Memoria para sorts complejos por operación
-    # max_connections: Bajamos a 200 porque PgBouncer gestionará los miles de usuarios
     command: >
       postgres 
-      -c shared_buffers=1536MB
+      -c shared_buffers=1024MB
       -c effective_cache_size=3GB 
-      -c work_mem=16MB 
+      -c work_mem=32MB
       -c maintenance_work_mem=128MB 
-      -c max_connections=100
+      -c max_connections=200
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c wal_buffers=16MB
+      -c synchronous_commit=off
 
     logging:
       driver: "none"
@@ -43,9 +42,9 @@ services:
       - DB_NAME=django_db
       - POOL_MODE=transaction  # El modo mágico que reduce el overhead
       - MAX_CLIENT_CONN=500   # Aceptamos 500 conexiones de Gunicorn
-      - DEFAULT_POOL_SIZE=15   # 15 conexiones by default
-      - MIN_POOL_SIZE=5       # Mantenemos 5 siempre calientes
-      - RESERVE_POOL_SIZE=3   # 3 extra para emergencias
+      - DEFAULT_POOL_SIZE=60   # 15 conexiones by default
+      - MIN_POOL_SIZE=20       # Mantenemos 5 siempre calientes
+      - RESERVE_POOL_SIZE=10   # 3 extra para emergencias
       - AUTH_TYPE=plain        # Simple para red interna
     networks:
       - proxy
@@ -81,6 +80,11 @@ services:
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowheaders=Authorization,Content-Type"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowcredentials=true"
+
+      - "traefik.http.middlewares.limit-buffering.buffering.maxRequestBodyBytes=10485760"
+      - "traefik.http.middlewares.limit-buffering.buffering.memRequestBodyBytes=2097152"
+      - "traefik.http.middlewares.limit-buffering.buffering.maxResponseBodyBytes=10485760"
+      - "traefik.http.middlewares.limit-buffering.buffering.memResponseBodyBytes=2097152"
     logging:
       driver: "json-file"
       options:
@@ -136,8 +140,11 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=15d' 
+      - '--storage.tsdb.wal-compression'
     networks:
       - proxy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     logging:
       driver: "none"
 
@@ -154,7 +161,10 @@ services:
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-      - '--collector.tcpstat'
+      - '--collector.conntrack'
+      - '--collector.sockstat'
+      - '--collector.netstat'
+      - '--collector.hwmon'
     network_mode: host
     pid: host
 
@@ -191,28 +201,30 @@ services:
       driver: "none"
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    image: gcr.io/cadvisor/cadvisor:v0.50.0
     container_name: cadvisorPiD
     restart: unless-stopped
-    privileged: true 
+    privileged: true
+    pid: host      # Mantenemos esto, es vital
     devices:
-      - /dev/kmsg:/dev/kmsg
+      - /dev/kmsg
     volumes:
       - /:/rootfs:ro
-      - /var/run:/var/run:ro
+      # - /var/run:/var/run:ro  <-- ELIMINA ESTA LÍNEA (causa conflictos a veces)
+      - /var/run/docker.sock:/var/run/docker.sock # Dejar RW (lectura/escritura)
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
       - /sys/fs/cgroup:/sys/fs/cgroup:ro
     networks:
-      - proxy 
-    logging:
-      driver: "none" 
+      - proxy
     command:
-      - '-housekeeping_interval=15s'     # Por defecto es mucho más rápido
-      - '-docker_only=true'              # No monitorizar procesos fuera de docker
-      - '-disable_metrics=disk,tcp,udp,percpu,sched,process' # Desactivar métricas que no uses
-      
+      - '-housekeeping_interval=15s'
+      - '-disable_metrics=disk,tcp,udp,percpu,sched,process'
+      - '-store_container_labels=false'
+#    logging:
+#      driver: "none"
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafanaPiD
