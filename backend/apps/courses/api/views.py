@@ -1,5 +1,6 @@
 # Create your views here.
 
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
@@ -230,9 +231,15 @@ class StudentGroupViewSet(BaseContentViewSet):
     @action(detail=False, methods=['get'], url_path='exists', url_name='exists')
     def exists(self, request):
         code = request.query_params.get('code')
-        student_group = courses_selectors.get_student_group_by_code(code)
-        return Response({'exists': bool(student_group is not None)})
-
+        
+        cache_key = f"group_exists_{code}"
+        exists = cache.get(cache_key)
+        if exists is None:
+            student_group = courses_selectors.get_student_group_by_code(code)
+            exists = student_group is not None
+            cache.set(cache_key, exists, 300)
+        
+        return Response({'exists': exists})
     #/studentgroups/subject/?code=XXX-XXX
     @action(detail=False, methods=['get'], url_path='subject', url_name='subject')
     def subject(self, request):
