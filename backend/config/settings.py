@@ -122,7 +122,7 @@ SIMPLE_JWT = {
 DATABASES = {
     'default': dj_database_url.config(
         default='sqlite:///db.sqlite3',
-        conn_max_age=None, 
+        conn_max_age=int(os.getenv('DATABASE_CONN_MAX_AGE', 0)),
         ssl_require=False
     )
 }

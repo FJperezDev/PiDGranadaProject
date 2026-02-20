@@ -11,15 +11,21 @@ services:
       - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     networks:
       - proxy
     command: >
-      postgres
-      -c max_connections=200
-      -c shared_buffers=1536MB
-      -c effective_cache_size=3GB
-      -c work_mem=32MB
-      -c maintenance_work_mem=256MB
+      postgres 
+      -c shared_buffers=2GB
+      -c effective_cache_size=4GB 
+      -c work_mem=16MB
+      -c maintenance_work_mem=256MB 
+      -c max_connections=300
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
       -c wal_buffers=16MB
       -c synchronous_commit=off
       -c checkpoint_timeout=10min
@@ -40,12 +46,15 @@ services:
       - DB_HOST=db
       - DB_NAME=django_db
       - POOL_MODE=transaction  # El modo mágico que reduce el overhead
-      - MAX_CLIENT_CONN=2000   # Aceptamos 100 conexiones de Gunicorn
-      - DEFAULT_POOL_SIZE=40   # 15 conexiones by default
-      - MIN_POOL_SIZE=10       # Mantenemos 5 siempre calientes
-      - RESERVE_POOL_SIZE=10   # 3 extra para emergencias
-      - MAX_DB_CONNECTIONS=100
+      - MAX_CLIENT_CONN=100   # Aceptamos 100 conexiones de Gunicorn
+      - DEFAULT_POOL_SIZE=80   # 80 conexiones by default
+      - MIN_POOL_SIZE=20       # Mantenemos 20 siempre calientes
+      - RESERVE_POOL_SIZE=50   # 20 extra para emergencias
       - AUTH_TYPE=plain        # Simple para red interna
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     networks:
       - proxy
     logging:
@@ -65,7 +74,10 @@ services:
     environment:
       - DATABASE_URL=postgresql://django:django123@pgbouncer:5432/django_db
       - DEBUG=False
-      - DATABASE_CONN_MAX_AGE=60
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     networks:
       - proxy
     labels:
@@ -82,6 +94,10 @@ services:
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowheaders=Authorization,Content-Type"
       - "traefik.http.middlewares.cors-header.headers.accesscontrolallowcredentials=true"
 
+      - "traefik.http.middlewares.limit-buffering.buffering.maxRequestBodyBytes=10485760"
+      - "traefik.http.middlewares.limit-buffering.buffering.memRequestBodyBytes=2097152"
+      - "traefik.http.middlewares.limit-buffering.buffering.maxResponseBodyBytes=10485760"
+      - "traefik.http.middlewares.limit-buffering.buffering.memResponseBodyBytes=2097152"
     logging:
       driver: "json-file"
       options:
@@ -92,7 +108,6 @@ services:
     container_name: frontend_student
     networks:
       - proxy
-    restart: unless-stopped
     depends_on:
       - backend
     labels:
@@ -112,7 +127,6 @@ services:
       args:
         - EXPO_PUBLIC_KEY_B64=${RSA_PUBLIC_KEY_B64}
     container_name: frontend_teacher
-    restart: unless-stopped
     networks:
       - proxy
     depends_on:
@@ -209,7 +223,8 @@ services:
       - /dev/kmsg
     volumes:
       - /:/rootfs:ro
-      - /var/run/docker.sock:/var/run/docker.sock
+      # - /var/run:/var/run:ro  <-- ELIMINA ESTA LÍNEA (causa conflictos a veces)
+      - /var/run/docker.sock:/var/run/docker.sock # Dejar RW (lectura/escritura)
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
@@ -220,8 +235,8 @@ services:
       - '-housekeeping_interval=15s'
       - '-disable_metrics=disk,tcp,udp,percpu,sched,process'
       - '-store_container_labels=false'
-    logging:
-      driver: "none"
+#    logging:
+#      driver: "none"
 
   grafana:
     image: grafana/grafana:latest

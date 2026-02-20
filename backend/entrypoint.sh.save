@@ -59,9 +59,11 @@ echo "Arrancando servidor Gunicorn modo gevent..."
 
 exec gosu django gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
-    --workers 4 \
-    --worker-class gevent \
+    --workers 5 \
+    --threads 20 \
+    --worker-class gthread \
     --worker-tmp-dir /dev/shm \
+    --backlog 2048 \
     --timeout 30 \
     --keep-alive 5 \
-    --log-level warning
+    --log-level error
