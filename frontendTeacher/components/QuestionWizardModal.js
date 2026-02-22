@@ -11,7 +11,7 @@ import { StyledButton } from './StyledButton';
 import { StyledTextInput } from './StyledTextInput';
 import { useLanguage } from '../context/LanguageContext';
 
-const CollapsibleSelector = ({ title, items, selectedItems, onToggle, emptyText }) => {
+const CollapsibleSelector = ({ title, items, selectedItems, onToggle, emptyText, testID }) => {
     const [expanded, setExpanded] = useState(false);
     
     const selectedCount = selectedItems.length;
@@ -23,6 +23,7 @@ const CollapsibleSelector = ({ title, items, selectedItems, onToggle, emptyText 
         <View style={styles.collapsibleContainer}>
             <TouchableOpacity 
                 style={styles.collapsibleHeader} 
+                testID={testID}
                 onPress={() => {
                     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                     setExpanded(!expanded);
@@ -46,6 +47,7 @@ const CollapsibleSelector = ({ title, items, selectedItems, onToggle, emptyText 
                                 const isSelected = selectedItems.includes(name);
                                 return (
                                     <StyledButton 
+                                        testID={`${testID}-chip-${name}`}
                                         key={i} 
                                         onPress={() => onToggle(name)} 
                                         variant={isSelected ? 'primary' : 'outline'}
@@ -208,6 +210,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                 <Text style={styles.label}>{t('subject')}</Text>
                 <View style={styles.pickerWrapper}>
                     <Picker 
+                        testID="subjectsPicker"
                         selectedValue={selectedSubject ?? ""} 
                         onValueChange={handleSubjectChange}
                         dropdownIconColor={COLORS.text} // Android
@@ -224,6 +227,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                 {/* SELECTOR COLAPSABLE PARA TEMAS */}
                 <Text style={styles.label}>{t('topics')}</Text>
                 <CollapsibleSelector 
+                    testID="topicsPicker"
                     title={t('selectTopics')} 
                     items={topics} 
                     selectedItems={selectedTopicTitles} 
@@ -236,6 +240,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                         <Text style={styles.label}>{t('concepts')}</Text>
                         <CollapsibleSelector 
                             title={t('selectConcepts')}
+                            testID="conceptsPicker"
                             items={concepts} 
                             selectedItems={selectedConceptNames} 
                             onToggle={toggleConcept}
@@ -247,6 +252,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                 <Text style={styles.label}>{t('questionType')}</Text>
                 <View style={styles.pickerWrapper}>
                     <Picker 
+                        testID="questionTypePicker"
                         selectedValue={questionType ?? "multiple"} 
                         onValueChange={setQuestionType}
                         dropdownIconColor={COLORS.text}
@@ -264,14 +270,14 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
             <ScrollView style={styles.stepContainer}>
                 <Text style={styles.sectionHeader}>{t('spanishVersion')}</Text>
                 <Text style={styles.label}>{t('statement')}</Text>
-                <StyledTextInput multiline numberOfLines={3} value={statementES} onChangeText={setStatementES} style={{minHeight: 80}} />
+                <StyledTextInput testID="statementInput" multiline numberOfLines={3} value={statementES} onChangeText={setStatementES} style={{minHeight: 80}} />
                 
                 <Text style={styles.label}>{t('answers')}</Text>
                 {answers.map((ans, index) => (
                     <View key={ans.id || ans.tempId} style={styles.answerRow}>
-                        <Switch value={ans.is_correct} onValueChange={() => handleCorrectChange(index)} trackColor={{false:"#ccc", true:COLORS.success}} />
+                        <Switch testID={`answerSwitch${index + 1}`} value={ans.is_correct} onValueChange={() => handleCorrectChange(index)} trackColor={{false:"#ccc", true:COLORS.success}} />
                         <View style={{flex: 1, marginHorizontal: 8}}>
-                            <StyledTextInput placeholder={`${t('option')} ${index + 1}`} value={ans.text_es} onChangeText={(text) => handleAnswerChangeES(text, index)} />
+                            <StyledTextInput testID={`answerInput${index + 1}`} placeholder={`${t('option')} ${index + 1}`} value={ans.text_es} onChangeText={(text) => handleAnswerChangeES(text, index)} />
                         </View>
                         {questionType === 'multiple' && (
                             <StyledButton onPress={() => handleRemoveAnswer(index)} variant="ghost" style={{padding: 4}}>
@@ -291,7 +297,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                 <Text style={styles.sectionHeader}>{t('englishVersion')}</Text>
                 <Text style={styles.label}>{t('statement')}</Text>
                 <Text style={styles.helperText}>{statementES}</Text>
-                <StyledTextInput multiline numberOfLines={3} value={statementEN} onChangeText={setStatementEN} style={{minHeight: 80}} />
+                <StyledTextInput testID="statementInputEN" multiline numberOfLines={3} value={statementEN} onChangeText={setStatementEN} style={{minHeight: 80}} />
                 
                 <Text style={styles.label}>{t('answers')}</Text>
                 {answers.map((ans, index) => (
@@ -300,7 +306,7 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                             <Text style={styles.originalTextLabel}>{ans.text_es}</Text>
                             {ans.is_correct && <Check size={14} color={COLORS.success} style={{marginLeft: 4}} />}
                         </View>
-                        <StyledTextInput placeholder={`${t('option')} ${index + 1} (EN)`} value={ans.text_en} onChangeText={(text) => handleAnswerChangeEN(text, index)} />
+                        <StyledTextInput testID={`answerInputEN${index + 1}`} placeholder={`${t('option')} ${index + 1} (EN)`} value={ans.text_en} onChangeText={(text) => handleAnswerChangeEN(text, index)} />
                     </View>
                 ))}
             </ScrollView>
@@ -327,9 +333,9 @@ export default function QuestionWizardModal({ visible, onClose, onSaveSuccess, e
                 }
                 
                 {step < 4 ? (
-                    <StyledButton onPress={handleNext} title={t('next')} icon={<ArrowRight size={20} color={COLORS.white} />} style={{flexDirection: 'row-reverse'}} />
+                    <StyledButton testID="nextBtn" onPress={handleNext} title={t('next')} icon={<ArrowRight size={20} color={COLORS.white} />} style={{flexDirection: 'row-reverse'}} />
                 ) : (
-                    <StyledButton onPress={handleSubmit} title={t('save')} disabled={loading} loading={loading} icon={<Save size={20} color="white" />} />
+                    <StyledButton testID="saveBtn" onPress={handleSubmit} title={t('save')} disabled={loading} loading={loading} icon={<Save size={20} color="white" />} />
                 )}
             </View>
           </View>
